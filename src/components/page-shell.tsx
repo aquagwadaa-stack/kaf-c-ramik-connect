@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { SiteFooter, SiteHeader } from "./site-header";
+import { OrganicShapes } from "./organic-shapes";
 
 export function PageShell({ children }: { children: ReactNode }) {
   return (
@@ -21,18 +22,17 @@ export function PageHeader({
   description?: string;
 }) {
   return (
-    <section className="relative overflow-hidden border-b border-border bg-rose/40">
-      <div className="blob -left-20 -top-20 h-72 w-72 bg-apricot" />
-      <div className="blob -right-10 top-10 h-60 w-60 bg-sage" />
-      <div className="relative mx-auto max-w-6xl px-4 py-12 sm:py-16">
+    <section className="relative overflow-hidden border-b border-border/60">
+      <OrganicShapes />
+      <div className="relative mx-auto max-w-6xl px-4 py-14 sm:py-20">
         {eyebrow && (
-          <div className="mb-3 inline-flex items-center rounded-full bg-background/70 px-3 py-1 text-xs font-medium text-foreground/70">
+          <div className="mb-3 inline-flex items-center rounded-full border border-ink/15 bg-cream/80 px-3 py-1 text-xs font-medium text-ink/70">
             {eyebrow}
           </div>
         )}
-        <h1 className="text-3xl sm:text-5xl font-semibold">{title}</h1>
+        <h1 className="text-4xl sm:text-6xl text-ink max-w-3xl leading-[1.05]">{title}</h1>
         {description && (
-          <p className="mt-4 max-w-2xl text-base sm:text-lg text-foreground/70">{description}</p>
+          <p className="mt-5 max-w-2xl text-base sm:text-lg text-ink/75">{description}</p>
         )}
       </div>
     </section>
