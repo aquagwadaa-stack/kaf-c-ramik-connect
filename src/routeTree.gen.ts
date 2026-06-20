@@ -9,8 +9,50 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ReserverRouteImport } from './routes/reserver'
+import { Route as ObjetsRouteImport } from './routes/objets'
+import { Route as GroupesRouteImport } from './routes/groupes'
+import { Route as CarteRouteImport } from './routes/carte'
+import { Route as CadeauRouteImport } from './routes/cadeau'
+import { Route as BrunchRouteImport } from './routes/brunch'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 
+const ReserverRoute = ReserverRouteImport.update({
+  id: '/reserver',
+  path: '/reserver',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ObjetsRoute = ObjetsRouteImport.update({
+  id: '/objets',
+  path: '/objets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GroupesRoute = GroupesRouteImport.update({
+  id: '/groupes',
+  path: '/groupes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CarteRoute = CarteRouteImport.update({
+  id: '/carte',
+  path: '/carte',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CadeauRoute = CadeauRouteImport.update({
+  id: '/cadeau',
+  path: '/cadeau',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrunchRoute = BrunchRouteImport.update({
+  id: '/brunch',
+  path: '/brunch',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +61,130 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/brunch': typeof BrunchRoute
+  '/cadeau': typeof CadeauRoute
+  '/carte': typeof CarteRoute
+  '/groupes': typeof GroupesRoute
+  '/objets': typeof ObjetsRoute
+  '/reserver': typeof ReserverRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/brunch': typeof BrunchRoute
+  '/cadeau': typeof CadeauRoute
+  '/carte': typeof CarteRoute
+  '/groupes': typeof GroupesRoute
+  '/objets': typeof ObjetsRoute
+  '/reserver': typeof ReserverRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/brunch': typeof BrunchRoute
+  '/cadeau': typeof CadeauRoute
+  '/carte': typeof CarteRoute
+  '/groupes': typeof GroupesRoute
+  '/objets': typeof ObjetsRoute
+  '/reserver': typeof ReserverRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/brunch'
+    | '/cadeau'
+    | '/carte'
+    | '/groupes'
+    | '/objets'
+    | '/reserver'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/admin'
+    | '/brunch'
+    | '/cadeau'
+    | '/carte'
+    | '/groupes'
+    | '/objets'
+    | '/reserver'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/brunch'
+    | '/cadeau'
+    | '/carte'
+    | '/groupes'
+    | '/objets'
+    | '/reserver'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
+  BrunchRoute: typeof BrunchRoute
+  CadeauRoute: typeof CadeauRoute
+  CarteRoute: typeof CarteRoute
+  GroupesRoute: typeof GroupesRoute
+  ObjetsRoute: typeof ObjetsRoute
+  ReserverRoute: typeof ReserverRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reserver': {
+      id: '/reserver'
+      path: '/reserver'
+      fullPath: '/reserver'
+      preLoaderRoute: typeof ReserverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/objets': {
+      id: '/objets'
+      path: '/objets'
+      fullPath: '/objets'
+      preLoaderRoute: typeof ObjetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/groupes': {
+      id: '/groupes'
+      path: '/groupes'
+      fullPath: '/groupes'
+      preLoaderRoute: typeof GroupesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/carte': {
+      id: '/carte'
+      path: '/carte'
+      fullPath: '/carte'
+      preLoaderRoute: typeof CarteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cadeau': {
+      id: '/cadeau'
+      path: '/cadeau'
+      fullPath: '/cadeau'
+      preLoaderRoute: typeof CadeauRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/brunch': {
+      id: '/brunch'
+      path: '/brunch'
+      fullPath: '/brunch'
+      preLoaderRoute: typeof BrunchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,6 +197,13 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
+  BrunchRoute: BrunchRoute,
+  CadeauRoute: CadeauRoute,
+  CarteRoute: CarteRoute,
+  GroupesRoute: GroupesRoute,
+  ObjetsRoute: ObjetsRoute,
+  ReserverRoute: ReserverRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
