@@ -11,7 +11,6 @@ import {
   ArrowRight,
   Sparkles,
   Brush,
-  CheckCircle2,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { OrganicShapes } from "@/components/organic-shapes";
@@ -66,6 +65,29 @@ const pieces: { name: string; detail: string; kind: CeramicKind; tone: string }[
   { name: "Vases", detail: "dès 28 €", kind: "vase", tone: "bg-sage/25" },
   { name: "Bols", detail: "dès 15 €", kind: "bowl", tone: "bg-mustard/25" },
 ];
+
+const creationPhotos = [
+  {
+    src: "/creations/figurines-xl.webp",
+    title: "Figurines à peindre",
+    body: "Des pièces expressives pour les ateliers en famille ou entre amis.",
+  },
+  {
+    src: "/creations/tasse-design.webp",
+    title: "Tasses design",
+    body: "Des formes simples qui deviennent vite très personnelles.",
+  },
+  {
+    src: "/creations/tasses-texturees.webp",
+    title: "Textures & reliefs",
+    body: "Des surfaces qui accrochent la couleur et donnent du caractère.",
+  },
+  {
+    src: "/creations/petites-pieces.webp",
+    title: "Petites décos",
+    body: "Des formats rapides à peindre pour repartir avec une idée claire.",
+  },
+] as const;
 
 function HomePage() {
   return (
@@ -195,6 +217,52 @@ function HomePage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-cream/80 px-3 py-1 text-xs font-medium text-ink/70">
+              <Sparkles className="h-3.5 w-3.5" /> Créations
+            </div>
+            <h2 className="mt-4 max-w-2xl text-3xl leading-tight text-ink sm:text-4xl">
+              Quelques idées avant de choisir sa pièce.
+            </h2>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-foreground/70 sm:text-base">
+              Un aperçu des formes disponibles au Kafé : tasses, assiettes, figurines, petits objets
+              et pièces déco à personnaliser pendant l'atelier.
+            </p>
+          </div>
+          <Link
+            to="/objets"
+            className="inline-flex w-fit items-center gap-2 rounded-full border border-ink/20 bg-cream/85 px-5 py-3 text-sm font-medium transition hover:bg-cream"
+          >
+            Voir les objets <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {creationPhotos.map((photo) => (
+            <Link
+              key={photo.src}
+              to="/objets"
+              className="group overflow-hidden rounded-2xl border border-border bg-card/90 shadow-sm shadow-ink/5 transition hover:-translate-y-0.5 hover:border-primary/40"
+            >
+              <div className="aspect-[4/5] overflow-hidden bg-cream">
+                <img
+                  src={photo.src}
+                  alt={photo.title}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                />
+              </div>
+              <div className="p-4">
+                <div className="font-medium">{photo.title}</div>
+                <p className="mt-2 text-sm leading-5 text-muted-foreground">{photo.body}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 py-8">
         <div className="grid gap-3 sm:grid-cols-3">
           <FlowStep n="1" title="Choisir une pièce" body="Tasse, assiette, bol, vase ou petite déco selon les disponibilités du jour." />
           <FlowStep n="2" title="Peindre au Kafé" body="Couleurs, pinceaux, café, jus frais ou brunch pendant le moment créatif." />
@@ -224,12 +292,6 @@ function CeramicHero() {
       </div>
       <div className="absolute bottom-3 right-12 h-40 w-40 rotate-[-5deg] rounded-3xl border border-border bg-sage/25 p-3 shadow-lg shadow-ink/10">
         <CeramicPiece kind="vase" label="Vase à peindre" />
-      </div>
-      <div className="absolute bottom-16 left-0 rounded-2xl border border-border bg-card px-4 py-3 shadow-lg shadow-ink/10">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <CheckCircle2 className="h-4 w-4 text-primary" />
-          Créneaux visibles à la semaine
-        </div>
       </div>
     </div>
   );
