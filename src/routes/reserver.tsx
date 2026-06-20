@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Palette,
   Coffee,
@@ -10,6 +10,7 @@ import {
   Check,
   CalendarCheck2,
   Sparkles,
+  CalendarDays,
 } from "lucide-react";
 import { PageShell, PageHeader } from "@/components/page-shell";
 import { addReservation, experienceLabel, type ExperienceType } from "@/lib/reservations";
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/reserver")({
   head: () => ({
     meta: [
       { title: "Réserver un atelier — Kafé Céramik" },
-      { name: "description", content: "Choisissez votre formule, votre date et votre créneau pour un atelier de peinture sur céramique." },
+      { name: "description", content: "Choisissez votre formule et votre créneau dans le planning de la semaine." },
     ],
   }),
   component: ReserverPage,
@@ -28,10 +29,10 @@ const experiences: { id: ExperienceType; title: string; desc: string; icon: type
   { id: "atelier", title: "Atelier libre", desc: "Peinture sur céramique, à votre rythme.", icon: Palette, price: "dès 22 €/pers" },
   { id: "cafe_atelier", title: "Café + atelier", desc: "Une boisson chaude et votre création.", icon: Coffee, price: "dès 28 €/pers" },
   { id: "brunch_atelier", title: "Brunch + atelier", desc: "Brunch gourmand puis création.", icon: CroissantIcon, price: "dès 38 €/pers" },
-  { id: "groupe", title: "Groupe / EVJF / Anniversaire", desc: "À partir de 6 personnes.", icon: Users, price: "sur devis" },
+  { id: "groupe", title: "Groupe / événement", desc: "Pour une grande table ou une occasion spéciale.", icon: Users, price: "sur demande" },
 ];
 
-const SLOTS = ["09:30", "10:30", "11:00", "13:30", "14:00", "15:30", "16:30"];
+const SLOTS = ["09:30", "10:30", "11:30", "13:30", "14:30", "15:30", "16:30"];
 
 function ReserverPage() {
   const [step, setStep] = useState(1);
@@ -45,10 +46,26 @@ function ReserverPage() {
 
   const deposit = people * 10;
 
-  const next = () => setStep((s) => Math.min(s + 1, 5));
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [step]);
+
+  const next = () => {
+    if (step === 2 && (!date || !slot)) return;
+    setStep((s) => Math.min(s + 1, 4));
+  };
   const back = () => setStep((s) => Math.max(s - 1, 1));
 
+  function chooseSlot(nextDate: string, nextSlot: string) {
+    setDate(nextDate);
+    setSlot(nextSlot);
+  }
+
   function submit(payDeposit: boolean) {
+    if (!date || !slot) {
+      setStep(2);
+      return;
+    }
     const e: Record<string, string> = {};
     if (!form.firstName) e.firstName = "Requis";
     if (!form.lastName) e.lastName = "Requis";
@@ -66,7 +83,7 @@ function ReserverPage() {
       status: payDeposit ? "deposit_paid" : "pending",
     });
     setDone(r.id);
-    setStep(5);
+    setStep(4);
   }
 
   return (
@@ -74,12 +91,12 @@ function ReserverPage() {
       <PageHeader
         eyebrow="Réservation"
         title="Réservez votre atelier"
-        description="En 4 étapes : choisissez votre formule, votre date, vos coordonnées, puis confirmez avec un acompte."
+        description="Choisissez votre formule, puis sélectionnez directement un créneau dans le planning de la semaine."
       />
-      <section className="mx-auto max-w-3xl px-4 py-10">
+      <section className="mx-auto max-w-5xl px-4 py-10">
         <Stepper step={step} />
 
-        <div className="mt-6 rounded-3xl border border-border bg-card p-5 sm:p-8">
+        <div className="mt-6 rounded-2xl border border-border bg-card p-5 sm:p-8">
           {step === 1 && (
             <Step title="Quelle expérience vous tente ?">
               <div className="grid gap-3 sm:grid-cols-2">
@@ -92,8 +109,8 @@ function ReserverPage() {
                       onClick={() => setExperience(x.id)}
                       className={`text-left rounded-2xl border p-4 transition ${
                         active
-                          ? "border-primary bg-primary/5 ring-2 ring-primary/30"
-                          : "border-border hover:border-foreground/30"
+                          ? "border-primary bg-primary/10 ring-2 ring-primary/25"
+                          : "border-border hover:border-primary/40 hover:bg-secondary/40"
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -117,7 +134,11 @@ function ReserverPage() {
                   {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => (
                     <button
                       key={n}
-                      onClick={() => setPeople(n)}
+                      onClick={() => {
+                        setPeople(n);
+                        setDate("");
+                        setSlot("");
+                      }}
                       className={`min-w-12 rounded-full border px-4 py-2 text-sm ${
                         people === n ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-secondary"
                       }`}
@@ -128,10 +149,10 @@ function ReserverPage() {
                 </div>
               </div>
               {experience === "groupe" && (
-                <div className="mt-4 rounded-xl bg-accent/15 p-3 text-sm">
-                  Pour un groupe, vous pouvez aussi{" "}
+                <div className="mt-4 rounded-xl bg-rose/20 p-3 text-sm">
+                  Pour un événement précis, vous pouvez aussi{" "}
                   <Link to="/groupes" className="font-medium text-primary underline">
-                    envoyer une demande dédiée
+                    envoyer une demande personnalisée
                   </Link>
                   .
                 </div>
@@ -140,41 +161,17 @@ function ReserverPage() {
           )}
 
           {step === 2 && (
-            <Step title="Choisissez une date">
-              <CalendarPicker value={date} onChange={setDate} />
+            <Step title="Choisissez un créneau cette semaine">
+              <WeekPlanner
+                people={people}
+                selectedDate={date}
+                selectedSlot={slot}
+                onSelect={chooseSlot}
+              />
             </Step>
           )}
 
           {step === 3 && (
-            <Step title="Choisissez un créneau">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {SLOTS.map((s) => {
-                  const blocked = (s === "13:30" && date.endsWith("3")) || (s === "16:30" && people > 4);
-                  return (
-                    <button
-                      key={s}
-                      disabled={blocked}
-                      onClick={() => setSlot(s)}
-                      className={`rounded-xl border px-3 py-3 text-sm font-medium ${
-                        blocked
-                          ? "border-border bg-muted text-muted-foreground line-through"
-                          : slot === s
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border hover:bg-secondary"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="mt-3 text-xs text-muted-foreground">
-                Les créneaux barrés sont complets. Affichage simulé pour la démo.
-              </p>
-            </Step>
-          )}
-
-          {step === 4 && (
             <Step title="Vos coordonnées">
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Prénom" value={form.firstName} onChange={(v) => setForm({ ...form, firstName: v })} error={errors.firstName} />
@@ -188,12 +185,12 @@ function ReserverPage() {
                     onChange={(e) => setForm({ ...form, message: e.target.value })}
                     rows={3}
                     className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="Allergies, occasion spéciale, demande particulière…"
+                    placeholder="Allergies, occasion spéciale, demande particulière..."
                   />
                 </div>
               </div>
 
-              <div className="mt-6 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4">
+              <div className="mt-6 rounded-2xl border border-dashed border-primary/40 bg-primary/10 p-4">
                 <div className="flex items-start gap-3">
                   <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                   <div className="text-sm">
@@ -208,12 +205,12 @@ function ReserverPage() {
             </Step>
           )}
 
-          {step === 5 && done && (
-            <div className="text-center py-4">
+          {step === 4 && done && (
+            <div className="py-4 text-center">
               <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-sage/20 text-sage">
                 <Check className="h-7 w-7" />
               </div>
-              <h2 className="mt-4 text-2xl">Réservation enregistrée ✨</h2>
+              <h2 className="mt-4 text-2xl">Réservation enregistrée</h2>
               <p className="mt-2 text-muted-foreground">On a hâte de vous accueillir au Kafé.</p>
               <div className="mx-auto mt-6 max-w-md rounded-2xl border border-border bg-secondary/40 p-5 text-left text-sm">
                 <Row k="Formule" v={experienceLabel(experience)} />
@@ -232,7 +229,7 @@ function ReserverPage() {
             </div>
           )}
 
-          {step < 5 && (
+          {step < 4 && (
             <div className="mt-8 flex items-center justify-between gap-3">
               <button
                 onClick={back}
@@ -241,13 +238,13 @@ function ReserverPage() {
               >
                 <ChevronLeft className="h-4 w-4" /> Retour
               </button>
-              {step < 4 ? (
+              {step < 3 ? (
                 <button
                   onClick={next}
-                  disabled={(step === 2 && !date) || (step === 3 && !slot)}
+                  disabled={step === 2 && (!date || !slot)}
                   className="inline-flex items-center gap-1 rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground disabled:opacity-40"
                 >
-                  Continuer <ChevronRight className="h-4 w-4" />
+                  {step === 1 ? "Voir les créneaux" : "Continuer"} <ChevronRight className="h-4 w-4" />
                 </button>
               ) : (
                 <div className="flex flex-wrap justify-end gap-2">
@@ -269,7 +266,7 @@ function ReserverPage() {
           )}
         </div>
 
-        {step < 5 && (
+        {step < 4 && (
           <Summary experience={experience} people={people} date={date} slot={slot} deposit={deposit} />
         )}
       </section>
@@ -315,23 +312,27 @@ function Row({ k, v }: { k: string; v: string }) {
 }
 
 function Stepper({ step }: { step: number }) {
-  const labels = ["Formule", "Date", "Créneau", "Coordonnées", "Confirmation"];
+  const labels = ["Formule", "Planning", "Infos", "Confirmé"];
   return (
-    <div className="flex items-center gap-1.5 overflow-x-auto">
+    <div className="grid grid-cols-4 gap-2">
       {labels.map((l, i) => {
         const n = i + 1;
         const active = step >= n;
         return (
-          <div key={l} className="flex items-center gap-1.5">
+          <div
+            key={l}
+            className={`rounded-2xl border px-2 py-2 text-center ${
+              active ? "border-primary bg-primary/10" : "border-border bg-card/70"
+            }`}
+          >
             <div
-              className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-medium ${
+              className={`mx-auto grid h-7 w-7 place-items-center rounded-full text-xs font-medium ${
                 active ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
               }`}
             >
               {n}
             </div>
-            <span className={`text-xs ${active ? "text-foreground" : "text-muted-foreground"}`}>{l}</span>
-            {n < labels.length && <div className="mx-1 h-px w-4 bg-border" />}
+            <div className={`mt-1 truncate text-[11px] ${active ? "text-foreground" : "text-muted-foreground"}`}>{l}</div>
           </div>
         );
       })}
@@ -339,77 +340,173 @@ function Stepper({ step }: { step: number }) {
   );
 }
 
-function CalendarPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [view, setView] = useState(() => {
-    const d = new Date();
-    return { y: d.getFullYear(), m: d.getMonth() };
-  });
-  const days = useMemo(() => buildMonth(view.y, view.m), [view]);
-  const monthLabel = new Date(view.y, view.m, 1).toLocaleDateString("fr-FR", {
-    month: "long", year: "numeric",
-  });
-  const today = new Date(); today.setHours(0, 0, 0, 0);
+function WeekPlanner({
+  people,
+  selectedDate,
+  selectedSlot,
+  onSelect,
+}: {
+  people: number;
+  selectedDate: string;
+  selectedSlot: string;
+  onSelect: (date: string, slot: string) => void;
+}) {
+  const currentWeek = useMemo(() => startOfWeek(new Date()), []);
+  const [weekStart, setWeekStart] = useState(currentWeek);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const days = useMemo(() => buildWeek(weekStart), [weekStart]);
+  const weekLabel = `${formatShortDate(days[0])} – ${formatShortDate(days[6])}`;
+  const canGoBack = weekStart.getTime() > currentWeek.getTime();
+
+  useEffect(() => {
+    const node = scrollerRef.current;
+    if (!node) return;
+    const todayIso = toISODate(new Date());
+    const todayIndex = days.findIndex((d) => toISODate(d) === todayIso);
+    const targetIndex = todayIndex >= 0 ? todayIndex : 0;
+    if (node.scrollWidth > node.clientWidth) {
+      const columnWidth = node.scrollWidth / 7;
+      node.scrollTo({ left: Math.max(0, targetIndex * columnWidth - 8), behavior: "auto" });
+    } else {
+      node.scrollTo({ left: 0, behavior: "auto" });
+    }
+  }, [days]);
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <button onClick={() => setView(prevMonth(view))} className="grid h-9 w-9 place-items-center rounded-full border border-border">
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <div className="font-medium capitalize">{monthLabel}</div>
-        <button onClick={() => setView(nextMonth(view))} className="grid h-9 w-9 place-items-center rounded-full border border-border">
-          <ChevronRight className="h-4 w-4" />
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-sm font-medium">
+          <CalendarDays className="h-4 w-4 text-primary" /> Semaine du {weekLabel}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => canGoBack && setWeekStart(addDays(weekStart, -7))}
+            disabled={!canGoBack}
+            className="grid h-9 w-9 place-items-center rounded-full border border-border disabled:opacity-35"
+            aria-label="Semaine précédente"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setWeekStart(addDays(weekStart, 7))}
+            className="grid h-9 w-9 place-items-center rounded-full border border-border"
+            aria-label="Semaine suivante"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
-      <div className="mt-4 grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
-        {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => <div key={i} className="py-1">{d}</div>)}
+
+      <div ref={scrollerRef} className="mt-5 overflow-x-auto pb-2">
+        <div className="grid min-w-[840px] grid-cols-7 gap-2">
+          {days.map((day) => {
+            const iso = toISODate(day);
+            const closed = day.getDay() === 1;
+            return (
+              <div
+                key={iso}
+                className={`rounded-2xl border p-3 ${
+                  closed ? "border-dashed bg-muted/45" : "border-border bg-background/85"
+                }`}
+              >
+                <div className="text-xs uppercase text-muted-foreground">
+                  {day.toLocaleDateString("fr-FR", { weekday: "short" })}
+                </div>
+                <div className="font-display text-2xl">{day.getDate()}</div>
+                {closed ? (
+                  <div className="mt-4 rounded-xl bg-background/70 px-2 py-3 text-center text-xs text-muted-foreground">
+                    Fermé
+                  </div>
+                ) : (
+                  <div className="mt-3 grid gap-1.5">
+                    {SLOTS.map((s) => {
+                      const state = getSlotAvailability(day, s, people);
+                      const selected = selectedDate === iso && selectedSlot === s;
+                      return (
+                        <button
+                          key={s}
+                          disabled={state.disabled}
+                          onClick={() => onSelect(iso, s)}
+                          className={`rounded-xl border px-2 py-2 text-left transition ${
+                            selected
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : state.disabled
+                                ? "border-border bg-muted/55 text-muted-foreground line-through"
+                                : "border-border bg-card hover:border-primary/45 hover:bg-secondary/60"
+                          }`}
+                        >
+                          <span className="block text-sm font-medium">{s}</span>
+                          <span className={`block text-[11px] ${selected ? "text-primary-foreground/75" : "text-muted-foreground"}`}>
+                            {state.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
-      <div className="grid grid-cols-7 gap-1">
-        {days.map((d, i) => {
-          if (!d) return <div key={i} />;
-          const iso = d.toISOString().slice(0, 10);
-          const dow = d.getDay(); // 0 = Sun, 1 = Mon
-          const closed = dow === 1; // Lundi fermé
-          const past = d < today;
-          const disabled = closed || past;
-          const selected = iso === value;
-          return (
-            <button
-              key={iso}
-              disabled={disabled}
-              onClick={() => onChange(iso)}
-              className={`aspect-square rounded-xl text-sm transition ${
-                selected
-                  ? "bg-primary text-primary-foreground"
-                  : disabled
-                    ? "text-muted-foreground/40 line-through"
-                    : "hover:bg-secondary"
-              }`}
-            >
-              {d.getDate()}
-            </button>
-          );
-        })}
-      </div>
-      <p className="mt-3 text-xs text-muted-foreground">Fermé le lundi.</p>
+
+      <p className="mt-3 text-xs text-muted-foreground">
+        Planning de démonstration : les disponibilités changent selon le jour et le nombre de personnes.
+      </p>
     </div>
   );
 }
 
-function buildMonth(y: number, m: number) {
-  const first = new Date(y, m, 1);
-  const lead = (first.getDay() + 6) % 7;
-  const total = new Date(y, m + 1, 0).getDate();
-  const arr: (Date | null)[] = Array.from({ length: lead }, () => null);
-  for (let d = 1; d <= total; d++) arr.push(new Date(y, m, d));
-  while (arr.length % 7) arr.push(null);
-  return arr;
+function getSlotAvailability(day: Date, slot: string, people: number) {
+  const today = startOfDay(new Date());
+  const current = startOfDay(day);
+  if (current < today) return { disabled: true, label: "passé" };
+
+  const dow = day.getDay();
+  const full =
+    (dow === 6 && (slot === "10:30" || slot === "14:30")) ||
+    (dow === 0 && slot === "15:30") ||
+    (people > 4 && slot === "16:30");
+
+  if (full) return { disabled: true, label: "complet" };
+
+  const limited = (dow === 5 && slot === "10:30") || (people > 3 && slot === "11:30");
+  if (limited) return { disabled: false, label: "reste 2 places" };
+
+  return { disabled: false, label: "disponible" };
 }
-function prevMonth(v: { y: number; m: number }) {
-  return v.m === 0 ? { y: v.y - 1, m: 11 } : { y: v.y, m: v.m - 1 };
+
+function startOfWeek(date: Date) {
+  const d = startOfDay(date);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d;
 }
-function nextMonth(v: { y: number; m: number }) {
-  return v.m === 11 ? { y: v.y + 1, m: 0 } : { y: v.y, m: v.m + 1 };
+
+function startOfDay(date: Date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function addDays(date: Date, count: number) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + count);
+  return d;
+}
+
+function buildWeek(start: Date) {
+  return Array.from({ length: 7 }, (_, i) => addDays(start, i));
+}
+
+function toISODate(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function formatShortDate(date: Date) {
+  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
 
 export function formatDate(iso: string) {
@@ -423,10 +520,10 @@ function Summary({
   experience, people, date, slot, deposit,
 }: { experience: ExperienceType; people: number; date: string; slot: string; deposit: number }) {
   return (
-    <div className="mt-4 rounded-2xl border border-border bg-cream/60 p-4 text-sm">
+    <div className="mt-4 rounded-2xl border border-border bg-cream/70 p-4 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">Récap</div>
+          <div className="text-xs uppercase text-muted-foreground">Récap</div>
           <div className="font-medium">
             {experienceLabel(experience)} · {people} pers
             {date && ` · ${formatDate(date)}`}

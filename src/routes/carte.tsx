@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Coffee, CroissantIcon, CupSoda, Sparkles } from "lucide-react";
 import { PageShell, PageHeader } from "@/components/page-shell";
+import { CeramicPiece } from "@/components/ceramic-piece";
 
 export const Route = createFileRoute("/carte")({
   head: () => ({
@@ -13,63 +15,60 @@ export const Route = createFileRoute("/carte")({
 
 type Item = { name: string; desc?: string; price: string; tag?: string };
 
-const sections: { title: string; items: Item[]; tone: string }[] = [
+const sections: { title: string; subtitle: string; items: Item[]; accent: string }[] = [
   {
-    title: "Cafés & compagnie",
-    tone: "bg-cream",
+    title: "Cafés et compagnie",
+    subtitle: "chaud ou glacé selon l'humeur",
+    accent: "text-brick",
     items: [
-      { name: "Espresso, Allongé", price: "3 €" },
-      { name: "Double Espresso", price: "4 €" },
-      { name: "Café Bombon", desc: "Espresso, lait concentré sucré, chantilly", price: "4 €" },
-      { name: "Cappuccino / Iced Cappuccino", desc: "Lait amande ou coco +0,50 €", price: "4,50 €" },
-      { name: "Chocolat Chaud", desc: "Chocolat local, onctueux et parfumé", price: "4 €" },
-      { name: "Chaï Latte Amande (chaud ou froid)", price: "5 €" },
-      { name: "Matcha Latte Coco (chaud ou froid)", price: "5 €" },
-      { name: "Golden Latte", desc: "Curcuma, gingembre, cannelle", price: "6 €" },
-      { name: "Infusion / thé", price: "3,50 €" },
+      { name: "Espresso / allongé", price: "3 €" },
+      { name: "Double espresso", price: "4 €" },
+      { name: "Café bombon", desc: "espresso, lait concentré sucré, chantilly", price: "4 €" },
+      { name: "Cappuccino ou iced cappuccino", desc: "lait amande ou coco +0,50 €", price: "4,50 €" },
+      { name: "Chocolat chaud", desc: "chocolat local de communion, onctueux et parfumé", price: "4 €" },
+      { name: "Chaï latte amande", desc: "chaud ou froid", price: "5 €" },
+      { name: "Matcha latte coco", desc: "chaud ou froid", price: "5 €" },
+      { name: "Golden latte", desc: "curcuma, gingembre, cannelle", price: "6 €" },
+      { name: "Infusion / thé du moment", price: "3,50 €" },
     ],
   },
   {
-    title: "Fresh juices baby !",
-    tone: "bg-rose/70",
+    title: "Fresh juices baby",
+    subtitle: "pressés, frais, colorés",
+    accent: "text-sage",
     items: [
-      { name: "Le Very Skinny", desc: "Pomme, ananas, concombre, citron vert, menthe, épinard", price: "8 €" },
-      { name: "Le Vitamine Sea", desc: "Carotte, ananas, orange, gingembre", price: "8 €" },
-      { name: "Le Ti Bo Doudou", desc: "Symbiose éphémère, à découvrir au comptoir", price: "8 €" },
-      { name: "La Piña Coco Lada", desc: "Ananas, lait de coco, sucre de canne, citron vert", price: "8 €" },
-      { name: "Ginger Beer maison", desc: "Boisson probiotique sans alcool, bien épicée", price: "6 €", tag: "Spicy" },
-      { name: "Orange Pressée", price: "6,50 €" },
-      { name: "Citron Pressé", price: "3 €" },
-      { name: "Limonade Mamounia", desc: "Limonade, menthe, fleur d'oranger, citron", price: "3,50 €" },
+      { name: "Le Very Skinny", desc: "pomme, ananas, concombre, citron vert, menthe, épinard", price: "8 €" },
+      { name: "Le Vitamine Sea", desc: "carotte, ananas, orange, gingembre", price: "8 €" },
+      { name: "Le Ti Bo Doudou", desc: "symbiose éphémère à découvrir au comptoir", price: "8 €" },
+      { name: "La Piña Coco Lada", desc: "ananas, lait de coco, sucre de canne, citron vert", price: "8 €" },
+      { name: "Ginger beer maison", desc: "boisson probiotique sans alcool, bien épicée", price: "6 €", tag: "spicy" },
+      { name: "Orange pressée", price: "6,50 €" },
+      { name: "Citron pressé", price: "3 €" },
     ],
   },
   {
-    title: "À table !",
-    tone: "bg-sage/30",
+    title: "Déjeunette",
+    subtitle: "service en continu",
+    accent: "text-rose",
     items: [
-      { name: "Le Ronchon", desc: "Croissant rond, œuf au plat, reblochon, jambon, sauce hollandaise", price: "16 €", tag: "New" },
-      { name: "Le Mec Muffin", desc: "Pain brioché, œufs brouillés, cheddar, bacon, paprika fumé", price: "16 €" },
-      { name: "Le Morning Bagel", desc: "Bagel, œuf, bacon crispy, philadelphia, cheddar", price: "11 €" },
-      { name: "Le Summer Body", desc: "Wrap, houmous, chèvre frais, légumes confits, pickles", price: "16 €" },
-      { name: "Le Summer Bowl", desc: "Bowl quinoa, œuf au plat, légumes — sans gluten", price: "16 €" },
-      { name: "La Sirène des Caraïbes", desc: "Bagel, fromage frais, avocat, thazard fumé, roquette", price: "16 €" },
-      { name: "Nutty Banana Bowl", desc: "Yaourt, granola, noix, coco, banane, sirop d'érable", price: "12 €", tag: "New" },
+      { name: "Le Ronchon", desc: "croissant rond, œuf au plat, reblochon, jambon, sauce hollandaise", price: "16 €" },
+      { name: "Le Morning Bagel", desc: "bagel, œuf, bacon crispy, philadelphia, cheddar", price: "11 €" },
+      { name: "Le Summer Body", desc: "wrap, houmous, chèvre frais, légumes confits, pickles", price: "16 €" },
+      { name: "Le Summer Bowl", desc: "bowl quinoa, œuf au plat, légumes, option sans gluten", price: "16 €" },
+      { name: "La Sirène des Caraïbes", desc: "bagel, fromage frais, avocat, thazard fumé, roquette", price: "16 €" },
+      { name: "Nutty banana bowl", desc: "yaourt, granola, noix, coco, banane, sirop d'érable", price: "12 €" },
     ],
   },
   {
     title: "Pour les gourmands",
-    tone: "bg-mustard/40",
+    subtitle: "sucré, glacé, maison",
+    accent: "text-mustard",
     items: [
-      { name: "Le Big Macchiato", desc: "500 ml de café glacé, chantilly, topping au choix", price: "8 €" },
-      { name: "La Gaufre Liégeoise", desc: "Topping au choix : nutella, miel, dulce de leche…", price: "5,50 €" },
-      { name: "Pâtisseries maison du jour", desc: "À découvrir dans la vitrine du Kafé", price: "—" },
-    ],
-  },
-  {
-    title: "Menu Kids",
-    tone: "bg-rose/50",
-    items: [
-      { name: "Formule Kids", desc: "Jus tropical ou chocolat chaud · 1/2 gaufre, œuf, bacon, potatoes · cookie", price: "12 €" },
+      { name: "Le Big Macchiato", desc: "500 ml de café glacé, chantilly et topping préféré", price: "8 €" },
+      { name: "Gaufre liégeoise", desc: "topping au choix : pâte à tartiner, miel, dulce de leche", price: "5,50 €" },
+      { name: "Pâtisserie maison du jour", desc: "à découvrir dans la vitrine du Kafé", price: "—" },
+      { name: "Petit jus d'ananas ou tropical", price: "3,50 €" },
+      { name: "Eau plate / gazeuse", desc: "petite ou grande", price: "2 €" },
     ],
   },
 ];
@@ -79,36 +78,102 @@ function CartePage() {
     <PageShell>
       <PageHeader
         eyebrow="Carte"
-        title="Carte café & déjeunette"
+        title="Kafé ou déjeunette"
         description="Service en continu de 9h30 à 18h, du mardi au dimanche."
       />
-      <section className="mx-auto max-w-5xl px-4 py-10 space-y-8">
-        {sections.map((s) => (
-          <div key={s.title} className={`rounded-3xl border border-border p-5 sm:p-8 ${s.tone}`}>
-            <h2 className="text-2xl">{s.title}</h2>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {s.items.map((it) => (
-                <div key={it.name} className="rounded-2xl bg-background/80 p-4 backdrop-blur">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium truncate">{it.name}</div>
-                        {it.tag && (
-                          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium uppercase text-primary">
-                            {it.tag}
-                          </span>
-                        )}
-                      </div>
-                      {it.desc && <div className="mt-0.5 text-sm text-muted-foreground">{it.desc}</div>}
-                    </div>
-                    <div className="shrink-0 font-display text-lg">{it.price}</div>
-                  </div>
+      <section className="mx-auto max-w-6xl px-4 py-10">
+        <div className="checker-pink rounded-[1.75rem] border border-border p-3 sm:p-5">
+          <div className="relative overflow-hidden rounded-[1.35rem] border border-cream/70 bg-cream/95 px-4 py-6 shadow-xl shadow-ink/10 sm:px-8 sm:py-8">
+            <div className="absolute -right-8 -top-8 h-36 w-36 rotate-12 opacity-70">
+              <CeramicPiece kind="mug" />
+            </div>
+            <div className="absolute -bottom-10 -left-8 h-40 w-40 rotate-[-10deg] opacity-60">
+              <CeramicPiece kind="plate" />
+            </div>
+
+            <div className="relative flex flex-wrap items-end justify-between gap-5 border-b border-dashed border-ink/20 pb-6">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-sage/20 px-3 py-1 text-xs font-medium text-ink/70">
+                  <Coffee className="h-3.5 w-3.5" /> by Mala Madre
                 </div>
+                <h2 className="mt-3 text-4xl leading-none sm:text-5xl">Kafé ou déjeunette</h2>
+                <p className="mt-2 max-w-xl text-sm text-foreground/70">
+                  Des classiques réconfortants, des jus frais, des petites douceurs et de quoi tenir entre deux coups de pinceau.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-card/90 px-4 py-3 text-sm">
+                <div className="font-medium">Mardi → dimanche</div>
+                <div className="text-muted-foreground">9h30 – 18h</div>
+              </div>
+            </div>
+
+            <div className="relative mt-7 grid gap-6 lg:grid-cols-2">
+              {sections.map((section) => (
+                <MenuSection key={section.title} section={section} />
               ))}
             </div>
+
+            <div className="relative mt-8 grid gap-3 border-t border-dashed border-ink/20 pt-6 sm:grid-cols-3">
+              <MiniNote icon={CroissantIcon} title="Brunch + atelier" body="Une formule pensée pour prendre le temps." />
+              <MiniNote icon={CupSoda} title="Jus frais" body="Recettes du moment, à confirmer au comptoir." />
+              <MiniNote icon={Sparkles} title="Atelier" body="La céramique se choisit sur place selon stock." />
+            </div>
           </div>
-        ))}
+        </div>
       </section>
     </PageShell>
+  );
+}
+
+function MenuSection({ section }: { section: (typeof sections)[number] }) {
+  return (
+    <div className="rounded-2xl bg-background/80 p-4 ring-1 ring-border/70">
+      <div className="mb-4 flex items-end justify-between gap-3">
+        <div>
+          <h3 className={`text-2xl leading-none ${section.accent}`}>{section.title}</h3>
+          <p className="mt-1 text-xs uppercase text-muted-foreground">{section.subtitle}</p>
+        </div>
+      </div>
+      <div className="divide-y divide-border/70">
+        {section.items.map((it) => (
+          <div key={it.name} className="grid grid-cols-[1fr_auto] gap-4 py-3">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium">{it.name}</span>
+                {it.tag && (
+                  <span className="rounded-full bg-rose/30 px-2 py-0.5 text-[10px] font-medium uppercase text-brick">
+                    {it.tag}
+                  </span>
+                )}
+              </div>
+              {it.desc && <p className="mt-1 text-sm leading-5 text-muted-foreground">{it.desc}</p>}
+            </div>
+            <div className="font-display text-lg">{it.price}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MiniNote({
+  icon: Icon,
+  title,
+  body,
+}: {
+  icon: typeof Coffee;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-2xl bg-card/90 p-4 ring-1 ring-border/70">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary">
+        <Icon className="h-5 w-5" />
+      </span>
+      <span>
+        <span className="block font-medium">{title}</span>
+        <span className="mt-1 block text-sm text-muted-foreground">{body}</span>
+      </span>
+    </div>
   );
 }

@@ -1,34 +1,23 @@
+import { CeramicPiece } from "./ceramic-piece";
+
 export function OrganicShapes({ className = "" }: { className?: string }) {
   return (
     <div className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`} aria-hidden>
-      {/* Sage leaf top-left */}
-      <svg className="absolute -left-10 -top-16 w-56 sm:w-72" viewBox="0 0 200 200" fill="none">
-        <path
-          d="M30 90 C20 40 70 10 120 20 C170 30 190 80 170 130 C150 170 100 190 60 170 C25 155 35 120 30 90 Z"
-          fill="var(--color-sage)"
-        />
-      </svg>
-      {/* Brick blob top-right */}
-      <svg className="absolute -right-12 -top-10 w-56 sm:w-72" viewBox="0 0 200 200" fill="none">
-        <path
-          d="M50 30 C100 0 170 20 180 70 C195 130 150 180 90 170 C30 160 10 100 30 60 C38 45 42 38 50 30 Z"
-          fill="var(--color-brick)"
-        />
-      </svg>
-      {/* Lavender shape bottom-left */}
-      <svg className="absolute -left-8 bottom-0 w-48 sm:w-64 translate-y-1/3" viewBox="0 0 200 200" fill="none">
-        <path
-          d="M40 40 C90 20 160 50 170 110 C175 170 110 200 60 180 C20 165 10 110 25 75 C30 60 32 50 40 40 Z"
-          fill="var(--color-lavender)"
-        />
-      </svg>
-      {/* Mustard shape bottom-right */}
-      <svg className="absolute -right-6 -bottom-10 w-56 sm:w-72" viewBox="0 0 200 200" fill="none">
-        <path
-          d="M60 30 C120 10 180 60 180 120 C180 180 100 200 60 170 C20 145 15 90 35 60 C45 45 50 38 60 30 Z"
-          fill="var(--color-mustard)"
-        />
-      </svg>
+      <div className="absolute -left-10 -top-12 h-52 w-52 rotate-[-14deg] opacity-70 sm:h-64 sm:w-64">
+        <CeramicPiece kind="plate" />
+      </div>
+      <div className="absolute -right-12 -top-8 h-48 w-48 rotate-[12deg] opacity-75 sm:h-64 sm:w-64">
+        <CeramicPiece kind="vase" />
+      </div>
+      <div className="absolute -left-6 bottom-0 h-40 w-40 translate-y-1/3 rotate-[9deg] opacity-55 sm:h-52 sm:w-52">
+        <CeramicPiece kind="bowl" />
+      </div>
+      <div className="absolute -right-2 bottom-2 hidden h-44 w-44 translate-y-1/4 rotate-[-8deg] opacity-60 sm:block">
+        <CeramicPiece kind="mug" />
+      </div>
+      <span className="absolute left-[18%] top-16 h-2 w-14 rotate-[-18deg] rounded-full bg-rose/70" />
+      <span className="absolute right-[30%] top-12 h-2 w-12 rotate-[24deg] rounded-full bg-sage/70" />
+      <span className="absolute bottom-12 left-[45%] h-2 w-16 rotate-[8deg] rounded-full bg-mustard/70" />
     </div>
   );
 }
