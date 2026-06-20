@@ -179,7 +179,7 @@ function Stat({
 
 function StatusBadge({ status }: { status: ReservationStatus }) {
   const map: Record<ReservationStatus, string> = {
-    pending: "bg-apricot/30 text-clay",
+    pending: "bg-mustard/30 text-brick",
     deposit_paid: "bg-sage/25 text-sage",
     confirmed: "bg-primary/15 text-primary",
     cancelled: "bg-destructive/15 text-destructive",
