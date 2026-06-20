@@ -17,17 +17,17 @@ type Obj = { name: string; cat: string; price: string; emoji: string; bg: string
 
 const items: Obj[] = [
   { name: "Tasse classique", cat: "Tasses", price: "18 €", emoji: "☕", bg: "bg-rose/70" },
-  { name: "Mug XL", cat: "Tasses", price: "22 €", emoji: "🍵", bg: "bg-apricot/60" },
+  { name: "Mug XL", cat: "Tasses", price: "22 €", emoji: "🍵", bg: "bg-mustard/60" },
   { name: "Bol breton", cat: "Bols", price: "20 €", emoji: "🥣", bg: "bg-sage/40" },
   { name: "Bol mini", cat: "Bols", price: "15 €", emoji: "🍜", bg: "bg-cream" },
   { name: "Assiette plate", cat: "Assiettes", price: "25 €", emoji: "🍽️", bg: "bg-rose/50" },
-  { name: "Assiette à dessert", cat: "Assiettes", price: "20 €", emoji: "🍰", bg: "bg-apricot/50" },
+  { name: "Assiette à dessert", cat: "Assiettes", price: "20 €", emoji: "🍰", bg: "bg-mustard/50" },
   { name: "Vase soliflore", cat: "Vases", price: "28 €", emoji: "🌸", bg: "bg-sage/30" },
   { name: "Vase rond", cat: "Vases", price: "35 €", emoji: "🌿", bg: "bg-rose/60" },
   { name: "Chat porte-bonheur", cat: "Figurines", price: "18 €", emoji: "🐱", bg: "bg-cream" },
   { name: "Tortue déco", cat: "Figurines", price: "22 €", emoji: "🐢", bg: "bg-sage/40" },
   { name: "Licorne enfant", cat: "Enfants", price: "16 €", emoji: "🦄", bg: "bg-rose/70" },
-  { name: "Dinosaure", cat: "Enfants", price: "16 €", emoji: "🦖", bg: "bg-apricot/60" },
+  { name: "Dinosaure", cat: "Enfants", price: "16 €", emoji: "🦖", bg: "bg-mustard/60" },
   { name: "Photophore étoile", cat: "Décorations", price: "20 €", emoji: "✨", bg: "bg-cream" },
   { name: "Suspension cœur", cat: "Décorations", price: "12 €", emoji: "💗", bg: "bg-rose/60" },
 ];

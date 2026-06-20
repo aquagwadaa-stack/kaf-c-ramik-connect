@@ -144,7 +144,7 @@ function GiftCardPreview({
   amount, from, to, msg,
 }: { amount: number; from: string; to: string; msg: string }) {
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-rose via-cream to-apricot/60 p-6 sm:p-8 text-foreground">
+    <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-rose via-cream to-mustard/60 p-6 sm:p-8 text-foreground">
       <div className="blob -right-10 -top-10 h-40 w-40 bg-sage/60" />
       <div className="relative">
         <div className="flex items-center gap-2 text-xs uppercase tracking-widest">

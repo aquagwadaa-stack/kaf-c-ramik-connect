@@ -58,7 +58,7 @@ const sections: { title: string; items: Item[]; tone: string }[] = [
   },
   {
     title: "Pour les gourmands",
-    tone: "bg-apricot/40",
+    tone: "bg-mustard/40",
     items: [
       { name: "Le Big Macchiato", desc: "500 ml de café glacé, chantilly, topping au choix", price: "8 €" },
       { name: "La Gaufre Liégeoise", desc: "Topping au choix : nutella, miel, dulce de leche…", price: "5,50 €" },

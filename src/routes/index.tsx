@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
+import { OrganicShapes } from "@/components/organic-shapes";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -29,12 +30,12 @@ export const Route = createFileRoute("/")({
 });
 
 const actions = [
-  { to: "/reserver", label: "Réserver un atelier", icon: Palette, color: "bg-primary text-primary-foreground", desc: "Choisissez votre créneau" },
-  { to: "/brunch", label: "Brunch + atelier", icon: CroissantIcon, color: "bg-sage text-primary-foreground", desc: "La formule gourmande" },
-  { to: "/carte", label: "Voir la carte café", icon: Coffee, color: "bg-cream text-foreground", desc: "Boissons & douceurs" },
-  { to: "/objets", label: "Objets à peindre", icon: Sparkles, color: "bg-rose text-foreground", desc: "Tasses, bols, vases…" },
-  { to: "/groupes", label: "Réservation de groupe", icon: Users, color: "bg-apricot text-foreground", desc: "Anniversaire, EVJF…" },
-  { to: "/cadeau", label: "Offrir une carte cadeau", icon: Gift, color: "bg-secondary text-secondary-foreground", desc: "À partir de 25 €" },
+  { to: "/reserver", label: "Réserver un atelier", icon: Palette, color: "bg-brick text-cream", desc: "Choisissez votre créneau" },
+  { to: "/brunch", label: "Brunch + atelier", icon: CroissantIcon, color: "bg-sage text-cream", desc: "La formule gourmande" },
+  { to: "/carte", label: "Voir la carte café", icon: Coffee, color: "bg-cream text-ink", desc: "Boissons & douceurs" },
+  { to: "/objets", label: "Objets à peindre", icon: Sparkles, color: "bg-mustard text-ink", desc: "Tasses, bols, vases…" },
+  { to: "/groupes", label: "Réservation de groupe", icon: Users, color: "bg-lavender text-cream", desc: "Anniversaire, EVJF…" },
+  { to: "/cadeau", label: "Offrir une carte cadeau", icon: Gift, color: "bg-rose text-ink", desc: "À partir de 25 €" },
 ] as const;
 
 function HomePage() {
@@ -42,31 +43,31 @@ function HomePage() {
     <PageShell>
       {/* HERO */}
       <section className="relative overflow-hidden">
-        <div className="blob -left-32 top-10 h-80 w-80 bg-rose" />
-        <div className="blob right-0 -top-10 h-72 w-72 bg-sage" />
-        <div className="blob left-1/3 top-1/2 h-72 w-72 bg-apricot" />
-        <div className="relative mx-auto max-w-6xl px-4 pt-12 pb-10 sm:pt-20 sm:pb-16">
-          <div className="inline-flex items-center gap-2 rounded-full bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground/70 backdrop-blur">
+        <OrganicShapes />
+        <div className="relative mx-auto max-w-6xl px-4 pt-12 pb-14 sm:pt-20 sm:pb-20">
+          <div className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-cream/80 px-3 py-1.5 text-xs font-medium text-ink/70 backdrop-blur">
             <span className="h-1.5 w-1.5 rounded-full bg-sage" /> Ouvert mardi → dimanche · 9h30 – 18h
           </div>
-          <h1 className="mt-5 text-4xl sm:text-6xl font-semibold leading-[1.05] max-w-3xl">
-            Votre moment créatif <span className="italic text-primary">à Saint-François.</span>
+          <h1 className="mt-6 text-5xl sm:text-7xl text-ink leading-[0.95] max-w-3xl">
+            Kafé Céramik.
+            <br />
+            <span className="text-brick">Déjeunette</span> &amp; <span className="text-sage">Création</span>.
           </h1>
-          <p className="mt-5 max-w-xl text-base sm:text-lg text-foreground/70">
+          <p className="mt-6 max-w-xl text-base sm:text-lg text-ink/75">
             Réservez votre moment créatif chez Kafé Céramik, entre peinture sur céramique,
-            café, brunch et douceurs maison.
+            café, brunch et douceurs maison. Saint-François, Guadeloupe.
           </p>
 
-          <div className="mt-7 flex flex-wrap gap-3">
+          <div className="mt-8 flex flex-wrap gap-3">
             <Link
               to="/reserver"
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90"
+              className="inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3.5 text-sm font-medium text-cream shadow-lg shadow-ink/10 hover:bg-brick transition"
             >
               <CalendarHeart className="h-4 w-4" /> Réserver un atelier
             </Link>
             <a
               href="tel:+590690284788"
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-5 py-3 text-sm font-medium backdrop-blur hover:bg-secondary"
+              className="inline-flex items-center gap-2 rounded-full border border-ink/20 bg-cream/80 px-6 py-3.5 text-sm font-medium backdrop-blur hover:bg-cream"
             >
               <Phone className="h-4 w-4" /> 0690 28 47 88
             </a>
