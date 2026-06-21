@@ -89,6 +89,27 @@ const creationPhotos = [
   },
 ] as const;
 
+const moodCards = [
+  {
+    icon: Coffee,
+    title: "Pause café & pinceaux",
+    body: "Un café glacé, une table tranquille, une pièce qui prend forme sans pression.",
+    tone: "bg-cream",
+  },
+  {
+    icon: Sparkles,
+    title: "Moment entre proches",
+    body: "Copines, couple, famille ou petit groupe : chacun choisit sa pièce et son univers.",
+    tone: "bg-rose/30",
+  },
+  {
+    icon: Gift,
+    title: "Idée cadeau simple",
+    body: "Une carte cadeau ou un atelier à offrir pour partager autre chose qu'un objet déjà tout fait.",
+    tone: "bg-sage/20",
+  },
+] as const;
+
 function HomePage() {
   return (
     <PageShell>
@@ -263,10 +284,29 @@ function HomePage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-8">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <FlowStep n="1" title="Choisir une pièce" body="Tasse, assiette, bol, vase ou petite déco selon les disponibilités du jour." />
-          <FlowStep n="2" title="Peindre au Kafé" body="Couleurs, pinceaux, café, jus frais ou brunch pendant le moment créatif." />
-          <FlowStep n="3" title="Revenir la récupérer" body="La pièce est cuite à l'atelier, puis récupérée quelques jours plus tard." />
+        <div className="rounded-3xl border border-border bg-card/80 p-5 shadow-sm shadow-ink/5 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-rose/35 px-3 py-1 text-xs font-medium text-ink/70">
+                <Sparkles className="h-3.5 w-3.5" /> À vivre au Kafé
+              </div>
+              <h2 className="mt-4 max-w-2xl text-3xl leading-tight text-ink sm:text-4xl">
+                Des moments qui ressemblent à l'endroit : simples, gourmands, créatifs.
+              </h2>
+            </div>
+            <Link
+              to="/reserver"
+              className="inline-flex w-fit items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
+            >
+              Voir les créneaux <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {moodCards.map((item) => (
+              <MoodTile key={item.title} item={item} />
+            ))}
+          </div>
         </div>
       </section>
 
@@ -326,12 +366,15 @@ function ExperienceCard({ item }: { item: (typeof experiences)[number] }) {
   );
 }
 
-function FlowStep({ n, title, body }: { n: string; title: string; body: string }) {
+function MoodTile({ item }: { item: (typeof moodCards)[number] }) {
+  const Icon = item.icon;
   return (
-    <div className="rounded-2xl border border-border bg-card/90 p-5">
-      <div className="grid h-10 w-10 place-items-center rounded-full bg-primary font-display text-primary-foreground">{n}</div>
-      <div className="mt-4 font-medium">{title}</div>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">{body}</p>
+    <div className={`rounded-2xl border border-border p-5 ${item.tone}`}>
+      <div className="grid h-11 w-11 place-items-center rounded-xl bg-card/80 text-ink">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="mt-5 font-medium">{item.title}</div>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
     </div>
   );
 }

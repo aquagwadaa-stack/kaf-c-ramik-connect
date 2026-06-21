@@ -16,33 +16,39 @@ export const Route = createFileRoute("/objets")({
 
 type Obj = { name: string; cat: string; price: string; kind: CeramicKind; bg: string; note?: string };
 
-const objectPhotos = [
-  { src: "/objets/figurines-xl.webp", title: "Figurines XXL", detail: "Monstres, dragons, licornes" },
-  { src: "/objets/tasse-design.webp", title: "Tasses design", detail: "Formats simples ou travaillés" },
-  { src: "/objets/tasses-texturees.webp", title: "Tasses texturées", detail: "Reliefs, bulles, anses originales" },
-  { src: "/objets/assiettes-empilees.webp", title: "Assiettes & coupelles", detail: "Formes plates, vagues ou décoratives" },
-  { src: "/objets/plateaux-cuilleres.webp", title: "Plateaux & cuillères", detail: "Pièces longues et accessoires" },
-  { src: "/objets/paniers-creatifs.webp", title: "Petits formats", detail: "Mini tasses, animaux, plaques" },
-  { src: "/objets/miniatures-a-peindre.webp", title: "Mini décos", detail: "Fruits, coquillages, champignons" },
-  { src: "/objets/petites-pieces.webp", title: "Objets à thème", detail: "Lapins, oeufs, bols couronne" },
-] as const;
-
 const items: Obj[] = [
   { name: "Tasse classique", cat: "Tasses", price: "18 €", kind: "mug", bg: "bg-rose/35", note: "format café" },
   { name: "Mug XL", cat: "Tasses", price: "22 €", kind: "mug", bg: "bg-mustard/30", note: "grand format" },
+  { name: "Tasse design", cat: "Tasses", price: "36 €", kind: "mug", bg: "bg-lavender/25", note: "anse travaillée" },
+  { name: "Tasse texturée", cat: "Tasses", price: "30 €", kind: "mug", bg: "bg-sage/20", note: "reliefs ou bulles" },
   { name: "Bol du matin", cat: "Bols", price: "20 €", kind: "bowl", bg: "bg-sage/25" },
   { name: "Bol mini", cat: "Bols", price: "15 €", kind: "bowl", bg: "bg-cream" },
+  { name: "Bol vague", cat: "Bols", price: "34 €", kind: "bowl", bg: "bg-rose/25" },
+  { name: "Bol matcha", cat: "Bols", price: "38 €", kind: "bowl", bg: "bg-mustard/20" },
   { name: "Assiette plate", cat: "Assiettes", price: "25 €", kind: "plate", bg: "bg-rose/25" },
   { name: "Assiette dessert", cat: "Assiettes", price: "20 €", kind: "plate", bg: "bg-mustard/25" },
+  { name: "Assiette coquillage", cat: "Assiettes", price: "38 €", kind: "plate", bg: "bg-sage/20", note: "forme décorative" },
+  { name: "Plateau apéro", cat: "Assiettes", price: "42 €", kind: "plate", bg: "bg-cream" },
   { name: "Vase soliflore", cat: "Vases", price: "28 €", kind: "vase", bg: "bg-sage/25" },
   { name: "Vase rond", cat: "Vases", price: "35 €", kind: "vase", bg: "bg-rose/30" },
+  { name: "Gros pot", cat: "Vases", price: "44 €", kind: "vase", bg: "bg-mustard/25" },
   { name: "Pichet décoratif", cat: "Décorations", price: "32 €", kind: "pitcher", bg: "bg-cream" },
   { name: "Carreau à motif", cat: "Décorations", price: "16 €", kind: "tile", bg: "bg-sage/20" },
   { name: "Suspension murale", cat: "Décorations", price: "12 €", kind: "tile", bg: "bg-rose/35" },
+  { name: "Porte-savon", cat: "Décorations", price: "24 €", kind: "tile", bg: "bg-lavender/25" },
+  { name: "Cuillère déco", cat: "Décorations", price: "12 €", kind: "tile", bg: "bg-cream" },
   { name: "Petite pièce enfant", cat: "Enfants", price: "16 €", kind: "tile", bg: "bg-mustard/25" },
+  { name: "Petit dragon", cat: "Figurines", price: "32 €", kind: "vase", bg: "bg-sage/25", note: "figurine à peindre" },
+  { name: "Licorne", cat: "Figurines", price: "28 €", kind: "vase", bg: "bg-rose/30", note: "format enfant" },
+  { name: "Grenouille", cat: "Figurines", price: "36 €", kind: "bowl", bg: "bg-mustard/25" },
+  { name: "Boîte lapin", cat: "Figurines", price: "44 €", kind: "bowl", bg: "bg-cream" },
+  { name: "Mini champignon", cat: "Mini décos", price: "10 €", kind: "tile", bg: "bg-rose/25" },
+  { name: "Coquillage mini", cat: "Mini décos", price: "10 €", kind: "tile", bg: "bg-sage/20" },
+  { name: "Petit fruit", cat: "Mini décos", price: "10 €", kind: "tile", bg: "bg-lavender/25" },
+  { name: "Mini tasse", cat: "Mini décos", price: "16 €", kind: "mug", bg: "bg-mustard/20" },
 ];
 
-const cats = ["Tous", "Tasses", "Bols", "Assiettes", "Vases", "Enfants", "Décorations"];
+const cats = ["Tous", "Tasses", "Bols", "Assiettes", "Vases", "Figurines", "Mini décos", "Enfants", "Décorations"];
 
 function ObjetsPage() {
   const [cat, setCat] = useState("Tous");
@@ -55,26 +61,7 @@ function ObjetsPage() {
         description="Un aperçu des pièces disponibles au Kafé. La sélection évolue selon les arrivages, les réservations et les cuissons."
       />
       <section className="mx-auto max-w-6xl px-4 py-10">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {objectPhotos.map((photo) => (
-            <div key={photo.src} className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm shadow-ink/5">
-              <div className="aspect-[4/5] overflow-hidden bg-cream">
-                <img
-                  src={photo.src}
-                  alt={photo.title}
-                  loading="lazy"
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <div className="p-4">
-                <div className="font-medium">{photo.title}</div>
-                <div className="mt-1 text-sm text-muted-foreground">{photo.detail}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-8 flex items-center gap-2 overflow-x-auto pb-2">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2">
           <Filter className="h-4 w-4 shrink-0 text-muted-foreground" />
           {cats.map((c) => (
             <button
