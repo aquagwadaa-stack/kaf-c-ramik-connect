@@ -68,24 +68,24 @@ const pieces: { name: string; detail: string; kind: CeramicKind; tone: string }[
 
 const creationPhotos = [
   {
-    src: "/creations/figurines-xl.webp",
-    title: "Figurines à peindre",
-    body: "Des pièces expressives pour les ateliers en famille ou entre amis.",
+    src: "/creations/assiette-tortue.webp",
+    title: "Assiette tortue tropicale",
+    body: "Une pièce peinte avec des motifs fins et une ambiance très Guadeloupe.",
   },
   {
-    src: "/creations/tasse-design.webp",
-    title: "Tasses design",
-    body: "Des formes simples qui deviennent vite très personnelles.",
+    src: "/creations/bol-vache.webp",
+    title: "Bol vache",
+    body: "Un exemple fun et accessible pour montrer que chacun peut partir sur son univers.",
   },
   {
-    src: "/creations/tasses-texturees.webp",
-    title: "Textures & reliefs",
-    body: "Des surfaces qui accrochent la couleur et donnent du caractère.",
+    src: "/creations/tasse-feuillage.webp",
+    title: "Tasse feuillage bleu",
+    body: "Un rendu plus délicat, parfait pour inspirer les motifs végétaux.",
   },
   {
-    src: "/creations/petites-pieces.webp",
-    title: "Petites décos",
-    body: "Des formats rapides à peindre pour repartir avec une idée claire.",
+    src: "/creations/assiette-bateau.webp",
+    title: "Assiette bateau",
+    body: "Une pièce plus artistique qui donne envie de prendre le temps.",
   },
 ] as const;
 
@@ -226,8 +226,8 @@ function HomePage() {
               Quelques idées avant de choisir sa pièce.
             </h2>
             <p className="mt-4 max-w-xl text-sm leading-6 text-foreground/70 sm:text-base">
-              Un aperçu des formes disponibles au Kafé : tasses, assiettes, figurines, petits objets
-              et pièces déco à personnaliser pendant l'atelier.
+              Un aperçu de pièces déjà peintes au Kafé : motifs tropicaux, dessins fins,
+              aplats colorés et idées simples à reprendre pendant l'atelier.
             </p>
           </div>
           <Link

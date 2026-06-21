@@ -16,6 +16,17 @@ export const Route = createFileRoute("/objets")({
 
 type Obj = { name: string; cat: string; price: string; kind: CeramicKind; bg: string; note?: string };
 
+const objectPhotos = [
+  { src: "/objets/figurines-xl.webp", title: "Figurines XXL", detail: "Monstres, dragons, licornes" },
+  { src: "/objets/tasse-design.webp", title: "Tasses design", detail: "Formats simples ou travaillés" },
+  { src: "/objets/tasses-texturees.webp", title: "Tasses texturées", detail: "Reliefs, bulles, anses originales" },
+  { src: "/objets/assiettes-empilees.webp", title: "Assiettes & coupelles", detail: "Formes plates, vagues ou décoratives" },
+  { src: "/objets/plateaux-cuilleres.webp", title: "Plateaux & cuillères", detail: "Pièces longues et accessoires" },
+  { src: "/objets/paniers-creatifs.webp", title: "Petits formats", detail: "Mini tasses, animaux, plaques" },
+  { src: "/objets/miniatures-a-peindre.webp", title: "Mini décos", detail: "Fruits, coquillages, champignons" },
+  { src: "/objets/petites-pieces.webp", title: "Objets à thème", detail: "Lapins, oeufs, bols couronne" },
+] as const;
+
 const items: Obj[] = [
   { name: "Tasse classique", cat: "Tasses", price: "18 €", kind: "mug", bg: "bg-rose/35", note: "format café" },
   { name: "Mug XL", cat: "Tasses", price: "22 €", kind: "mug", bg: "bg-mustard/30", note: "grand format" },
@@ -41,10 +52,29 @@ function ObjetsPage() {
       <PageHeader
         eyebrow="Catalogue"
         title="Objets à peindre"
-        description="Un aperçu des pièces généralement disponibles. La sélection évolue selon les arrivages et les cuissons."
+        description="Un aperçu des pièces disponibles au Kafé. La sélection évolue selon les arrivages, les réservations et les cuissons."
       />
       <section className="mx-auto max-w-6xl px-4 py-10">
-        <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {objectPhotos.map((photo) => (
+            <div key={photo.src} className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm shadow-ink/5">
+              <div className="aspect-[4/5] overflow-hidden bg-cream">
+                <img
+                  src={photo.src}
+                  alt={photo.title}
+                  loading="lazy"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="p-4">
+                <div className="font-medium">{photo.title}</div>
+                <div className="mt-1 text-sm text-muted-foreground">{photo.detail}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-8 flex items-center gap-2 overflow-x-auto pb-2">
           <Filter className="h-4 w-4 shrink-0 text-muted-foreground" />
           {cats.map((c) => (
             <button
