@@ -257,6 +257,33 @@ function HomePage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-8">
+        <div className="rounded-3xl border border-border bg-card/80 p-5 shadow-sm shadow-ink/5 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-rose/35 px-3 py-1 text-xs font-medium text-ink/70">
+                <Sparkles className="h-3.5 w-3.5" /> À vivre au Kafé
+              </div>
+              <h2 className="mt-4 max-w-2xl text-3xl leading-tight text-ink sm:text-4xl">
+                Des moments qui ressemblent à l'endroit : simples, gourmands, créatifs.
+              </h2>
+            </div>
+            <Link
+              to="/reserver"
+              className="inline-flex w-fit items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
+            >
+              Voir les créneaux <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {moodCards.map((item) => (
+              <MoodTile key={item.title} item={item} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 py-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-cream/80 px-3 py-1 text-xs font-medium text-ink/70">
@@ -299,33 +326,6 @@ function HomePage() {
               </div>
             </Link>
           ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 py-8">
-        <div className="rounded-3xl border border-border bg-card/80 p-5 shadow-sm shadow-ink/5 sm:p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-rose/35 px-3 py-1 text-xs font-medium text-ink/70">
-                <Sparkles className="h-3.5 w-3.5" /> À vivre au Kafé
-              </div>
-              <h2 className="mt-4 max-w-2xl text-3xl leading-tight text-ink sm:text-4xl">
-                Des moments qui ressemblent à l'endroit : simples, gourmands, créatifs.
-              </h2>
-            </div>
-            <Link
-              to="/reserver"
-              className="inline-flex w-fit items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
-            >
-              Voir les créneaux <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            {moodCards.map((item) => (
-              <MoodTile key={item.title} item={item} />
-            ))}
-          </div>
         </div>
       </section>
 
