@@ -1,12 +1,16 @@
 import type { ReactNode } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { SiteFooter, SiteHeader } from "./site-header";
 import { OrganicShapes } from "./organic-shapes";
 
 export function PageShell({ children }: { children: ReactNode }) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex min-h-screen flex-col">
       <SiteHeader />
-      <main className="flex-1">{children}</main>
+      <main key={pathname} className="page-enter flex-1">
+        {children}
+      </main>
       <SiteFooter />
     </div>
   );
@@ -30,9 +34,9 @@ export function PageHeader({
             {eyebrow}
           </div>
         )}
-        <h1 className="text-4xl sm:text-6xl text-ink max-w-3xl leading-[1.05]">{title}</h1>
+        <h1 className="max-w-3xl text-4xl leading-[1.05] text-ink sm:text-6xl">{title}</h1>
         {description && (
-          <p className="mt-5 max-w-2xl text-base sm:text-lg text-ink/75">{description}</p>
+          <p className="mt-5 max-w-2xl text-base text-ink/75 sm:text-lg">{description}</p>
         )}
       </div>
     </section>

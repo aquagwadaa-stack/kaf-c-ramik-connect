@@ -151,4 +151,95 @@
     background-position: 0 0, 0 32px, 32px -32px, -32px 0;
     background-size: 64px 64px;
   }
+
+  /* Animated nav link underline */
+  .nav-link {
+    position: relative;
+    transition: color 0.2s ease;
+  }
+  .nav-link::after {
+    content: "";
+    position: absolute;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.35rem;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .nav-link:hover::after,
+  .nav-link[data-status="active"]::after {
+    transform: scaleX(1);
+  }
+
+  /* Tactile press for buttons */
+  .press {
+    transition:
+      transform 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.25s ease,
+      background-color 0.2s ease,
+      opacity 0.2s ease;
+  }
+  .press:hover { transform: translateY(-1.5px); }
+  .press:active { transform: translateY(0) scale(0.98); }
+
+  /* Shine sweep on primary CTAs */
+  .shine {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .shine::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      120deg,
+      transparent 30%,
+      color-mix(in oklab, white 35%, transparent) 50%,
+      transparent 70%
+    );
+    transform: translateX(-120%);
+    transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+  }
+  .shine:hover::before { transform: translateX(120%); }
 }
+
+@layer utilities {
+  @keyframes float-y {
+    0%, 100% { transform: translateY(0) rotate(var(--rot, 0deg)); }
+    50% { transform: translateY(-8px) rotate(var(--rot, 0deg)); }
+  }
+  .float-slow { animation: float-y 6s ease-in-out infinite; }
+  .float-med { animation: float-y 4.5s ease-in-out infinite; }
+  .float-fast { animation: float-y 3.8s ease-in-out infinite; }
+
+  @keyframes soft-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 color-mix(in oklab, var(--sage) 60%, transparent); }
+    50% { transform: scale(1.15); opacity: 0.85; box-shadow: 0 0 0 6px color-mix(in oklab, var(--sage) 0%, transparent); }
+  }
+  .pulse-dot { animation: soft-pulse 2.2s ease-in-out infinite; }
+
+  @keyframes page-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .page-enter { animation: page-in 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+  @keyframes rise-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .rise { animation: rise-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .float-slow, .float-med, .float-fast,
+    .pulse-dot, .page-enter, .rise,
+    .shine::before { animation: none !important; transition: none !important; }
+  }
+}
+
