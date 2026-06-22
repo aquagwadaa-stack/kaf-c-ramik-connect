@@ -126,8 +126,7 @@ function HomePage() {
               <span className="text-brick">Déjeunette</span> &amp; <span className="text-sage">Création</span>.
             </h1>
             <p className="mt-6 max-w-xl text-base text-ink/75 sm:text-lg">
-              Venez librement pour un café, un bagel ou une déjeunette. Pour peindre sur céramique,
-              la réservation vous donne la priorité sur les places disponibles.
+              Réservez votre moment créatif chez Kafé Céramik, entre peinture sur céramique, café, brunch et douceurs maison. Saint-François, Guadeloupe.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
