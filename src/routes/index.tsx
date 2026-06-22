@@ -155,7 +155,7 @@ function HomePage() {
           <VisitNote
             icon={Coffee}
             title="Kafé sans réservation"
-            body="Passez pour un café, un jus, un bagel ou une déjeunette selon les places du moment."
+            body="Passez pour un café, un jus, un bagel ou une déjeunette tranquillement."
           />
           <VisitNote
             icon={CalendarHeart}
