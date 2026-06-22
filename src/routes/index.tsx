@@ -150,7 +150,7 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto -mt-4 max-w-6xl px-4 pb-6">
+      <section className="mx-auto -mt-2 max-w-6xl px-4 pb-3">
         <div className="grid gap-3 rounded-3xl border border-border bg-card/85 p-4 shadow-sm shadow-ink/5 sm:grid-cols-3 sm:p-5">
           <VisitNote
             icon={Coffee}
