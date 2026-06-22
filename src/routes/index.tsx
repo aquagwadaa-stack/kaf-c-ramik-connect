@@ -118,7 +118,7 @@ function HomePage() {
         <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pt-12 pb-14 sm:pt-20 sm:pb-20 lg:grid-cols-[1fr_420px]">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-cream/85 px-3 py-1.5 text-xs font-medium text-ink/70 backdrop-blur">
-              <span className="h-1.5 w-1.5 rounded-full bg-sage" /> Ouvert mardi → dimanche · 9h30 – 18h
+              <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-sage" /> Ouvert mardi → dimanche · 9h30 – 18h
             </div>
             <h1 className="mt-6 max-w-3xl text-5xl leading-[0.95] text-ink sm:text-7xl">
               Kafé Céramik.
@@ -132,24 +132,25 @@ function HomePage() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 to="/reserver"
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3.5 text-sm font-medium text-primary-foreground shadow-lg shadow-ink/10 transition hover:bg-sage/90"
+                className="press shine group inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3.5 text-sm font-medium text-primary-foreground shadow-lg shadow-ink/10 hover:bg-sage/90"
               >
-                <CalendarHeart className="h-4 w-4" /> Réserver un atelier
+                <CalendarHeart className="h-4 w-4 transition-transform duration-300 group-hover:rotate-[-8deg]" /> Réserver un atelier
               </Link>
               <Link
                 to="/carte"
-                className="inline-flex items-center gap-2 rounded-full border border-ink/20 bg-cream/85 px-6 py-3.5 text-sm font-medium backdrop-blur hover:bg-cream"
+                className="press group inline-flex items-center gap-2 rounded-full border border-ink/20 bg-cream/85 px-6 py-3.5 text-sm font-medium backdrop-blur hover:bg-cream"
               >
-                <Coffee className="h-4 w-4" /> Voir la carte café
+                <Coffee className="h-4 w-4 transition-transform duration-300 group-hover:rotate-12" /> Voir la carte café
               </Link>
             </div>
+
           </div>
 
           <CeramicHero />
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto -mt-2 max-w-6xl px-4 pb-3">
+      <section className="relative z-10 mx-auto mt-2 max-w-6xl px-4 pb-2">
         <div className="grid gap-3 rounded-xl border border-border bg-card p-4 shadow-sm shadow-ink/5 sm:grid-cols-3 sm:p-5">
           <VisitNote
             icon={Coffee}
@@ -343,18 +344,28 @@ function HomePage() {
 function CeramicHero() {
   return (
     <div className="relative mx-auto hidden min-h-[360px] w-full max-w-sm lg:block">
-      <div className="absolute left-8 top-8 h-60 w-60 rotate-[-7deg] rounded-[2rem] border border-border bg-cream/80 p-4 shadow-xl shadow-ink/10">
+      <div
+        className="float-slow absolute left-8 top-8 h-60 w-60 rounded-[2rem] border border-border bg-cream/80 p-4 shadow-xl shadow-ink/10"
+        style={{ ["--rot" as never]: "-7deg" }}
+      >
         <CeramicPiece kind="plate" label="Assiette peinte" />
       </div>
-      <div className="absolute right-0 top-2 h-36 w-36 rotate-[10deg] rounded-3xl border border-border bg-rose/35 p-3 shadow-lg shadow-ink/10">
+      <div
+        className="float-med absolute right-0 top-2 h-36 w-36 rounded-3xl border border-border bg-rose/35 p-3 shadow-lg shadow-ink/10"
+        style={{ ["--rot" as never]: "10deg" }}
+      >
         <CeramicPiece kind="mug" label="Tasse peinte" />
       </div>
-      <div className="absolute bottom-3 right-12 h-40 w-40 rotate-[-5deg] rounded-3xl border border-border bg-sage/25 p-3 shadow-lg shadow-ink/10">
+      <div
+        className="float-fast absolute bottom-3 right-12 h-40 w-40 rounded-3xl border border-border bg-sage/25 p-3 shadow-lg shadow-ink/10"
+        style={{ ["--rot" as never]: "-5deg" }}
+      >
         <CeramicPiece kind="vase" label="Vase à peindre" />
       </div>
     </div>
   );
 }
+
 
 function ExperienceCard({ item }: { item: (typeof experiences)[number] }) {
   const Icon = item.icon;
