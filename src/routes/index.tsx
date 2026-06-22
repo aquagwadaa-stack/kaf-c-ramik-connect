@@ -54,7 +54,7 @@ const experiences = [
 ] as const;
 
 const quickLinks = [
-  { to: "/carte", label: "Carte café", desc: "Boissons, brunch, douceurs", icon: Coffee },
+  { to: "/carte", label: "Carte café", desc: "Café, bagels, brunch sans réservation", icon: Coffee },
   { to: "/objets", label: "Objets à peindre", desc: "Tasses, bols, vases", icon: Sparkles },
   { to: "/cadeau", label: "Carte cadeau", desc: "Offrir un atelier", icon: Gift },
 ] as const;
@@ -126,8 +126,8 @@ function HomePage() {
               <span className="text-brick">Déjeunette</span> &amp; <span className="text-sage">Création</span>.
             </h1>
             <p className="mt-6 max-w-xl text-base text-ink/75 sm:text-lg">
-              Réservez votre moment créatif chez Kafé Céramik, entre peinture sur céramique,
-              café, brunch et douceurs maison. Saint-François, Guadeloupe.
+              Venez librement pour un café, un bagel ou une déjeunette. Pour peindre sur céramique,
+              la réservation vous donne la priorité sur les places disponibles.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -137,16 +137,36 @@ function HomePage() {
               >
                 <CalendarHeart className="h-4 w-4" /> Réserver un atelier
               </Link>
-              <a
-                href="tel:+590690284788"
+              <Link
+                to="/carte"
                 className="inline-flex items-center gap-2 rounded-full border border-ink/20 bg-cream/85 px-6 py-3.5 text-sm font-medium backdrop-blur hover:bg-cream"
               >
-                <Phone className="h-4 w-4" /> 0690 28 47 88
-              </a>
+                <Coffee className="h-4 w-4" /> Voir la carte café
+              </Link>
             </div>
           </div>
 
           <CeramicHero />
+        </div>
+      </section>
+
+      <section className="mx-auto -mt-4 max-w-6xl px-4 pb-6">
+        <div className="grid gap-3 rounded-3xl border border-border bg-card/85 p-4 shadow-sm shadow-ink/5 sm:grid-cols-3 sm:p-5">
+          <VisitNote
+            icon={Coffee}
+            title="Kafé sans réservation"
+            body="Passez pour un café, un jus, un bagel ou une déjeunette selon les places du moment."
+          />
+          <VisitNote
+            icon={CalendarHeart}
+            title="Atelier prioritaire sur réservation"
+            body="Les places peinture partent vite : réserver sécurise votre table et votre créneau."
+          />
+          <VisitNote
+            icon={Sparkles}
+            title="Places du jour possibles"
+            body="Sans réservation, l'atelier reste possible s'il reste de la place à votre arrivée."
+          />
         </div>
       </section>
 
@@ -375,6 +395,28 @@ function MoodTile({ item }: { item: (typeof moodCards)[number] }) {
       </div>
       <div className="mt-5 font-medium">{item.title}</div>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
+    </div>
+  );
+}
+
+function VisitNote({
+  icon: Icon,
+  title,
+  body,
+}: {
+  icon: typeof Coffee;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary text-secondary-foreground">
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="min-w-0">
+        <span className="block font-medium">{title}</span>
+        <span className="mt-1 block text-sm leading-5 text-muted-foreground">{body}</span>
+      </span>
     </div>
   );
 }

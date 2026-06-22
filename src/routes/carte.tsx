@@ -79,7 +79,7 @@ function CartePage() {
       <PageHeader
         eyebrow="Carte"
         title="Kafé ou déjeunette"
-        description="Service en continu de 9h30 à 18h, du mardi au dimanche."
+        description="Service en continu de 9h30 à 18h, du mardi au dimanche. Café, bagels et déjeunette se font sans réservation."
       />
       <section className="mx-auto max-w-6xl px-4 py-10">
         <div className="checker-pink rounded-[1.75rem] border border-border p-3 sm:p-5">
@@ -114,9 +114,9 @@ function CartePage() {
             </div>
 
             <div className="relative mt-8 grid gap-3 border-t border-dashed border-ink/20 pt-6 sm:grid-cols-3">
-              <MiniNote icon={CroissantIcon} title="Brunch + atelier" body="Une formule pensée pour prendre le temps." />
+              <MiniNote icon={CroissantIcon} title="Sans réservation" body="Passez librement pour le Kafé, selon les tables disponibles." />
               <MiniNote icon={CupSoda} title="Jus frais" body="Recettes du moment, à confirmer au comptoir." />
-              <MiniNote icon={Sparkles} title="Atelier" body="La céramique se choisit sur place selon stock." />
+              <MiniNote icon={Sparkles} title="Atelier" body="Réservation conseillée : les créneaux réservés sont prioritaires." />
             </div>
           </div>
         </div>

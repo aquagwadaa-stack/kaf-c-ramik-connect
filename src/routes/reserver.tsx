@@ -91,9 +91,22 @@ function ReserverPage() {
       <PageHeader
         eyebrow="Réservation"
         title="Réservez votre atelier"
-        description="Choisissez votre formule, puis sélectionnez directement un créneau dans le planning de la semaine."
+        description="La réservation concerne l'atelier céramique. Pour un café, un bagel ou une déjeunette, vous pouvez passer librement."
       />
       <section className="mx-auto max-w-5xl px-4 py-10">
+        <div className="mb-5 grid gap-3 rounded-2xl border border-border bg-cream/75 p-4 sm:grid-cols-[auto_1fr] sm:items-center">
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-secondary text-secondary-foreground">
+            <Coffee className="h-5 w-5" />
+          </span>
+          <div>
+            <div className="font-medium">Envie de venir seulement au Kafé ?</div>
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+              Pas besoin de réserver pour boire un café, manger un bagel ou bruncher. Pour peindre, les personnes
+              ayant réservé sont prioritaires ; des places peuvent se libérer sur place selon l'affluence.
+            </p>
+          </div>
+        </div>
+
         <Stepper step={step} />
 
         <div className="mt-6 rounded-2xl border border-border bg-card p-5 sm:p-8">
