@@ -83,13 +83,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "Café-atelier en Guadeloupe. Réservez un atelier de peinture sur céramique, un brunch + atelier, ou un événement de groupe à Saint-François.",
       },
-      { property: "og:title", content: "Kafé Céramik — Déjeunette & Création" },
+      { property: "og:title", content: "Kafé Céramik — Réservez votre moment créatif à Saint-François" },
       {
         property: "og:description",
         content: "Réservez votre atelier de peinture sur céramique à Saint-François, Guadeloupe.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Kafé Céramik — Réservez votre moment créatif à Saint-François" },
+      { name: "description", content: "Web app for Kafé Céramik Guadeloupe: book ceramic workshops, brunch, and manage reservations." },
+      { property: "og:description", content: "Web app for Kafé Céramik Guadeloupe: book ceramic workshops, brunch, and manage reservations." },
+      { name: "twitter:description", content: "Web app for Kafé Céramik Guadeloupe: book ceramic workshops, brunch, and manage reservations." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e2ef7785-f2f9-4712-8513-381bffc82a0a/id-preview-2673b219--00ccab37-93b3-432c-8d64-4b8d98211dba.lovable.app-1782165375738.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e2ef7785-f2f9-4712-8513-381bffc82a0a/id-preview-2673b219--00ccab37-93b3-432c-8d64-4b8d98211dba.lovable.app-1782165375738.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
