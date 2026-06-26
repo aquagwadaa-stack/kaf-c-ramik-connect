@@ -6,8 +6,8 @@ import { CeramicPiece } from "@/components/ceramic-piece";
 export const Route = createFileRoute("/carte")({
   head: () => ({
     meta: [
-      { title: "Carte café — Kafé Céramik" },
-      { name: "description", content: "Cafés, jus frais, boissons gourmandes, brunch et pâtisseries maison du Kafé Céramik." },
+      { title: "Carte — Kafé Céramik" },
+      { name: "description", content: "Cafés, jus frais pressés, déjeunette, brunch et pâtisseries maison du Kafé Céramik à Saint-François." },
     ],
   }),
   component: CartePage,
@@ -25,11 +25,12 @@ const sections: { title: string; subtitle: string; items: Item[]; accent: string
       { name: "Double espresso", price: "4 €" },
       { name: "Café bombon", desc: "espresso, lait concentré sucré, chantilly", price: "4 €" },
       { name: "Cappuccino ou iced cappuccino", desc: "lait amande ou coco +0,50 €", price: "4,50 €" },
-      { name: "Chocolat chaud", desc: "chocolat local de communion, onctueux et parfumé", price: "4 €" },
+      { name: "Chocolat chaud", desc: "chocolat local de communion onctueux et parfumé", price: "4 €" },
       { name: "Chaï latte amande", desc: "chaud ou froid", price: "5 €" },
       { name: "Matcha latte coco", desc: "chaud ou froid", price: "5 €" },
-      { name: "Golden latte", desc: "curcuma, gingembre, cannelle", price: "6 €" },
-      { name: "Infusion / thé du moment", price: "3,50 €" },
+      { name: "Création glacée du moment", desc: "à découvrir au comptoir", price: "3 € / 6 €" },
+      { name: "Golden latte", desc: "curcuma, gingembre, cannelle — aux vertus réconfortantes et anti-inflammatoires", price: "6 €" },
+      { name: "Infusion / thé du moment", desc: "chaud ou froid", price: "3,50 €" },
     ],
   },
   {
@@ -37,26 +38,32 @@ const sections: { title: string; subtitle: string; items: Item[]; accent: string
     subtitle: "pressés, frais, colorés",
     accent: "text-sage",
     items: [
-      { name: "Le Very Skinny", desc: "pomme, ananas, concombre, citron vert, menthe, épinard", price: "8 €" },
+      { name: "Le Very Skinny", desc: "pomme, ananas, concombre, citron vert, menthe fraîche, épinard", price: "8 €" },
       { name: "Le Vitamine Sea", desc: "carotte, ananas, orange, gingembre", price: "8 €" },
-      { name: "Le Ti Bo Doudou", desc: "symbiose éphémère à découvrir au comptoir", price: "8 €" },
+      { name: "Le Ti Bo Doudou", desc: "symbiose éphémère et originale de saveurs d'ici ou d'ailleurs, à découvrir sur l'ardoise du comptoir", price: "8 €" },
       { name: "La Piña Coco Lada", desc: "ananas, lait de coco, sucre de canne, citron vert", price: "8 €" },
-      { name: "Ginger beer maison", desc: "boisson probiotique sans alcool, bien épicée", price: "6 €", tag: "spicy" },
+      { name: "Ginger beer maison", desc: "boisson maison probiotiquée sans alcool, pétillante à base de gingembre fermenté, bien épicée", price: "6 €", tag: "spicy" },
+      { name: "Petit jus d'ananas ou jus tropical", price: "3,50 €" },
       { name: "Orange pressée", price: "6,50 €" },
       { name: "Citron pressé", price: "3 €" },
+      { name: "Ginger shot", desc: "concentré puissant de gingembre et curcuma, relevé d'une touche de citron et de piment — boost immunité et énergie", price: "3 €" },
+      { name: "Limonade Mamounia", desc: "limonade, menthe fraîche, fleur d'oranger, citron et sucre de canne", price: "3,50 €" },
+      { name: "Eau plate / gazeuse", desc: "petite 2 € / grande 3 €", price: "2 € / 3 €" },
     ],
   },
   {
-    title: "Déjeunette",
+    title: "À table — Déjeunette",
     subtitle: "service en continu",
     accent: "text-rose",
     items: [
-      { name: "Le Ronchon", desc: "croissant rond, œuf au plat, reblochon, jambon, sauce hollandaise", price: "16 €" },
-      { name: "Le Morning Bagel", desc: "bagel, œuf, bacon crispy, philadelphia, cheddar", price: "11 €" },
-      { name: "Le Summer Body", desc: "wrap, houmous, chèvre frais, légumes confits, pickles", price: "16 €" },
-      { name: "Le Summer Bowl", desc: "bowl quinoa, œuf au plat, légumes, option sans gluten", price: "16 €" },
-      { name: "La Sirène des Caraïbes", desc: "bagel, fromage frais, avocat, thazard fumé, roquette", price: "16 €" },
-      { name: "Nutty banana bowl", desc: "yaourt, granola, noix, coco, banane, sirop d'érable", price: "12 €" },
+      { name: "Le Ronchon", desc: "croissant rond, œuf au plat, reblochon fondant, jambon de Noël antillais, sauce hollandaise, cives et oignons frits — servi avec ses p'tites potatoes", price: "16 €" },
+      { name: "Le Mec Muffin", desc: "pain dodu brioché garni de deux œufs (brouillés ou au plat), cheddar fondu, bacon, mayonnaise au paprika fumé et oignons confits aux 4 épices — servi avec ses p'tites potatoes", price: "16 €" },
+      { name: "Le Morning Bagel", desc: "bagel, œuf au plat, bacon crispy, fromage frais philadelphia, cheddar", price: "11 €" },
+      { name: "Le Summer Body", desc: "wrap de blé toasté, houmous, chèvre frais, épinards, assortiment de légumes confits (poivrons, artichauts, courgettes, aubergines), pickles de chou rouge, pesto du jardin et mélange de graines torréfiées — servi avec ses p'tites potatoes", price: "16 €" },
+      { name: "Le Summer Bowl", desc: "la version bowl du Summer Body sur une base de quinoa avec œuf au plat — sans gluten", price: "16 €" },
+      { name: "La Sirène des Caraïbes", desc: "bagel, fromage frais citronné fouetté à l'avocat, zestes de combava, tranches de thazard intrépide local et fumé, roquette, concombre et pickles d'oignons rouges — servi avec ses p'tites potatoes", price: "16 €" },
+      { name: "Nutty Banana Bowl", desc: "yaourt onctueux, granola au chocolat noir, mélange de noix torréfiées, coco râpée grillée, bananes et beurre de cacahuète recouvert d'un filet de sirop d'érable", price: "12 €" },
+      { name: "Extra potatoes et sa mayo au paprika", price: "+4,50 €" },
     ],
   },
   {
@@ -64,11 +71,17 @@ const sections: { title: string; subtitle: string; items: Item[]; accent: string
     subtitle: "sucré, glacé, maison",
     accent: "text-mustard",
     items: [
-      { name: "Le Big Macchiato", desc: "500 ml de café glacé, chantilly et topping préféré", price: "8 €" },
-      { name: "Gaufre liégeoise", desc: "topping au choix : pâte à tartiner, miel, dulce de leche", price: "5,50 €" },
-      { name: "Pâtisserie maison du jour", desc: "à découvrir dans la vitrine du Kafé", price: "—" },
-      { name: "Petit jus d'ananas ou tropical", price: "3,50 €" },
-      { name: "Eau plate / gazeuse", desc: "petite ou grande", price: "2 €" },
+      { name: "Le Big Macchiato", desc: "500 ml de café glacé crémeux, chantilly et ton topping préféré : Nutella, spéculoos ou peanut butter", price: "8 €" },
+      { name: "Gaufre liégeoise", desc: "servie avec ton topping préféré : Nutella, miel, dulce de leche, sirop d'érable. Extra chantilly +0,50 €", price: "5,50 €" },
+      { name: "Pâtisseries divines faites maison", desc: "à découvrir dans la vitrine du Kafé", price: "—" },
+    ],
+  },
+  {
+    title: "Menu Kids",
+    subtitle: "− de 12 ans",
+    accent: "text-brick",
+    items: [
+      { name: "Formule enfant", desc: "un jus tropical/ananas ou un chocolat chaud · une demie gaufre, un œuf au plat, du bacon crispy et des potatoes · un cookie", price: "12 €" },
     ],
   },
 ];
@@ -112,6 +125,10 @@ function CartePage() {
                 <MenuSection key={section.title} section={section} />
               ))}
             </div>
+
+            <p className="relative mt-6 text-center text-sm italic text-foreground/70">
+              Merci d'accompagner votre atelier d'une petite consommation ♥
+            </p>
 
             <div className="relative mt-8 grid gap-3 border-t border-dashed border-ink/20 pt-6 sm:grid-cols-3">
               <MiniNote icon={CroissantIcon} title="Sans réservation" body="Passez librement pour le Kafé, selon les tables disponibles." />

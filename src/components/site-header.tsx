@@ -5,7 +5,7 @@ import { Menu, X, Coffee } from "lucide-react";
 const links = [
   { to: "/reserver", label: "Réserver" },
   { to: "/brunch", label: "Brunch + Atelier" },
-  { to: "/carte", label: "Carte café" },
+  { to: "/carte", label: "Carte" },
   { to: "/objets", label: "Objets" },
   { to: "/cadeau", label: "Carte cadeau" },
 ] as const;
