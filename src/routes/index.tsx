@@ -33,7 +33,7 @@ export const Route = createFileRoute("/")({
 const experiences = [
   {
     to: "/reserver",
-    title: "Atelier libre",
+    title: "Atelier céramique",
     eyebrow: "Peinture sur céramique",
     body: "Choisissez votre pièce, vos couleurs, votre créneau, puis laissez poser les pinceaux autour d'un café.",
     icon: Palette,
