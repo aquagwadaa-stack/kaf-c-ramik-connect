@@ -26,9 +26,8 @@ export const Route = createFileRoute("/reserver")({
 });
 
 const experiences: { id: ExperienceType; title: string; desc: string; icon: typeof Palette; price: string }[] = [
-  { id: "atelier", title: "Atelier céramique", desc: "Peinture sur céramique, à votre rythme.", icon: Palette, price: "dès 22 €/pers" },
-  { id: "cafe_atelier", title: "Café + atelier", desc: "Une boisson chaude et votre création.", icon: Coffee, price: "dès 28 €/pers" },
-  { id: "brunch_atelier", title: "Brunch + atelier", desc: "Brunch gourmand puis création.", icon: CroissantIcon, price: "dès 38 €/pers" },
+  { id: "cafe_atelier", title: "Atelier céramique (autour d'un café)", desc: "Peinture sur céramique avec une boisson chaude ou un jus.", icon: Coffee, price: "dès 28 €/pers" },
+  { id: "brunch_atelier", title: "Atelier céramique (avec un brunch)", desc: "Brunch gourmand puis création.", icon: CroissantIcon, price: "dès 38 €/pers" },
   { id: "groupe", title: "Groupe / événement", desc: "Pour une grande table ou une occasion spéciale.", icon: Users, price: "sur demande" },
 ];
 
@@ -36,7 +35,7 @@ const SLOTS = ["09:30", "10:30", "11:30", "13:30", "14:30", "15:30", "16:30"];
 
 function ReserverPage() {
   const [step, setStep] = useState(1);
-  const [experience, setExperience] = useState<ExperienceType>("atelier");
+  const [experience, setExperience] = useState<ExperienceType>("cafe_atelier");
   const [people, setPeople] = useState(2);
   const [date, setDate] = useState<string>("");
   const [slot, setSlot] = useState<string>("");
