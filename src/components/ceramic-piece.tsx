@@ -23,11 +23,10 @@ export function CeramicPiece({
       <svg {...common}>
         <circle cx="80" cy="80" r="61" fill="var(--color-cream)" stroke="var(--color-ink)" strokeWidth="5" />
         <circle cx="80" cy="80" r="38" fill="var(--color-rose)" opacity="0.42" stroke="var(--color-ink)" strokeWidth="3" />
-        <path d="M75 47c-14 18-13 39 4 57" stroke="var(--color-sage)" strokeWidth="8" strokeLinecap="round" />
-        <path d="M83 49c20 7 30 23 25 43" stroke="var(--color-brick)" strokeWidth="7" strokeLinecap="round" />
-        <path d="M55 102c19-7 41-4 58 10" stroke="var(--color-lavender)" strokeWidth="7" strokeLinecap="round" />
-        <circle cx="53" cy="69" r="5" fill="var(--color-lavender)" />
-        <circle cx="113" cy="112" r="7" fill="var(--color-mustard)" />
+        <path d="M51 63c17 5 32 3 51-7" stroke="var(--color-sage)" strokeWidth="8" strokeLinecap="round" />
+        <path d="M56 102c12-9 33-10 49-4" stroke="var(--color-brick)" strokeWidth="7" strokeLinecap="round" />
+        <circle cx="111" cy="82" r="7" fill="var(--color-mustard)" />
+        <circle cx="54" cy="83" r="5" fill="var(--color-lavender)" />
       </svg>
     );
   }
@@ -109,11 +108,10 @@ export function CeramicPiece({
         strokeLinejoin="round"
       />
       <path d="M106 65h10c14 0 21 9 21 21s-8 21-22 21h-9" stroke="var(--color-ink)" strokeWidth="5" strokeLinecap="round" />
-      <path d="M55 68c13 9 29 11 43 5" stroke="var(--color-sage)" strokeWidth="8" strokeLinecap="round" />
-      <path d="M52 100c13 4 31 1 47-8" stroke="var(--color-rose)" strokeWidth="8" strokeLinecap="round" />
-      <path d="M66 56c-5 19-1 35 11 49" stroke="var(--color-brick)" strokeWidth="6" strokeLinecap="round" />
-      <circle cx="94" cy="64" r="5" fill="var(--color-lavender)" />
-      <circle cx="58" cy="120" r="5" fill="var(--color-mustard)" />
+      <path d="M51 75c14 7 32 7 45 0" stroke="var(--color-sage)" strokeWidth="8" strokeLinecap="round" />
+      <path d="M51 99c13-6 30-5 45 1" stroke="var(--color-rose)" strokeWidth="8" strokeLinecap="round" />
+      <circle cx="57" cy="121" r="5" fill="var(--color-mustard)" />
+      <circle cx="91" cy="121" r="5" fill="var(--color-lavender)" />
     </svg>
   );
 }

@@ -29,7 +29,7 @@ const seed: Reservation[] = [
   {
     id: "r1",
     createdAt: new Date().toISOString(),
-    experience: "cafe_atelier",
+    experience: "atelier",
     people: 2,
     date: nextWeekday(5),
     slot: "10:30",
@@ -75,7 +75,7 @@ const seed: Reservation[] = [
   {
     id: "r4",
     createdAt: new Date().toISOString(),
-    experience: "cafe_atelier",
+    experience: "atelier",
     people: 3,
     date: nextWeekday(0),
     slot: "11:00",
@@ -149,8 +149,8 @@ export function updateStatus(id: string, status: ReservationStatus) {
 
 export function experienceLabel(e: ExperienceType): string {
   return {
-    atelier: "Kafé + atelier",
-    cafe_atelier: "Kafé + atelier",
+    atelier: "Atelier libre",
+    cafe_atelier: "Café + atelier",
     brunch_atelier: "Brunch + atelier",
     groupe: "Groupe / Événement",
   }[e];
