@@ -35,7 +35,7 @@ const SLOTS = ["09:30", "10:30", "11:30", "13:30", "14:30", "15:30", "16:30"];
 
 function ReserverPage() {
   const [step, setStep] = useState(1);
-  const [experience, setExperience] = useState<ExperienceType>("atelier");
+  const [experience, setExperience] = useState<ExperienceType>("cafe_atelier");
   const [people, setPeople] = useState(2);
   const [date, setDate] = useState<string>("");
   const [slot, setSlot] = useState<string>("");

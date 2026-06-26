@@ -150,8 +150,8 @@ export function updateStatus(id: string, status: ReservationStatus) {
 export function experienceLabel(e: ExperienceType): string {
   return {
     atelier: "Atelier céramique",
-    cafe_atelier: "Café + atelier",
-    brunch_atelier: "Brunch + atelier",
+    cafe_atelier: "Atelier céramique (autour d'un café)",
+    brunch_atelier: "Atelier céramique (avec un brunch)",
     groupe: "Groupe / Événement",
   }[e];
 }
