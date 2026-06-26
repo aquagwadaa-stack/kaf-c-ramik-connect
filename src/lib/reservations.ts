@@ -149,7 +149,7 @@ export function updateStatus(id: string, status: ReservationStatus) {
 
 export function experienceLabel(e: ExperienceType): string {
   return {
-    atelier: "Atelier libre",
+    atelier: "Atelier céramique",
     cafe_atelier: "Café + atelier",
     brunch_atelier: "Brunch + atelier",
     groupe: "Groupe / Événement",
