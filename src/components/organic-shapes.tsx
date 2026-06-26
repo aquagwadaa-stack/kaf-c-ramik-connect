@@ -15,9 +15,6 @@ export function OrganicShapes({ className = "" }: { className?: string }) {
       <div className="absolute -right-2 bottom-2 hidden h-44 w-44 translate-y-1/4 rotate-[-8deg] opacity-60 sm:block">
         <CeramicPiece kind="mug" />
       </div>
-      <span className="absolute left-[18%] top-16 h-2 w-14 rotate-[-18deg] rounded-full bg-rose/70" />
-      <span className="absolute right-[30%] top-12 h-2 w-12 rotate-[24deg] rounded-full bg-sage/70" />
-      <span className="absolute bottom-12 left-[45%] h-2 w-16 rotate-[8deg] rounded-full bg-mustard/70" />
     </div>
   );
 }
