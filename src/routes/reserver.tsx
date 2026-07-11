@@ -13,22 +13,55 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { PageShell, PageHeader } from "@/components/page-shell";
-import { addReservation, experienceLabel, type ExperienceType } from "@/lib/reservations";
+import {
+  addReservation,
+  experienceLabel,
+  getDepositAmount,
+  shouldRequireDeposit,
+  type ExperienceType,
+} from "@/lib/reservations";
 
 export const Route = createFileRoute("/reserver")({
   head: () => ({
     meta: [
       { title: "Réserver un atelier — Kafé Céramik" },
-      { name: "description", content: "Choisissez votre formule et votre créneau dans le planning de la semaine." },
+      {
+        name: "description",
+        content: "Choisissez votre formule et votre créneau dans le planning de la semaine.",
+      },
     ],
   }),
   component: ReserverPage,
 });
 
-const experiences: { id: ExperienceType; title: string; desc: string; icon: typeof Palette; price: string }[] = [
-  { id: "cafe_atelier", title: "Atelier céramique (autour d'un café)", desc: "Peinture sur céramique avec une boisson chaude ou un jus.", icon: Coffee, price: "dès 28 €/pers" },
-  { id: "brunch_atelier", title: "Atelier céramique (avec un brunch)", desc: "Brunch gourmand puis création.", icon: CroissantIcon, price: "dès 38 €/pers" },
-  { id: "groupe", title: "Groupe / événement", desc: "Pour une grande table ou une occasion spéciale.", icon: Users, price: "sur demande" },
+const experiences: {
+  id: ExperienceType;
+  title: string;
+  desc: string;
+  icon: typeof Palette;
+  price: string;
+}[] = [
+  {
+    id: "cafe_atelier",
+    title: "Atelier céramique (autour d'un café)",
+    desc: "Peinture sur céramique avec une boisson chaude ou un jus.",
+    icon: Coffee,
+    price: "dès 28 €/pers",
+  },
+  {
+    id: "brunch_atelier",
+    title: "Atelier céramique (avec un brunch)",
+    desc: "Brunch gourmand puis création.",
+    icon: CroissantIcon,
+    price: "dès 38 €/pers",
+  },
+  {
+    id: "groupe",
+    title: "Groupe / événement",
+    desc: "Pour une grande table ou une occasion spéciale.",
+    icon: Users,
+    price: "sur demande",
+  },
 ];
 
 const SLOTS = ["09:30", "10:30", "11:30", "13:30", "14:30", "15:30", "16:30"];
@@ -39,11 +72,19 @@ function ReserverPage() {
   const [people, setPeople] = useState(2);
   const [date, setDate] = useState<string>("");
   const [slot, setSlot] = useState<string>("");
-  const [form, setForm] = useState({ firstName: "", lastName: "", phone: "", email: "", message: "" });
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+    message: "",
+  });
+  const [guideAccepted, setGuideAccepted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState<string | null>(null);
 
-  const deposit = people * 10;
+  const depositRequired = shouldRequireDeposit(people);
+  const deposit = getDepositAmount(people);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -70,6 +111,7 @@ function ReserverPage() {
     if (!form.lastName) e.lastName = "Requis";
     if (!form.phone || form.phone.length < 8) e.phone = "Téléphone invalide";
     if (!form.email || !/.+@.+\..+/.test(form.email)) e.email = "Email invalide";
+    if (!guideAccepted) e.guideAccepted = "Merci de confirmer les consignes avant de continuer";
     setErrors(e);
     if (Object.keys(e).length) return;
     const r = addReservation({
@@ -78,8 +120,11 @@ function ReserverPage() {
       date,
       slot,
       ...form,
-      depositPaid: payDeposit,
-      status: payDeposit ? "deposit_paid" : "pending",
+      depositPaid: depositRequired ? payDeposit : false,
+      depositRequired,
+      depositAmount: deposit,
+      status: depositRequired ? (payDeposit ? "deposit_paid" : "pending") : "confirmed",
+      isGroupRequest: people >= 8 || experience === "groupe",
     });
     setDone(r.id);
     setStep(4);
@@ -90,7 +135,7 @@ function ReserverPage() {
       <PageHeader
         eyebrow="Réservation"
         title="Réservez votre atelier"
-        description="La réservation concerne l'atelier céramique. Pour un café, un bagel ou une déjeunette, vous pouvez passer librement."
+        description="La réservation concerne l'atelier céramique avec consommation sur place. Pour un café, un bagel ou une déjeunette sans peindre, vous pouvez passer librement."
       />
       <section className="mx-auto max-w-5xl px-4 py-10">
         <div className="mb-5 grid gap-3 rounded-2xl border border-border bg-cream/75 p-4 sm:grid-cols-[auto_1fr] sm:items-center">
@@ -100,8 +145,9 @@ function ReserverPage() {
           <div>
             <div className="font-medium">Envie de venir seulement au Kafé ?</div>
             <p className="mt-1 text-sm leading-5 text-muted-foreground">
-              Pas besoin de réserver pour boire un café, manger un bagel ou bruncher. Pour peindre, les personnes
-              ayant réservé sont prioritaires ; des places peuvent se libérer sur place selon l'affluence.
+              Pas besoin de réserver pour boire un café, manger un bagel ou bruncher. Pour peindre,
+              l'atelier se fait avec une consommation sur place et les personnes ayant réservé sont
+              prioritaires ; des places peuvent se libérer sur place selon l'affluence.
             </p>
           </div>
         </div>
@@ -152,7 +198,9 @@ function ReserverPage() {
                         setSlot("");
                       }}
                       className={`min-w-12 rounded-full border px-4 py-2 text-sm ${
-                        people === n ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-secondary"
+                        people === n
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border hover:bg-secondary"
                       }`}
                     >
                       {n}
@@ -186,10 +234,31 @@ function ReserverPage() {
           {step === 3 && (
             <Step title="Vos coordonnées">
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Prénom" value={form.firstName} onChange={(v) => setForm({ ...form, firstName: v })} error={errors.firstName} />
-                <Field label="Nom" value={form.lastName} onChange={(v) => setForm({ ...form, lastName: v })} error={errors.lastName} />
-                <Field label="Téléphone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} error={errors.phone} />
-                <Field label="Email" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} error={errors.email} />
+                <Field
+                  label="Prénom"
+                  value={form.firstName}
+                  onChange={(v) => setForm({ ...form, firstName: v })}
+                  error={errors.firstName}
+                />
+                <Field
+                  label="Nom"
+                  value={form.lastName}
+                  onChange={(v) => setForm({ ...form, lastName: v })}
+                  error={errors.lastName}
+                />
+                <Field
+                  label="Téléphone"
+                  value={form.phone}
+                  onChange={(v) => setForm({ ...form, phone: v })}
+                  error={errors.phone}
+                />
+                <Field
+                  label="Email"
+                  type="email"
+                  value={form.email}
+                  onChange={(v) => setForm({ ...form, email: v })}
+                  error={errors.email}
+                />
                 <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-sm font-medium">Message (optionnel)</label>
                   <textarea
@@ -206,14 +275,41 @@ function ReserverPage() {
                 <div className="flex items-start gap-3">
                   <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                   <div className="text-sm">
-                    <div className="font-medium">Acompte de {deposit} € ({people} × 10 €)</div>
+                    <div className="font-medium">
+                      {depositRequired
+                        ? `Acompte groupe de ${deposit} €`
+                        : "Pas d'acompte en ligne pour ce créneau"}
+                    </div>
                     <p className="mt-1 text-muted-foreground">
-                      L'acompte permet de confirmer votre réservation. Il est déduit de votre note finale.
-                      Paiement simulé pour la démo.
+                      {depositRequired
+                        ? "Pour les groupes de 8 personnes ou plus, un acompte permet de bloquer la table. Il sera déduit de la note finale."
+                        : "Pour peindre, une consommation sur place reste demandée. Les personnes ayant réservé sont prioritaires sur les places atelier."}
                     </p>
                   </div>
                 </div>
               </div>
+
+              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-background p-4 text-sm">
+                <input
+                  type="checkbox"
+                  checked={guideAccepted}
+                  onChange={(e) => setGuideAccepted(e.target.checked)}
+                  className="mt-1 h-4 w-4 accent-primary"
+                />
+                <span>
+                  <span className="font-medium">J'ai compris les consignes de l'atelier.</span>
+                  <span className="mt-1 block text-muted-foreground">
+                    Le guide et la décharge devront être lus et signés à l'arrivée sur la tablette
+                    du Kafé Céramik. Le respect des consignes conditionne le rendu et la
+                    récupération de la création.
+                  </span>
+                  {errors.guideAccepted && (
+                    <span className="mt-1 block text-xs text-destructive">
+                      {errors.guideAccepted}
+                    </span>
+                  )}
+                </span>
+              </label>
             </Step>
           )}
 
@@ -233,8 +329,13 @@ function ReserverPage() {
                 <Row k="Référence" v={done} />
               </div>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
-                <Link to="/" className="rounded-full border border-border px-4 py-2 text-sm">Accueil</Link>
-                <Link to="/admin" className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+                <Link to="/" className="rounded-full border border-border px-4 py-2 text-sm">
+                  Accueil
+                </Link>
+                <Link
+                  to="/admin"
+                  className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                >
                   Voir côté équipe
                 </Link>
               </div>
@@ -256,30 +357,44 @@ function ReserverPage() {
                   disabled={step === 2 && (!date || !slot)}
                   className="inline-flex items-center gap-1 rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground disabled:opacity-40"
                 >
-                  {step === 1 ? "Voir les créneaux" : "Continuer"} <ChevronRight className="h-4 w-4" />
+                  {step === 1 ? "Voir les créneaux" : "Continuer"}{" "}
+                  <ChevronRight className="h-4 w-4" />
                 </button>
-              ) : (
+              ) : depositRequired ? (
                 <div className="flex flex-wrap justify-end gap-2">
                   <button
                     onClick={() => submit(false)}
                     className="rounded-full border border-border px-4 py-2 text-sm"
                   >
-                    Réserver sans acompte
+                    Envoyer la demande groupe
                   </button>
                   <button
                     onClick={() => submit(true)}
                     className="inline-flex items-center gap-1 rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground"
                   >
-                    <CalendarCheck2 className="h-4 w-4" /> Payer {deposit} € et confirmer
+                    <CalendarCheck2 className="h-4 w-4" /> Simuler l'acompte de {deposit} €
                   </button>
                 </div>
+              ) : (
+                <button
+                  onClick={() => submit(false)}
+                  className="inline-flex items-center gap-1 rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground"
+                >
+                  <CalendarCheck2 className="h-4 w-4" /> Confirmer la réservation
+                </button>
               )}
             </div>
           )}
         </div>
 
         {step < 4 && (
-          <Summary experience={experience} people={people} date={date} slot={slot} deposit={deposit} />
+          <Summary
+            experience={experience}
+            people={people}
+            date={date}
+            slot={slot}
+            deposit={deposit}
+          />
         )}
       </section>
     </PageShell>
@@ -296,8 +411,18 @@ function Step({ title, children }: { title: string; children: React.ReactNode })
 }
 
 function Field({
-  label, value, onChange, type = "text", error,
-}: { label: string; value: string; onChange: (v: string) => void; type?: string; error?: string }) {
+  label,
+  value,
+  onChange,
+  type = "text",
+  error,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  error?: string;
+}) {
   return (
     <div>
       <label className="mb-1.5 block text-sm font-medium">{label}</label>
@@ -344,7 +469,11 @@ function Stepper({ step }: { step: number }) {
             >
               {n}
             </div>
-            <div className={`mt-1 truncate text-[11px] ${active ? "text-foreground" : "text-muted-foreground"}`}>{l}</div>
+            <div
+              className={`mt-1 truncate text-[11px] ${active ? "text-foreground" : "text-muted-foreground"}`}
+            >
+              {l}
+            </div>
           </div>
         );
       })}
@@ -448,7 +577,9 @@ function WeekPlanner({
                           }`}
                         >
                           <span className="block text-sm font-medium">{s}</span>
-                          <span className={`block text-[11px] ${selected ? "text-primary-foreground/75" : "text-muted-foreground"}`}>
+                          <span
+                            className={`block text-[11px] ${selected ? "text-primary-foreground/75" : "text-muted-foreground"}`}
+                          >
                             {state.label}
                           </span>
                         </button>
@@ -463,7 +594,8 @@ function WeekPlanner({
       </div>
 
       <p className="mt-3 text-xs text-muted-foreground">
-        Planning de démonstration : les disponibilités changent selon le jour et le nombre de personnes.
+        Planning de démonstration : les disponibilités changent selon le jour et le nombre de
+        personnes.
       </p>
     </div>
   );
@@ -524,13 +656,25 @@ function formatShortDate(date: Date) {
 export function formatDate(iso: string) {
   if (!iso) return "—";
   return new Date(iso + "T00:00:00").toLocaleDateString("fr-FR", {
-    weekday: "long", day: "numeric", month: "long",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
   });
 }
 
 function Summary({
-  experience, people, date, slot, deposit,
-}: { experience: ExperienceType; people: number; date: string; slot: string; deposit: number }) {
+  experience,
+  people,
+  date,
+  slot,
+  deposit,
+}: {
+  experience: ExperienceType;
+  people: number;
+  date: string;
+  slot: string;
+  deposit: number;
+}) {
   return (
     <div className="mt-4 rounded-2xl border border-border bg-cream/70 p-4 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -543,8 +687,8 @@ function Summary({
           </div>
         </div>
         <div className="text-right">
-          <div className="text-xs text-muted-foreground">Acompte simulé</div>
-          <div className="font-display text-xl">{deposit} €</div>
+          <div className="text-xs text-muted-foreground">Acompte</div>
+          <div className="font-display text-xl">{deposit > 0 ? `${deposit} €` : "Non requis"}</div>
         </div>
       </div>
     </div>

@@ -16,6 +16,8 @@ export interface Reservation {
   email: string;
   message?: string;
   depositPaid: boolean;
+  depositRequired?: boolean;
+  depositAmount?: number;
   status: ReservationStatus;
   notes?: string;
   isGroupRequest?: boolean;
@@ -37,8 +39,10 @@ const seed: Reservation[] = [
     lastName: "Bertrand",
     phone: "0690 11 22 33",
     email: "anais@example.com",
-    depositPaid: true,
-    status: "deposit_paid",
+    depositPaid: false,
+    depositRequired: false,
+    depositAmount: 0,
+    status: "confirmed",
   },
   {
     id: "r2",
@@ -51,7 +55,9 @@ const seed: Reservation[] = [
     lastName: "Marie-Jeanne",
     phone: "0690 44 55 66",
     email: "camille@example.com",
-    depositPaid: true,
+    depositPaid: false,
+    depositRequired: false,
+    depositAmount: 0,
     status: "confirmed",
   },
   {
@@ -66,6 +72,8 @@ const seed: Reservation[] = [
     phone: "0690 77 88 99",
     email: "laura@example.com",
     depositPaid: false,
+    depositRequired: true,
+    depositAmount: 80,
     status: "pending",
     isGroupRequest: true,
     eventType: "Anniversaire",
@@ -83,7 +91,9 @@ const seed: Reservation[] = [
     lastName: "Lacroix",
     phone: "0690 12 34 56",
     email: "sophie@example.com",
-    depositPaid: true,
+    depositPaid: false,
+    depositRequired: false,
+    depositAmount: 0,
     status: "confirmed",
   },
 ];
@@ -119,7 +129,9 @@ function write(list: Reservation[]) {
 }
 
 export function useReservations() {
-  const [list, setList] = useState<Reservation[]>(() => (typeof window === "undefined" ? seed : []));
+  const [list, setList] = useState<Reservation[]>(() =>
+    typeof window === "undefined" ? seed : [],
+  );
   useEffect(() => {
     setList(read());
     const update = () => setList(read());
@@ -140,6 +152,14 @@ export function addReservation(r: Omit<Reservation, "id" | "createdAt">): Reserv
   const list = read();
   write([full, ...list]);
   return full;
+}
+
+export function shouldRequireDeposit(people: number) {
+  return people >= 8;
+}
+
+export function getDepositAmount(people: number) {
+  return shouldRequireDeposit(people) ? people * 10 : 0;
 }
 
 export function updateStatus(id: string, status: ReservationStatus) {
