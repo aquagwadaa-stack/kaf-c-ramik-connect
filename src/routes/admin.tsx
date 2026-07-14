@@ -12,12 +12,15 @@ import {
   Coins,
   Download,
   FileText,
+  Image as ImageIcon,
   PackageOpen,
   Plus,
   Save,
   Settings,
   ShieldCheck,
   Trash2,
+  UploadCloud,
+  X,
 } from "lucide-react";
 import { PageShell, PageHeader } from "@/components/page-shell";
 import {
@@ -62,6 +65,15 @@ const tabs: { id: AdminTab; label: string; icon: LucideIcon }[] = [
   { id: "documents", label: "Guide", icon: BookOpenText },
   { id: "settings", label: "Réglages", icon: Settings },
 ];
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
 
 function AdminPage() {
   const reservations = useReservations();
@@ -405,12 +417,7 @@ function WaiversPanel({
             </label>
           </div>
 
-          <div className="mt-4 rounded-xl bg-secondary/40 p-3 text-sm">
-            <div className="font-medium">
-              {waiver?.title ?? "Décharge atelier"} · {waiver?.version ?? "v1-demo"}
-            </div>
-            <p className="mt-1 line-clamp-4 text-muted-foreground">{waiver?.body}</p>
-          </div>
+          <DocumentPreview document={waiver} title="Document officiel à signer" className="mt-4" />
 
           <label className="mt-4 flex cursor-pointer items-start gap-3 text-sm">
             <input
@@ -563,6 +570,12 @@ function ObjectsPanel({
     saveObjects(objects.map((object) => (object.id === id ? { ...object, ...patch } : object)));
   }
 
+  async function uploadObjectImage(id: string, file?: File) {
+    if (!file) return;
+    const imageDataUrl = await readFileAsDataUrl(file);
+    updateObject(id, { imageDataUrl, imageName: file.name });
+  }
+
   function addObject() {
     if (!draft.name.trim()) return;
     saveObjects([
@@ -581,7 +594,7 @@ function ObjectsPanel({
   return (
     <Panel
       title="Objets à peindre"
-      desc="Gestion simple des pièces, prix et disponibilités. Les photos pourront être ajoutées ensuite."
+      desc="Gestion simple des pièces, prix, disponibilités et photos visibles côté client."
     >
       <div className="grid gap-3 rounded-2xl border border-border bg-background p-4 sm:grid-cols-[1fr_180px_110px_auto]">
         <Field
@@ -642,6 +655,46 @@ function ObjectsPanel({
                 <option value="unavailable">Indisponible</option>
               </select>
             </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-[96px_1fr] sm:items-center">
+              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-border bg-secondary/40">
+                {object.imageDataUrl ? (
+                  <img
+                    src={object.imageDataUrl}
+                    alt={object.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm hover:bg-secondary">
+                  <UploadCloud className="h-4 w-4" /> Ajouter une photo
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={async (event) => {
+                      await uploadObjectImage(object.id, event.currentTarget.files?.[0]);
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+                {object.imageDataUrl && (
+                  <button
+                    onClick={() =>
+                      updateObject(object.id, { imageDataUrl: undefined, imageName: undefined })
+                    }
+                    className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" /> Retirer
+                  </button>
+                )}
+                {object.imageName && (
+                  <span className="w-full text-xs text-muted-foreground">{object.imageName}</span>
+                )}
+              </div>
+            </div>
             {object.note && <p className="mt-2 text-sm text-muted-foreground">{object.note}</p>}
           </div>
         ))}
@@ -665,6 +718,16 @@ function DocumentsPanel({
           : document,
       ),
     );
+  }
+
+  async function uploadDocument(id: ContentDocument["id"], file?: File) {
+    if (!file) return;
+    const attachmentDataUrl = await readFileAsDataUrl(file);
+    updateDocument(id, {
+      attachmentDataUrl,
+      attachmentName: file.name,
+      attachmentType: file.type || "application/octet-stream",
+    });
   }
 
   return (
@@ -696,6 +759,47 @@ function DocumentsPanel({
                 className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
             </label>
+            <div className="mt-4 rounded-2xl border border-border bg-card p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="text-sm font-medium">
+                    {document.id === "waiver" ? "Document officiel" : "Fichier joint"}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    PDF ou image à afficher avant signature.
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm hover:bg-secondary">
+                    <UploadCloud className="h-4 w-4" /> Importer
+                    <input
+                      type="file"
+                      accept="application/pdf,image/*,.doc,.docx"
+                      className="sr-only"
+                      onChange={async (event) => {
+                        await uploadDocument(document.id, event.currentTarget.files?.[0]);
+                        event.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
+                  {document.attachmentDataUrl && (
+                    <button
+                      onClick={() =>
+                        updateDocument(document.id, {
+                          attachmentDataUrl: undefined,
+                          attachmentName: undefined,
+                          attachmentType: undefined,
+                        })
+                      }
+                      className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" /> Retirer
+                    </button>
+                  )}
+                </div>
+              </div>
+              <DocumentPreview document={document} className="mt-3" compact />
+            </div>
             <div className="mt-3 text-xs text-muted-foreground">
               Dernière modification : {new Date(document.updatedAt).toLocaleString("fr-FR")}
             </div>
@@ -703,6 +807,90 @@ function DocumentsPanel({
         ))}
       </div>
     </Panel>
+  );
+}
+
+function DocumentPreview({
+  document: item,
+  title,
+  className = "",
+  compact,
+}: {
+  document?: ContentDocument;
+  title?: string;
+  className?: string;
+  compact?: boolean;
+}) {
+  const previewTitle = title ?? item?.title ?? "Document";
+  const hasAttachment = Boolean(item?.attachmentDataUrl);
+  const isImage = item?.attachmentType?.startsWith("image/");
+  const isPdf = item?.attachmentType === "application/pdf";
+
+  return (
+    <div className={`rounded-xl border border-border bg-secondary/30 p-3 text-sm ${className}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="font-medium">
+            {previewTitle}
+            {item?.version && ` · ${item.version}`}
+          </div>
+          {item?.attachmentName && (
+            <div className="mt-0.5 text-xs text-muted-foreground">{item.attachmentName}</div>
+          )}
+        </div>
+        {hasAttachment && (
+          <a
+            href={item?.attachmentDataUrl}
+            download={item?.attachmentName}
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs hover:bg-secondary"
+          >
+            <Download className="h-3.5 w-3.5" /> Ouvrir
+          </a>
+        )}
+      </div>
+
+      {hasAttachment && isImage && (
+        <img
+          src={item?.attachmentDataUrl}
+          alt={previewTitle}
+          className={`mt-3 w-full rounded-lg border border-border bg-white object-contain ${
+            compact ? "max-h-52" : "max-h-80"
+          }`}
+        />
+      )}
+
+      {hasAttachment && isPdf && (
+        <object
+          data={item?.attachmentDataUrl}
+          type="application/pdf"
+          className={`mt-3 w-full rounded-lg border border-border bg-white ${
+            compact ? "h-52" : "h-80"
+          }`}
+        >
+          <a href={item?.attachmentDataUrl} download={item?.attachmentName}>
+            Télécharger le document
+          </a>
+        </object>
+      )}
+
+      {hasAttachment && !isImage && !isPdf && (
+        <div className="mt-3 flex items-center gap-3 rounded-lg border border-border bg-background p-3">
+          <FileText className="h-5 w-5 text-primary" />
+          <div>
+            <div className="font-medium">Document importé</div>
+            <div className="text-xs text-muted-foreground">
+              Aperçu non disponible ici, mais le fichier est bien lié à cette version.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!hasAttachment && (
+        <p className={`mt-2 text-muted-foreground ${compact ? "line-clamp-3" : ""}`}>
+          {item?.body ?? "Le document officiel sera ajouté par l'équipe."}
+        </p>
+      )}
+    </div>
   );
 }
 

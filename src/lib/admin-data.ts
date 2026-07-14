@@ -53,6 +53,8 @@ export interface CeramicObject {
   category: "Tasses" | "Bols" | "Assiettes" | "Figurines" | "Deco" | "Vases" | "Petites pieces";
   price: number;
   availability: "available" | "limited" | "unavailable";
+  imageDataUrl?: string;
+  imageName?: string;
   note?: string;
 }
 
@@ -129,6 +131,9 @@ export interface ContentDocument {
   version: string;
   updatedAt: string;
   body: string;
+  attachmentDataUrl?: string;
+  attachmentName?: string;
+  attachmentType?: string;
 }
 
 export const contentDocumentsSeed: ContentDocument[] = [
