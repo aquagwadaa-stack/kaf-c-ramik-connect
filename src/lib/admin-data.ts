@@ -210,16 +210,54 @@ export const ceramicObjectsSeed: CeramicObject[] = [
   },
 ];
 
+export interface GuideSection {
+  id: string;
+  number: string;
+  title: string;
+  body: string;
+  imageDataUrl?: string;
+  imageName?: string;
+}
+
 export interface ContentDocument {
   id: "guide" | "waiver";
   title: string;
   version: string;
   updatedAt: string;
   body: string;
+  intro?: string;
+  sections?: GuideSection[];
   attachmentDataUrl?: string;
   attachmentName?: string;
   attachmentType?: string;
 }
+
+export const guideSectionsSeed: GuideSection[] = [
+  {
+    id: "guide-choose",
+    number: "01",
+    title: "Choisir sa piece",
+    body: "Chaque personne choisit une ceramique disponible sur place. Les prix, formes et disponibilites peuvent varier selon les arrivages.",
+  },
+  {
+    id: "guide-paint",
+    number: "02",
+    title: "Peindre en suivant les consignes",
+    body: "Les couleurs, les couches et certaines zones demandent de respecter les indications du Kafe pour obtenir un rendu propre apres cuisson.",
+  },
+  {
+    id: "guide-leave",
+    number: "03",
+    title: "Laisser la piece a l'atelier",
+    body: "Une fois terminee, la piece reste au Kafe pour sechage, emaillage et cuisson. Elle n'est pas recuperable immediatement.",
+  },
+  {
+    id: "guide-collect",
+    number: "04",
+    title: "Revenir la recuperer",
+    body: "L'equipe indique le delai de recuperation. Les pieces sont a reprendre au Kafe avec le nom donne lors de la reservation ou de la signature.",
+  },
+];
 
 export const contentDocumentsSeed: ContentDocument[] = [
   {
@@ -227,7 +265,10 @@ export const contentDocumentsSeed: ContentDocument[] = [
     title: "Guide de peinture",
     version: "v1-demo",
     updatedAt: new Date().toISOString(),
+    intro:
+      "Avant de commencer, prenez le temps de lire les consignes principales. Elles permettent d'eviter les mauvaises surprises apres cuisson et de profiter pleinement de l'atelier.",
     body: "Guide provisoire. Le texte officiel sera fourni par Mala Madre : préparation de la pièce, consignes de peinture, délais de cuisson et récupération.",
+    sections: guideSectionsSeed,
   },
   {
     id: "waiver",
@@ -237,6 +278,15 @@ export const contentDocumentsSeed: ContentDocument[] = [
     body: "Décharge provisoire. Le texte officiel sera fourni par Mala Madre et validé par le client avant publication.",
   },
 ];
+
+export function getGuideDocument(documents: ContentDocument[]) {
+  const guide = documents.find((document) => document.id === "guide") ?? contentDocumentsSeed[0];
+  return {
+    ...guide,
+    intro: guide.intro ?? contentDocumentsSeed[0].intro,
+    sections: guide.sections?.length ? guide.sections : guideSectionsSeed,
+  };
+}
 
 export interface WaiverSignature {
   id: string;

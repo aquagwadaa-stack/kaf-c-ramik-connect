@@ -18,6 +18,7 @@ import { useKafeSettings, type KafeSettings } from "@/lib/admin-data";
 import {
   addReservation,
   experienceLabel,
+  formatDuration,
   formatReservationDate,
   getDepositAmount,
   getRemainingCapacity,
@@ -643,8 +644,8 @@ function WeekPlanner({
       </div>
 
       <p className="mt-3 text-xs text-muted-foreground">
-        Durée indicative d'un créneau : {settings.slotDurationMinutes} min. Les créneaux complets ne
-        peuvent pas être réservés.
+        Durée indicative d'un créneau : {formatDuration(settings.slotDurationMinutes)}. Les créneaux
+        complets ne peuvent pas être réservés.
       </p>
     </div>
   );

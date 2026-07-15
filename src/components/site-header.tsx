@@ -1,9 +1,12 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Menu, X, Coffee } from "lucide-react";
+import { Menu, X, Coffee, ShieldCheck } from "lucide-react";
+import { useAdminAccess } from "@/lib/supabase-rest";
 
 const links = [
-  { to: "/brunch", label: "Brunch + Atelier" },
+  { to: "/brunch", label: "Déroulement" },
+  { to: "/creations", label: "Créations" },
+  { to: "/guide", label: "Guide" },
   { to: "/carte", label: "Carte" },
   { to: "/objets", label: "Objets" },
 ] as const;
@@ -12,6 +15,8 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const admin = useAdminAccess();
+  const showAdminLink = admin.configured && admin.signedIn && admin.allowed && !admin.checking;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -58,6 +63,18 @@ export function SiteHeader() {
               {l.label}
             </Link>
           ))}
+          {showAdminLink && (
+            <Link
+              to="/admin"
+              className="nav-link inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm text-foreground/70 hover:text-foreground"
+              activeProps={{
+                className:
+                  "nav-link inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm text-foreground",
+              }}
+            >
+              <ShieldCheck className="h-3.5 w-3.5" /> Admin
+            </Link>
+          )}
           <Link
             to="/reserver"
             className="press shine ml-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm shadow-ink/10 hover:shadow-md hover:shadow-ink/15"
@@ -108,6 +125,15 @@ export function SiteHeader() {
               {l.label}
             </Link>
           ))}
+          {showAdminLink && (
+            <Link
+              to="/admin"
+              onClick={() => setOpen(false)}
+              className="press inline-flex items-center gap-2 rounded-xl px-3 py-3 text-left text-sm hover:bg-secondary"
+            >
+              <ShieldCheck className="h-4 w-4" /> Admin
+            </Link>
+          )}
           <Link
             to="/reserver"
             onClick={() => setOpen(false)}

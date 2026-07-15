@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -12,6 +12,7 @@ import {
   Coins,
   Download,
   FileText,
+  Home,
   Image as ImageIcon,
   LockKeyhole,
   LogOut,
@@ -22,6 +23,8 @@ import {
   ShieldCheck,
   Trash2,
   UploadCloud,
+  UserCog,
+  Users,
   X,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
@@ -38,8 +41,11 @@ import {
 import {
   useCeramicObjects,
   useContentDocuments,
+  contentDocumentsSeed,
+  getGuideDocument,
   useKafeSettings,
   useWaiverSignatures,
+  type GuideSection,
   type CeramicObject,
   type ContentDocument,
   type KafeSettings,
@@ -49,6 +55,7 @@ import {
 import {
   deleteRow,
   isSupabaseConfigured,
+  selectRows,
   signInAdmin,
   signOutAdmin,
   useAdminAccess,
@@ -67,7 +74,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type AdminTab = "reservations" | "waivers" | "objects" | "documents" | "settings";
+type AdminTab = "reservations" | "waivers" | "objects" | "documents" | "settings" | "team";
 
 const objectCategories: CeramicObject["category"][] = [
   "Tasses",
@@ -85,6 +92,7 @@ const tabs: { id: AdminTab; label: string; icon: LucideIcon }[] = [
   { id: "objects", label: "Objets", icon: PackageOpen },
   { id: "documents", label: "Guide", icon: BookOpenText },
   { id: "settings", label: "Réglages", icon: Settings },
+  { id: "team", label: "Équipe", icon: UserCog },
 ];
 
 function readFileAsDataUrl(file: File) {
@@ -225,14 +233,22 @@ function AdminWorkspace({
                 : "Mode local de travail"}
             </div>
           </div>
-          {remoteMode && (
-            <button
-              onClick={signOutAdmin}
-              className="inline-flex shrink-0 items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm text-foreground hover:bg-secondary"
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm text-foreground hover:bg-secondary"
             >
-              <LogOut className="h-4 w-4" /> Déconnexion
-            </button>
-          )}
+              <Home className="h-4 w-4" /> Voir le site
+            </Link>
+            {remoteMode && (
+              <button
+                onClick={signOutAdmin}
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm text-foreground hover:bg-secondary"
+              >
+                <LogOut className="h-4 w-4" /> Déconnexion
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -300,6 +316,9 @@ function AdminWorkspace({
           <DocumentsPanel documents={documents} saveDocuments={saveDocuments} />
         )}
         {tab === "settings" && <SettingsPanel settings={settings} saveSettings={saveSettings} />}
+        {tab === "team" && (
+          <TeamPanel remoteMode={remoteMode} adminEmail={adminEmail} adminRole={adminRole} />
+        )}
       </main>
     </div>
   );
@@ -407,6 +426,146 @@ function Stat({
       </div>
       <div className="mt-2 font-display text-2xl sm:text-3xl">{value}</div>
       <div className="text-xs text-muted-foreground">{sub}</div>
+    </div>
+  );
+}
+
+type AdminTeamRow = {
+  user_id: string;
+  email: string | null;
+  role: "owner" | "manager" | "team" | "readonly";
+  created_at?: string;
+  updated_at?: string;
+};
+
+function useAdminTeam(remoteMode: boolean) {
+  const [members, setMembers] = useState<AdminTeamRow[]>([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!remoteMode || !isSupabaseConfigured()) return;
+    let alive = true;
+    selectRows<AdminTeamRow>(
+      "kafe_admin_profiles",
+      "?select=user_id,email,role,created_at,updated_at&order=created_at.asc",
+      true,
+    )
+      .then((rows) => {
+        if (!alive) return;
+        setMembers(rows);
+        setError("");
+      })
+      .catch((teamError) => {
+        if (!alive) return;
+        setError(teamError instanceof Error ? teamError.message : "Liste des accès indisponible.");
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [remoteMode]);
+
+  return { members, error };
+}
+
+function TeamPanel({
+  remoteMode,
+  adminEmail,
+  adminRole,
+}: {
+  remoteMode: boolean;
+  adminEmail?: string | null;
+  adminRole?: string;
+}) {
+  const { members, error } = useAdminTeam(remoteMode);
+
+  return (
+    <Panel
+      title="Équipe"
+      desc="Comptes autorisés à entrer dans l'espace admin. La route admin reste protégée par connexion et droits en base."
+    >
+      <div className="grid gap-4 lg:grid-cols-[1fr_0.85fr]">
+        <div className="rounded-2xl border border-border bg-background p-4">
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            <h3 className="font-display text-xl">Accès actifs</h3>
+          </div>
+          <div className="mt-4 grid gap-3">
+            {!remoteMode ? (
+              <EmptyState text="Mode local : les accès seront visibles une fois Supabase connecté." />
+            ) : error ? (
+              <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
+                {error}
+              </div>
+            ) : members.length === 0 ? (
+              <EmptyState text="Aucun profil admin lu pour le moment." />
+            ) : (
+              members.map((member) => (
+                <div
+                  key={member.user_id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4"
+                >
+                  <div>
+                    <div className="font-medium">{member.email ?? "Compte sans email visible"}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Ajouté le{" "}
+                      {member.created_at
+                        ? new Date(member.created_at).toLocaleDateString("fr-FR")
+                        : "-"}
+                    </div>
+                  </div>
+                  <RoleBadge role={member.role} />
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-background p-4">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            <h3 className="font-display text-xl">Rôles prévus</h3>
+          </div>
+          <div className="mt-4 space-y-3 text-sm">
+            <RoleLine
+              title="owner"
+              body="Accès complet : réglages, contenus, objets, réservations et futurs comptes."
+            />
+            <RoleLine
+              title="manager"
+              body="Gestion quotidienne : réservations, objets, guide, documents et signatures."
+            />
+            <RoleLine
+              title="team"
+              body="Usage terrain : consultation du jour et signature de décharge sur tablette."
+            />
+            <RoleLine title="readonly" body="Lecture seule pour contrôler sans modifier." />
+          </div>
+          <div className="mt-5 rounded-2xl bg-secondary/60 p-4 text-sm text-muted-foreground">
+            Compte connecté :{" "}
+            <span className="font-medium text-foreground">{adminEmail ?? "-"}</span>
+            {adminRole && <> · rôle {adminRole}</>}. Pour ajouter Anouk ou une autre personne, il
+            faudra créer son compte puis lui attribuer un rôle ici ou via Supabase.
+          </div>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function RoleBadge({ role }: { role: AdminTeamRow["role"] }) {
+  return (
+    <span className="inline-flex rounded-full border border-border bg-secondary px-3 py-1 text-xs font-medium">
+      {role}
+    </span>
+  );
+}
+
+function RoleLine({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-3">
+      <div className="font-medium">{title}</div>
+      <div className="mt-1 text-muted-foreground">{body}</div>
     </div>
   );
 }
@@ -1000,14 +1159,24 @@ function DocumentsPanel({
   documents: ContentDocument[];
   saveDocuments: (next: ContentDocument[]) => void;
 }) {
-  function updateDocument(id: ContentDocument["id"], patch: Partial<ContentDocument>) {
+  const guide = getGuideDocument(documents);
+  const waiver =
+    documents.find((document) => document.id === "waiver") ??
+    contentDocumentsSeed.find((document) => document.id === "waiver");
+
+  function saveDocument(nextDocument: ContentDocument) {
+    const exists = documents.some((document) => document.id === nextDocument.id);
     saveDocuments(
-      documents.map((document) =>
-        document.id === id
-          ? { ...document, ...patch, updatedAt: new Date().toISOString() }
-          : document,
-      ),
+      exists
+        ? documents.map((document) => (document.id === nextDocument.id ? nextDocument : document))
+        : [...documents, nextDocument],
     );
+  }
+
+  function updateDocument(id: ContentDocument["id"], patch: Partial<ContentDocument>) {
+    const current = id === "guide" ? guide : waiver;
+    if (!current) return;
+    saveDocument({ ...current, ...patch, updatedAt: new Date().toISOString() });
   }
 
   async function uploadDocument(id: ContentDocument["id"], file?: File) {
@@ -1021,35 +1190,178 @@ function DocumentsPanel({
     });
   }
 
-  const guide = documents.find((document) => document.id === "guide");
-  const waiver = documents.find((document) => document.id === "waiver");
+  function updateGuideSection(id: string, patch: Partial<GuideSection>) {
+    updateDocument("guide", {
+      sections: (guide.sections ?? []).map((section) =>
+        section.id === id ? { ...section, ...patch } : section,
+      ),
+    });
+  }
+
+  async function uploadGuideImage(id: string, file?: File) {
+    if (!file) return;
+    const imageDataUrl = await readFileAsDataUrl(file);
+    updateGuideSection(id, { imageDataUrl, imageName: file.name });
+  }
+
+  function addGuideSection() {
+    const nextIndex = (guide.sections?.length ?? 0) + 1;
+    updateDocument("guide", {
+      sections: [
+        ...(guide.sections ?? []),
+        {
+          id: `guide-${Date.now()}`,
+          number: String(nextIndex).padStart(2, "0"),
+          title: "Nouvelle étape",
+          body: "Texte à compléter depuis l'administration.",
+        },
+      ],
+    });
+  }
+
+  function removeGuideSection(id: string) {
+    updateDocument("guide", {
+      sections: (guide.sections ?? []).filter((section) => section.id !== id),
+    });
+  }
 
   return (
     <Panel
-      title="Guide"
-      desc="Contenu affiché aux clients pour comprendre le fonctionnement de l'atelier."
+      title="Guide & décharge"
+      desc="Le guide est une page publique modifiable. La décharge reste un document officiel importé pour la signature sur place."
     >
-      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        {guide && (
-          <div className="rounded-2xl border border-border bg-background p-4">
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="rounded-2xl border border-border bg-background p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-center gap-2">
               <BookOpenText className="h-5 w-5 text-primary" />
               <h3 className="font-display text-xl">Page guide</h3>
             </div>
-            <label className="mt-4 block">
-              <span className="mb-1.5 block text-sm font-medium">Texte de la page guide</span>
-              <textarea
-                value={guide.body}
-                onChange={(event) => updateDocument("guide", { body: event.target.value })}
-                rows={14}
-                className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-              />
-            </label>
-            <div className="mt-3 text-xs text-muted-foreground">
-              Dernière modification : {new Date(guide.updatedAt).toLocaleString("fr-FR")}
-            </div>
+            <Link
+              to="/guide"
+              className="rounded-full border border-border bg-card px-4 py-2 text-sm hover:bg-secondary"
+            >
+              Voir la page
+            </Link>
           </div>
-        )}
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <Field
+              label="Titre"
+              value={guide.title}
+              onChange={(value) => updateDocument("guide", { title: value })}
+            />
+            <Field
+              label="Version interne"
+              value={guide.version}
+              onChange={(value) => updateDocument("guide", { version: value })}
+            />
+          </div>
+          <TextareaField
+            label="Introduction"
+            value={guide.intro ?? ""}
+            onChange={(value) => updateDocument("guide", { intro: value })}
+          />
+          <TextareaField
+            label="Texte important avant les étapes"
+            value={guide.body}
+            onChange={(value) => updateDocument("guide", { body: value })}
+          />
+
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+            <h4 className="font-display text-xl">Étapes du guide</h4>
+            <button
+              onClick={addGuideSection}
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            >
+              <Plus className="h-4 w-4" /> Ajouter une étape
+            </button>
+          </div>
+
+          <div className="mt-3 grid gap-3">
+            {(guide.sections ?? []).map((section) => (
+              <div key={section.id} className="rounded-2xl border border-border bg-card p-4">
+                <div className="grid gap-3 md:grid-cols-[90px_1fr]">
+                  <Field
+                    label="Numéro"
+                    value={section.number}
+                    onChange={(value) => updateGuideSection(section.id, { number: value })}
+                  />
+                  <Field
+                    label="Titre"
+                    value={section.title}
+                    onChange={(value) => updateGuideSection(section.id, { title: value })}
+                  />
+                </div>
+
+                <div className="mt-3 grid gap-3 lg:grid-cols-[150px_1fr]">
+                  <div>
+                    <div className="flex h-32 w-full items-center justify-center overflow-hidden rounded-2xl border border-border bg-secondary/40">
+                      {section.imageDataUrl ? (
+                        <img
+                          src={section.imageDataUrl}
+                          alt={section.title}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs hover:bg-secondary">
+                        <UploadCloud className="h-3.5 w-3.5" /> Photo
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          onChange={async (event) => {
+                            await uploadGuideImage(section.id, event.currentTarget.files?.[0]);
+                            event.currentTarget.value = "";
+                          }}
+                        />
+                      </label>
+                      {section.imageDataUrl && (
+                        <button
+                          onClick={() =>
+                            updateGuideSection(section.id, {
+                              imageDataUrl: undefined,
+                              imageName: undefined,
+                            })
+                          }
+                          className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary"
+                        >
+                          Retirer
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <TextareaField
+                    label="Texte de l'étape"
+                    value={section.body}
+                    onChange={(value) => updateGuideSection(section.id, { body: value })}
+                  />
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {section.imageName ??
+                      "Photo de remplacement utilisée côté client si aucune photo n'est ajoutée."}
+                  </span>
+                  <button
+                    onClick={() => removeGuideSection(section.id)}
+                    className="inline-flex items-center gap-2 rounded-full border border-destructive/30 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Supprimer
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 text-xs text-muted-foreground">
+            Dernière modification : {new Date(guide.updatedAt).toLocaleString("fr-FR")}
+          </div>
+        </div>
 
         {waiver && (
           <div className="rounded-2xl border border-border bg-background p-4">

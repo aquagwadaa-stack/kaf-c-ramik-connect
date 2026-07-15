@@ -333,6 +333,17 @@ export function getSlotsForDate(isoDate: string, settings: KafeSettings) {
   return [...slots].sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
 }
 
+export function formatDuration(minutes: number) {
+  if (!Number.isFinite(minutes) || minutes <= 0) return "la duree prevue";
+  const rounded = Math.round(minutes);
+  const hours = Math.floor(rounded / 60);
+  const remainingMinutes = rounded % 60;
+
+  if (hours === 0) return `${remainingMinutes} min`;
+  if (remainingMinutes === 0) return `${hours}h`;
+  return `${hours}h${String(remainingMinutes).padStart(2, "0")}`;
+}
+
 export function updateStatus(id: string, status: ReservationStatus) {
   const list = read().map((reservation) =>
     reservation.id === id ? { ...reservation, status } : reservation,

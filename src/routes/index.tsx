@@ -43,12 +43,12 @@ const experiences = [
   },
   {
     to: "/brunch",
-    title: "Brunch + atelier",
-    eyebrow: "Déjeunette & création",
-    body: "Une table gourmande, une pièce à peindre, et un moment à partager entre amis, en couple ou en famille.",
+    title: "Déroulement atelier",
+    eyebrow: "Avant, pendant, après",
+    body: "Comprenez comment se passe l'atelier : réservation prioritaire, consommation sur place, peinture, cuisson et récupération.",
     icon: CroissantIcon,
     visual: "mug",
-    cta: "Voir la formule",
+    cta: "Voir le déroulement",
     tone: "bg-rose/30",
   },
 ] as const;
@@ -61,6 +61,7 @@ const quickLinks = [
     icon: Coffee,
   },
   { to: "/objets", label: "Objets à peindre", desc: "Tasses, bols, vases", icon: Sparkles },
+  { to: "/guide", label: "Guide atelier", desc: "Consignes et récupération", icon: Brush },
 ] as const;
 
 const pieces: { name: string; detail: string; kind: CeramicKind; tone: string }[] = [
@@ -279,10 +280,10 @@ function HomePage() {
             </p>
           </div>
           <Link
-            to="/objets"
+            to="/creations"
             className="inline-flex w-fit items-center gap-2 rounded-full border border-ink/20 bg-cream/85 px-5 py-3 text-sm font-medium transition hover:bg-cream"
           >
-            Voir les objets <ArrowRight className="h-4 w-4" />
+            Voir les créations <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
@@ -290,7 +291,7 @@ function HomePage() {
           {creationPhotos.map((photo) => (
             <Link
               key={photo.src}
-              to="/objets"
+              to="/creations"
               className="group overflow-hidden rounded-2xl border border-border bg-card/90 shadow-sm shadow-ink/5 transition hover:-translate-y-0.5 hover:border-primary/40"
             >
               <div className="aspect-[4/5] overflow-hidden bg-cream">

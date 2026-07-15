@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ReserverRouteImport } from './routes/reserver'
 import { Route as ObjetsRouteImport } from './routes/objets'
+import { Route as GuideRouteImport } from './routes/guide'
+import { Route as CreationsRouteImport } from './routes/creations'
 import { Route as CarteRouteImport } from './routes/carte'
 import { Route as CadeauRouteImport } from './routes/cadeau'
 import { Route as BrunchRouteImport } from './routes/brunch'
@@ -25,6 +27,16 @@ const ReserverRoute = ReserverRouteImport.update({
 const ObjetsRoute = ObjetsRouteImport.update({
   id: '/objets',
   path: '/objets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuideRoute = GuideRouteImport.update({
+  id: '/guide',
+  path: '/guide',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreationsRoute = CreationsRouteImport.update({
+  id: '/creations',
+  path: '/creations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CarteRoute = CarteRouteImport.update({
@@ -59,6 +71,8 @@ export interface FileRoutesByFullPath {
   '/brunch': typeof BrunchRoute
   '/cadeau': typeof CadeauRoute
   '/carte': typeof CarteRoute
+  '/creations': typeof CreationsRoute
+  '/guide': typeof GuideRoute
   '/objets': typeof ObjetsRoute
   '/reserver': typeof ReserverRoute
 }
@@ -68,6 +82,8 @@ export interface FileRoutesByTo {
   '/brunch': typeof BrunchRoute
   '/cadeau': typeof CadeauRoute
   '/carte': typeof CarteRoute
+  '/creations': typeof CreationsRoute
+  '/guide': typeof GuideRoute
   '/objets': typeof ObjetsRoute
   '/reserver': typeof ReserverRoute
 }
@@ -78,16 +94,34 @@ export interface FileRoutesById {
   '/brunch': typeof BrunchRoute
   '/cadeau': typeof CadeauRoute
   '/carte': typeof CarteRoute
+  '/creations': typeof CreationsRoute
+  '/guide': typeof GuideRoute
   '/objets': typeof ObjetsRoute
   '/reserver': typeof ReserverRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/admin' | '/brunch' | '/cadeau' | '/carte' | '/objets' | '/reserver'
+    | '/'
+    | '/admin'
+    | '/brunch'
+    | '/cadeau'
+    | '/carte'
+    | '/creations'
+    | '/guide'
+    | '/objets'
+    | '/reserver'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/admin' | '/brunch' | '/cadeau' | '/carte' | '/objets' | '/reserver'
+    | '/'
+    | '/admin'
+    | '/brunch'
+    | '/cadeau'
+    | '/carte'
+    | '/creations'
+    | '/guide'
+    | '/objets'
+    | '/reserver'
   id:
     | '__root__'
     | '/'
@@ -95,6 +129,8 @@ export interface FileRouteTypes {
     | '/brunch'
     | '/cadeau'
     | '/carte'
+    | '/creations'
+    | '/guide'
     | '/objets'
     | '/reserver'
   fileRoutesById: FileRoutesById
@@ -105,6 +141,8 @@ export interface RootRouteChildren {
   BrunchRoute: typeof BrunchRoute
   CadeauRoute: typeof CadeauRoute
   CarteRoute: typeof CarteRoute
+  CreationsRoute: typeof CreationsRoute
+  GuideRoute: typeof GuideRoute
   ObjetsRoute: typeof ObjetsRoute
   ReserverRoute: typeof ReserverRoute
 }
@@ -123,6 +161,20 @@ declare module '@tanstack/react-router' {
       path: '/objets'
       fullPath: '/objets'
       preLoaderRoute: typeof ObjetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guide': {
+      id: '/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof GuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creations': {
+      id: '/creations'
+      path: '/creations'
+      fullPath: '/creations'
+      preLoaderRoute: typeof CreationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/carte': {
@@ -169,6 +221,8 @@ const rootRouteChildren: RootRouteChildren = {
   BrunchRoute: BrunchRoute,
   CadeauRoute: CadeauRoute,
   CarteRoute: CarteRoute,
+  CreationsRoute: CreationsRoute,
+  GuideRoute: GuideRoute,
   ObjetsRoute: ObjetsRoute,
   ReserverRoute: ReserverRoute,
 }
