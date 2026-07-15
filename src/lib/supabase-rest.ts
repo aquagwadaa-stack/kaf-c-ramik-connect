@@ -1,0 +1,194 @@
+import { useEffect, useMemo, useState } from "react";
+
+type RequestOptions = {
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  body?: unknown;
+  auth?: boolean;
+  prefer?: string;
+};
+
+export type SupabaseSession = {
+  access_token: string;
+  refresh_token?: string;
+  expires_at?: number;
+  user?: {
+    id: string;
+    email?: string;
+  };
+};
+
+const SESSION_KEY = "kafe-ceramik-admin-session";
+const AUTH_EVENT = "kafe-ceramik-auth-change";
+
+export const supabaseConfig = {
+  url: import.meta.env.VITE_SUPABASE_URL as string | undefined,
+  anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined,
+};
+
+export function isSupabaseConfigured() {
+  return Boolean(supabaseConfig.url && supabaseConfig.anonKey);
+}
+
+function baseUrl() {
+  if (!supabaseConfig.url) throw new Error("Supabase URL missing");
+  return supabaseConfig.url.replace(/\/$/, "");
+}
+
+function anonKey() {
+  if (!supabaseConfig.anonKey) throw new Error("Supabase anon key missing");
+  return supabaseConfig.anonKey;
+}
+
+export function readAdminSession(): SupabaseSession | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const session = JSON.parse(raw) as SupabaseSession;
+    if (session.expires_at && session.expires_at * 1000 < Date.now()) {
+      localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return session;
+  } catch {
+    return null;
+  }
+}
+
+function saveAdminSession(session: SupabaseSession | null) {
+  if (typeof window === "undefined") return;
+  if (session) localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  else localStorage.removeItem(SESSION_KEY);
+  window.dispatchEvent(new Event(AUTH_EVENT));
+}
+
+export function useAdminSession() {
+  const configured = isSupabaseConfigured();
+  const [session, setSession] = useState<SupabaseSession | null>(() => readAdminSession());
+
+  useEffect(() => {
+    const update = () => setSession(readAdminSession());
+    window.addEventListener(AUTH_EVENT, update);
+    window.addEventListener("storage", update);
+    return () => {
+      window.removeEventListener(AUTH_EVENT, update);
+      window.removeEventListener("storage", update);
+    };
+  }, []);
+
+  return useMemo(
+    () => ({
+      configured,
+      session,
+      signedIn: Boolean(session?.access_token),
+    }),
+    [configured, session],
+  );
+}
+
+export async function signInAdmin(email: string, password: string) {
+  const response = await fetch(`${baseUrl()}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: {
+      apikey: anonKey(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!response.ok) throw new Error(await errorMessage(response));
+  const data = (await response.json()) as SupabaseSession & { expires_in?: number };
+  const session: SupabaseSession = {
+    ...data,
+    expires_at: data.expires_at ?? Math.floor(Date.now() / 1000) + (data.expires_in ?? 3600),
+  };
+  saveAdminSession(session);
+  return session;
+}
+
+export function signOutAdmin() {
+  saveAdminSession(null);
+}
+
+async function errorMessage(response: Response) {
+  try {
+    const data = await response.json();
+    return data.message ?? data.error_description ?? data.error ?? response.statusText;
+  } catch {
+    return response.statusText;
+  }
+}
+
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  if (!isSupabaseConfigured()) throw new Error("Supabase is not configured");
+
+  const session = readAdminSession();
+  const token = options.auth ? session?.access_token : undefined;
+  if (options.auth && !token) throw new Error("Admin session required");
+
+  const response = await fetch(`${baseUrl()}${path}`, {
+    method: options.method ?? "GET",
+    headers: {
+      apikey: anonKey(),
+      Authorization: `Bearer ${token ?? anonKey()}`,
+      "Content-Type": "application/json",
+      ...(options.prefer ? { Prefer: options.prefer } : {}),
+    },
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+  });
+
+  if (!response.ok) throw new Error(await errorMessage(response));
+  if (response.status === 204) return undefined as T;
+  return (await response.json()) as T;
+}
+
+export async function selectRows<T>(table: string, query = "", auth = false) {
+  return request<T[]>(`/rest/v1/${table}${query}`, { auth });
+}
+
+export async function upsertRows<T extends Record<string, unknown>>(
+  table: string,
+  rows: T[],
+  auth = true,
+) {
+  return request<T[]>(`/rest/v1/${table}?on_conflict=id`, {
+    method: "POST",
+    body: rows,
+    auth,
+    prefer: "resolution=merge-duplicates,return=representation",
+  });
+}
+
+export async function insertRow<T extends Record<string, unknown>>(
+  table: string,
+  row: T,
+  auth = false,
+) {
+  return request<T[]>(`/rest/v1/${table}`, {
+    method: "POST",
+    body: row,
+    auth,
+    prefer: "return=representation",
+  });
+}
+
+export async function patchRow<T extends Record<string, unknown>>(
+  table: string,
+  id: string,
+  patch: T,
+  auth = true,
+) {
+  return request<T[]>(`/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: patch,
+    auth,
+    prefer: "return=representation",
+  });
+}
+
+export async function callRpc<T>(name: string, args: Record<string, unknown>, auth = false) {
+  return request<T>(`/rest/v1/rpc/${name}`, {
+    method: "POST",
+    body: args,
+    auth,
+  });
+}

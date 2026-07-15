@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { settingsSeed, type KafeSettings } from "./admin-data";
+import { callRpc, insertRow, isSupabaseConfigured, patchRow, selectRows } from "./supabase-rest";
 
 export type ReservationStatus = "pending" | "deposit_paid" | "confirmed" | "cancelled";
 export type ExperienceType = "atelier" | "cafe_atelier" | "brunch_atelier" | "groupe";
@@ -93,6 +94,53 @@ function nextWeekday(target: number, offset = 0) {
 
 const listeners = new Set<() => void>();
 
+type ReservationRow = {
+  id: string;
+  value: Reservation;
+  created_at: string;
+  date: string;
+  slot: string;
+  people: number;
+  status: ReservationStatus;
+  updated_at?: string;
+};
+
+export type SlotCapacity = {
+  date: string;
+  slot: string;
+  reserved_people: number;
+};
+
+function toReservationRow(reservation: Reservation): ReservationRow {
+  return {
+    id: reservation.id,
+    value: reservation,
+    created_at: reservation.createdAt,
+    date: reservation.date,
+    slot: reservation.slot,
+    people: reservation.people,
+    status: reservation.status,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+async function loadRemoteReservations() {
+  const rows = await selectRows<ReservationRow>(
+    "kafe_reservations",
+    "?select=id,value,created_at,date,slot,people,status,updated_at&order=date.asc,slot.asc",
+    true,
+  );
+  return rows.map((row) => row.value);
+}
+
+async function insertRemoteReservation(reservation: Reservation) {
+  await insertRow("kafe_reservations", toReservationRow(reservation), false);
+}
+
+async function updateRemoteReservationStatus(reservation: Reservation) {
+  await patchRow("kafe_reservations", reservation.id, toReservationRow(reservation), true);
+}
+
 function read(): Reservation[] {
   if (typeof window === "undefined") return seed;
   try {
@@ -118,14 +166,57 @@ export function useReservations() {
     typeof window === "undefined" ? seed : [],
   );
   useEffect(() => {
+    let alive = true;
     setList(read());
     const update = () => setList(read());
     listeners.add(update);
+
+    if (isSupabaseConfigured()) {
+      loadRemoteReservations()
+        .then((remoteList) => {
+          if (!alive || remoteList.length === 0) return;
+          write(remoteList);
+          setList(remoteList);
+        })
+        .catch((error) => {
+          console.warn("Remote reservations load skipped:", error);
+        });
+    }
+
     return () => {
+      alive = false;
       listeners.delete(update);
     };
   }, []);
   return list;
+}
+
+export function useReservationCapacities() {
+  const [capacities, setCapacities] = useState<SlotCapacity[]>([]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    let alive = true;
+    const today = new Date();
+    const until = new Date();
+    until.setDate(until.getDate() + 90);
+    callRpc<SlotCapacity[]>("get_kafe_slot_capacity", {
+      from_date: today.toISOString().slice(0, 10),
+      to_date: until.toISOString().slice(0, 10),
+    })
+      .then((rows) => {
+        if (alive) setCapacities(rows);
+      })
+      .catch((error) => {
+        console.warn("Remote capacity load skipped:", error);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  return capacities;
 }
 
 export function addReservation(r: Omit<Reservation, "id" | "createdAt">): Reservation {
@@ -136,6 +227,11 @@ export function addReservation(r: Omit<Reservation, "id" | "createdAt">): Reserv
   };
   const list = read();
   write([full, ...list]);
+  if (isSupabaseConfigured()) {
+    insertRemoteReservation(full).catch((error) => {
+      console.warn("Remote reservation insert skipped:", error);
+    });
+  }
   return full;
 }
 
@@ -172,7 +268,12 @@ export function getRemainingCapacity(
   date: string,
   slot: string,
   settings: KafeSettings,
+  capacities?: SlotCapacity[],
 ) {
+  const remoteCapacity = capacities?.find(
+    (capacity) => capacity.date === date && capacity.slot === slot,
+  );
+  if (remoteCapacity) return Math.max(0, settings.defaultCapacity - remoteCapacity.reserved_people);
   return Math.max(0, settings.defaultCapacity - getReservedPeopleForSlot(reservations, date, slot));
 }
 
@@ -181,6 +282,13 @@ export function updateStatus(id: string, status: ReservationStatus) {
     reservation.id === id ? { ...reservation, status } : reservation,
   );
   write(list);
+  const updated = list.find((reservation) => reservation.id === id);
+  if (isSupabaseConfigured()) {
+    if (!updated) return;
+    updateRemoteReservationStatus(updated).catch((error) => {
+      console.warn("Remote reservation status save skipped:", error);
+    });
+  }
 }
 
 export function experienceLabel(experience: ExperienceType): string {

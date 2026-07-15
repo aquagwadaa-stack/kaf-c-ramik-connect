@@ -23,9 +23,11 @@ import {
   getRemainingCapacity,
   shouldRequireDeposit,
   shouldWaitForManualConfirmation,
+  useReservationCapacities,
   useReservations,
   type ExperienceType,
   type Reservation,
+  type SlotCapacity,
 } from "@/lib/reservations";
 
 export const Route = createFileRoute("/reserver")({
@@ -73,6 +75,7 @@ const experiences: {
 
 function ReserverPage() {
   const reservations = useReservations();
+  const capacities = useReservationCapacities();
   const [settings] = useKafeSettings();
   const [step, setStep] = useState(1);
   const [experience, setExperience] = useState<ExperienceType>("cafe_atelier");
@@ -119,7 +122,7 @@ function ReserverPage() {
       return;
     }
 
-    const remaining = getRemainingCapacity(reservations, date, slot, settings);
+    const remaining = getRemainingCapacity(reservations, date, slot, settings, capacities);
     if (remaining < people) {
       setErrors({ slot: "Ce créneau n'a plus assez de place pour ce nombre de personnes." });
       setStep(2);
@@ -260,6 +263,7 @@ function ReserverPage() {
               <WeekPlanner
                 people={people}
                 reservations={reservations}
+                capacities={capacities}
                 settings={settings}
                 selectedDate={date}
                 selectedSlot={slot}
@@ -528,6 +532,7 @@ function Stepper({ step }: { step: number }) {
 function WeekPlanner({
   people,
   reservations,
+  capacities,
   settings,
   selectedDate,
   selectedSlot,
@@ -535,6 +540,7 @@ function WeekPlanner({
 }: {
   people: number;
   reservations: Reservation[];
+  capacities: SlotCapacity[];
   settings: KafeSettings;
   selectedDate: string;
   selectedSlot: string;
@@ -614,6 +620,7 @@ function WeekPlanner({
                         slotOption,
                         people,
                         reservations,
+                        capacities,
                         settings,
                       );
                       const selected = selectedDate === iso && selectedSlot === slotOption;
@@ -660,6 +667,7 @@ function getSlotAvailability(
   slot: string,
   people: number,
   reservations: Reservation[],
+  capacities: SlotCapacity[],
   settings: KafeSettings,
 ) {
   const today = startOfDay(new Date());
@@ -667,7 +675,7 @@ function getSlotAvailability(
   if (current < today) return { disabled: true, label: "passé" };
 
   const date = toISODate(day);
-  const remaining = getRemainingCapacity(reservations, date, slot, settings);
+  const remaining = getRemainingCapacity(reservations, date, slot, settings, capacities);
   if (remaining <= 0) return { disabled: true, label: "complet" };
   if (remaining < people) return { disabled: true, label: `${remaining} place(s) restante(s)` };
   if (remaining <= 2) return { disabled: false, label: `${remaining} place(s) restante(s)` };

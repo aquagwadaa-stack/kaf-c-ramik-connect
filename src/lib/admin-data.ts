@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { isSupabaseConfigured, selectRows, upsertRows } from "./supabase-rest";
 
 type Listener = () => void;
 
@@ -48,16 +49,85 @@ function writeStore<T>(key: string, value: T) {
   notify(key);
 }
 
-export function useStoredList<T>(key: string, seed: T[]) {
+type RemoteJsonRow<T> = {
+  id: string;
+  value: T;
+  sort_order?: number;
+  updated_at?: string;
+};
+
+type RemoteListOptions<T> = {
+  table: string;
+  authLoad?: boolean;
+  toRow?: (item: T, index: number) => RemoteJsonRow<T>;
+};
+
+async function loadRemoteList<T>(table: string, authLoad = false) {
+  const rows = await selectRows<RemoteJsonRow<T>>(
+    table,
+    "?select=id,value,sort_order,updated_at&order=sort_order.asc.nullslast,updated_at.desc",
+    authLoad,
+  );
+  return rows.map((row) => row.value);
+}
+
+async function saveRemoteList<T extends { id: string }>(
+  table: string,
+  list: T[],
+  toRow: (item: T, index: number) => RemoteJsonRow<T>,
+) {
+  await upsertRows(table, list.map(toRow), true);
+}
+
+export function useStoredList<T extends { id: string }>(
+  key: string,
+  seed: T[],
+  remote?: RemoteListOptions<T>,
+) {
   const [list, setList] = useState<T[]>(() => (typeof window === "undefined" ? seed : []));
+  const remoteTable = remote?.table;
+  const remoteAuthLoad = remote?.authLoad;
 
   useEffect(() => {
+    let alive = true;
     const update = () => setList(readList(key, seed));
     update();
-    return subscribe(key, update);
-  }, [key, seed]);
+    const unsubscribe = subscribe(key, update);
 
-  const save = (next: T[]) => writeStore(key, next);
+    if (remoteTable && isSupabaseConfigured()) {
+      loadRemoteList<T>(remoteTable, remoteAuthLoad)
+        .then((remoteList) => {
+          if (!alive || remoteList.length === 0) return;
+          writeStore(key, remoteList);
+          setList(remoteList);
+        })
+        .catch((error) => {
+          console.warn(`Remote load skipped for ${remoteTable}:`, error);
+        });
+    }
+
+    return () => {
+      alive = false;
+      unsubscribe();
+    };
+  }, [key, remoteAuthLoad, remoteTable, seed]);
+
+  const save = (next: T[]) => {
+    writeStore(key, next);
+    if (remote && isSupabaseConfigured()) {
+      const toRow =
+        remote.toRow ??
+        ((item: T, index: number) => ({
+          id: item.id,
+          value: item,
+          sort_order: index,
+          updated_at: new Date().toISOString(),
+        }));
+      saveRemoteList(remote.table, next, toRow).catch((error) => {
+        console.warn(`Remote save skipped for ${remote.table}:`, error);
+      });
+    }
+  };
   return [list, save] as const;
 }
 
@@ -229,15 +299,27 @@ export const settingsSeed: KafeSettings = {
 };
 
 export function useCeramicObjects() {
-  return useStoredList<CeramicObject>("kafe-ceramik-objects", ceramicObjectsSeed);
+  return useStoredList<CeramicObject>("kafe-ceramik-objects", ceramicObjectsSeed, {
+    table: "kafe_ceramic_objects",
+  });
 }
 
 export function useContentDocuments() {
-  return useStoredList<ContentDocument>("kafe-ceramik-documents", contentDocumentsSeed);
+  return useStoredList<ContentDocument>("kafe-ceramik-documents", contentDocumentsSeed, {
+    table: "kafe_content_documents",
+  });
 }
 
 export function useWaiverSignatures() {
-  return useStoredList<WaiverSignature>("kafe-ceramik-waiver-signatures", waiverSignaturesSeed);
+  return useStoredList<WaiverSignature>("kafe-ceramik-waiver-signatures", waiverSignaturesSeed, {
+    table: "kafe_waiver_signatures",
+    authLoad: true,
+    toRow: (signature) => ({
+      id: signature.id,
+      value: signature,
+      updated_at: new Date().toISOString(),
+    }),
+  });
 }
 
 export function useKafeSettings() {
@@ -246,11 +328,44 @@ export function useKafeSettings() {
   );
 
   useEffect(() => {
+    let alive = true;
     const update = () => setSettings(readStore("kafe-ceramik-settings", settingsSeed));
     update();
-    return subscribe("kafe-ceramik-settings", update);
+    const unsubscribe = subscribe("kafe-ceramik-settings", update);
+
+    if (isSupabaseConfigured()) {
+      selectRows<{ id: string; value: KafeSettings }>(
+        "kafe_settings",
+        "?id=eq.main&select=id,value&limit=1",
+      )
+        .then((rows) => {
+          if (!alive || !rows[0]?.value) return;
+          const next = { ...settingsSeed, ...rows[0].value };
+          writeStore("kafe-ceramik-settings", next);
+          setSettings(next);
+        })
+        .catch((error) => {
+          console.warn("Remote settings load skipped:", error);
+        });
+    }
+
+    return () => {
+      alive = false;
+      unsubscribe();
+    };
   }, []);
 
-  const save = (next: KafeSettings) => writeStore("kafe-ceramik-settings", next);
+  const save = (next: KafeSettings) => {
+    writeStore("kafe-ceramik-settings", next);
+    if (isSupabaseConfigured()) {
+      upsertRows(
+        "kafe_settings",
+        [{ id: "main", value: next, updated_at: new Date().toISOString() }],
+        true,
+      ).catch((error) => {
+        console.warn("Remote settings save skipped:", error);
+      });
+    }
+  };
   return [settings, save] as const;
 }

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
-import type { PointerEvent, ReactNode } from "react";
+import type { FormEvent, PointerEvent, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   AlertCircle,
@@ -13,6 +13,8 @@ import {
   Download,
   FileText,
   Image as ImageIcon,
+  LockKeyhole,
+  LogOut,
   PackageOpen,
   Plus,
   Save,
@@ -42,6 +44,7 @@ import {
   type KafeSettings,
   type WaiverSignature,
 } from "@/lib/admin-data";
+import { signInAdmin, signOutAdmin, useAdminSession } from "@/lib/supabase-rest";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -76,6 +79,16 @@ function readFileAsDataUrl(file: File) {
 }
 
 function AdminPage() {
+  const admin = useAdminSession();
+
+  if (admin.configured && !admin.signedIn) {
+    return <AdminLogin />;
+  }
+
+  return <AdminWorkspace remoteMode={admin.configured} adminEmail={admin.session?.user?.email} />;
+}
+
+function AdminWorkspace({ remoteMode, adminEmail }: { remoteMode: boolean; adminEmail?: string }) {
   const reservations = useReservations();
   const [objects, saveObjects] = useCeramicObjects();
   const [documents, saveDocuments] = useContentDocuments();
@@ -109,13 +122,23 @@ function AdminPage() {
 
       <section className="mx-auto max-w-6xl px-4 py-10 space-y-6">
         <div className="rounded-2xl border border-border bg-cream/75 p-4 text-sm text-muted-foreground">
-          <div className="flex items-start gap-3">
-            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-            <p>
-              Version de travail : les données sont simulées côté navigateur pour valider les
-              parcours. Avant mise en production, cet espace devra être protégé par connexion
-              administrateur et branché à la base de données.
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+              <p>
+                {remoteMode
+                  ? `Mode connecté : les données sont synchronisées avec la base Supabase${adminEmail ? ` pour ${adminEmail}` : ""}.`
+                  : "Version de travail : les données sont simulées côté navigateur. Dès que Supabase est configuré, cet espace demande une connexion administrateur et synchronise les données."}
+              </p>
+            </div>
+            {remoteMode && (
+              <button
+                onClick={signOutAdmin}
+                className="inline-flex shrink-0 items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-xs text-foreground hover:bg-secondary"
+              >
+                <LogOut className="h-4 w-4" /> Déconnexion
+              </button>
+            )}
           </div>
         </div>
 
@@ -173,6 +196,67 @@ function AdminPage() {
           <DocumentsPanel documents={documents} saveDocuments={saveDocuments} />
         )}
         {tab === "settings" && <SettingsPanel settings={settings} saveSettings={saveSettings} />}
+      </section>
+    </PageShell>
+  );
+}
+
+function AdminLogin() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      await signInAdmin(email, password);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Connexion impossible.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <PageShell>
+      <section className="mx-auto grid min-h-[70vh] max-w-md place-items-center px-4 py-12">
+        <form
+          onSubmit={submit}
+          className="w-full rounded-3xl border border-border bg-card p-6 shadow-sm"
+        >
+          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary text-primary-foreground">
+            <LockKeyhole className="h-5 w-5" />
+          </div>
+          <h1 className="mt-5 font-display text-3xl">Connexion équipe</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Accès réservé à l'administration du Kafé Céramik.
+          </p>
+
+          <div className="mt-5 grid gap-3">
+            <Field label="Email" value={email} onChange={setEmail} />
+            <label>
+              <span className="mb-1.5 block text-sm font-medium">Mot de passe</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </label>
+          </div>
+
+          {error && <div className="mt-4 text-sm text-destructive">{error}</div>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-5 w-full rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground disabled:opacity-60"
+          >
+            {loading ? "Connexion..." : "Se connecter"}
+          </button>
+        </form>
       </section>
     </PageShell>
   );
