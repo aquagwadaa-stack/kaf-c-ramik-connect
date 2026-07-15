@@ -6,8 +6,9 @@ Ajouter ces variables dans Lovable quand le projet Supabase est cree :
 
 ```text
 VITE_SUPABASE_URL=https://xxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=ey...
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx
 ```
+
 
 Sans ces variables, le site reste en mode demo local avec `localStorage`.
 
