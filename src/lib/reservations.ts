@@ -286,6 +286,53 @@ export function getRemainingCapacity(
   return Math.max(0, settings.defaultCapacity - getReservedPeopleForSlot(reservations, date, slot));
 }
 
+function timeToMinutes(value: string) {
+  const [hours, minutes] = value.split(":").map(Number);
+  return (Number.isFinite(hours) ? hours : 0) * 60 + (Number.isFinite(minutes) ? minutes : 0);
+}
+
+function minutesToTime(value: number) {
+  const hours = Math.floor(value / 60);
+  const minutes = value % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+function dateMatchesRule(
+  isoDate: string,
+  weekday: number,
+  settings: KafeSettings,
+  ruleIndex: number,
+) {
+  const rule = settings.scheduleRules?.[ruleIndex];
+  if (!rule) return false;
+  if (!rule.weekdays.includes(weekday)) return false;
+  if (rule.validFrom && isoDate < rule.validFrom) return false;
+  if (rule.validUntil && isoDate > rule.validUntil) return false;
+  return true;
+}
+
+export function getSlotsForDate(isoDate: string, settings: KafeSettings) {
+  const weekday = new Date(`${isoDate}T00:00:00`).getDay();
+  const duration = Math.max(15, settings.slotDurationMinutes || 90);
+
+  if (!settings.scheduleRules?.length) {
+    return settings.closedWeekdays.includes(weekday) ? [] : settings.slots;
+  }
+
+  const slots = new Set<string>();
+  settings.scheduleRules.forEach((rule, index) => {
+    if (!dateMatchesRule(isoDate, weekday, settings, index)) return;
+    const start = timeToMinutes(rule.startTime);
+    const end = timeToMinutes(rule.endTime);
+    if (end <= start) return;
+    for (let minute = start; minute < end; minute += duration) {
+      slots.add(minutesToTime(minute));
+    }
+  });
+
+  return [...slots].sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
+}
+
 export function updateStatus(id: string, status: ReservationStatus) {
   const list = read().map((reservation) =>
     reservation.id === id ? { ...reservation, status } : reservation,

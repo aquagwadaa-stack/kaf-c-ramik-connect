@@ -251,12 +251,23 @@ export interface WaiverSignature {
 
 export const waiverSignaturesSeed: WaiverSignature[] = [];
 
+export interface ScheduleRule {
+  id: string;
+  label: string;
+  weekdays: number[];
+  startTime: string;
+  endTime: string;
+  validFrom: string;
+  validUntil: string;
+}
+
 export interface KafeSettings {
   depositThreshold: number;
   depositPerPerson: number;
   defaultCapacity: number;
   slotDurationMinutes: number;
   slots: string[];
+  scheduleRules: ScheduleRule[];
   closedWeekdays: number[];
   manualConfirmationForGroups: boolean;
   manualConfirmationThreshold: number;
@@ -274,6 +285,17 @@ export const settingsSeed: KafeSettings = {
   defaultCapacity: 12,
   slotDurationMinutes: 90,
   slots: ["09:30", "10:30", "11:30", "13:30", "14:30", "15:30", "16:30"],
+  scheduleRules: [
+    {
+      id: "rule-standard",
+      label: "Semaine type",
+      weekdays: [2, 3, 4, 5, 6, 0],
+      startTime: "09:30",
+      endTime: "18:00",
+      validFrom: "2026-01-01",
+      validUntil: "2026-12-31",
+    },
+  ],
   closedWeekdays: [1],
   manualConfirmationForGroups: true,
   manualConfirmationThreshold: 8,

@@ -21,6 +21,7 @@ import {
   formatReservationDate,
   getDepositAmount,
   getRemainingCapacity,
+  getSlotsForDate,
   shouldRequireDeposit,
   shouldWaitForManualConfirmation,
   useReservationCapacities,
@@ -582,7 +583,8 @@ function WeekPlanner({
         <div className="grid min-w-[840px] grid-cols-7 gap-2">
           {days.map((day) => {
             const iso = toISODate(day);
-            const closed = settings.closedWeekdays.includes(day.getDay());
+            const slots = getSlotsForDate(iso, settings);
+            const closed = slots.length === 0;
             return (
               <div
                 key={iso}
@@ -600,7 +602,7 @@ function WeekPlanner({
                   </div>
                 ) : (
                   <div className="mt-3 grid gap-1.5">
-                    {settings.slots.map((slotOption) => {
+                    {slots.map((slotOption) => {
                       const state = getSlotAvailability(
                         day,
                         slotOption,

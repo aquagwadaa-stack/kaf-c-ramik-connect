@@ -20,12 +20,11 @@ import {
   Save,
   Settings,
   ShieldCheck,
-  SlidersHorizontal,
   Trash2,
   UploadCloud,
   X,
 } from "lucide-react";
-import { PageShell, PageHeader } from "@/components/page-shell";
+import { PageShell } from "@/components/page-shell";
 import {
   useReservations,
   experienceLabel,
@@ -44,6 +43,7 @@ import {
   type CeramicObject,
   type ContentDocument,
   type KafeSettings,
+  type ScheduleRule,
   type WaiverSignature,
 } from "@/lib/admin-data";
 import {
@@ -213,36 +213,40 @@ function AdminWorkspace({
   }, [reservations, signatures, today]);
 
   return (
-    <PageShell>
-      <PageHeader
-        eyebrow="Espace équipe"
-        title="Tableau de bord"
-        description="Pilotez les réservations, les décharges, les objets disponibles et les textes importants depuis un seul endroit."
-      />
-
-      <section className="mx-auto max-w-6xl px-4 py-10 space-y-6">
-        <div className="rounded-2xl border border-border bg-cream/75 p-4 text-sm text-muted-foreground">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-              <p>
-                {remoteMode
-                  ? `Mode connecté : les données sont synchronisées avec la base Supabase${adminEmail ? ` pour ${adminEmail}` : ""}${adminRole ? ` · rôle ${adminRole}` : ""}.`
-                  : "Version de travail : les données sont simulées côté navigateur. Dès que Supabase est configuré, cet espace demande une connexion administrateur et synchronise les données."}
-              </p>
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-40 border-b border-border bg-background/92 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+          <div className="min-w-0">
+            <div className="font-display text-xl leading-none">Kafé Céramik</div>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+              {remoteMode
+                ? `Données synchronisées${adminEmail ? ` · ${adminEmail}` : ""}${adminRole ? ` · ${adminRole}` : ""}`
+                : "Mode local de travail"}
             </div>
-            {remoteMode && (
-              <button
-                onClick={signOutAdmin}
-                className="inline-flex shrink-0 items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-xs text-foreground hover:bg-secondary"
-              >
-                <LogOut className="h-4 w-4" /> Déconnexion
-              </button>
-            )}
+          </div>
+          {remoteMode && (
+            <button
+              onClick={signOutAdmin}
+              className="inline-flex shrink-0 items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm text-foreground hover:bg-secondary"
+            >
+              <LogOut className="h-4 w-4" /> Déconnexion
+            </button>
+          )}
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl space-y-5 px-4 py-6">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="font-display text-3xl leading-tight sm:text-4xl">Tableau de bord</h1>
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              Gérez les réservations, les objets, les documents et les conditions de réservation.
+            </p>
           </div>
         </div>
 
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Stat
             icon={CalendarDays}
             label="Aujourd'hui"
@@ -263,8 +267,6 @@ function AdminWorkspace({
             sub="signées aujourd'hui"
           />
         </div>
-
-        <OperationalFocus />
 
         <div className="flex gap-2 overflow-x-auto pb-1">
           {tabs.map(({ id, label, icon: Icon }) => (
@@ -298,8 +300,8 @@ function AdminWorkspace({
           <DocumentsPanel documents={documents} saveDocuments={saveDocuments} />
         )}
         {tab === "settings" && <SettingsPanel settings={settings} saveSettings={saveSettings} />}
-      </section>
-    </PageShell>
+      </main>
+    </div>
   );
 }
 
@@ -405,31 +407,6 @@ function Stat({
       </div>
       <div className="mt-2 font-display text-2xl sm:text-3xl">{value}</div>
       <div className="text-xs text-muted-foreground">{sub}</div>
-    </div>
-  );
-}
-
-function OperationalFocus() {
-  return (
-    <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 md:grid-cols-[auto_1fr] md:items-center">
-      <div className="grid h-12 w-12 place-items-center rounded-xl bg-secondary text-secondary-foreground">
-        <SlidersHorizontal className="h-5 w-5" />
-      </div>
-      <div className="grid gap-3 md:grid-cols-4">
-        <AdminCue title="Journee" body="reservations et signatures" />
-        <AdminCue title="Groupes" body="acomptes et validation" />
-        <AdminCue title="Objets" body="prix, photos, disponibilite" />
-        <AdminCue title="Contenus" body="guide, decharge, messages" />
-      </div>
-    </div>
-  );
-}
-
-function AdminCue({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="rounded-xl bg-background px-3 py-2">
-      <div className="text-sm font-medium">{title}</div>
-      <div className="text-xs text-muted-foreground">{body}</div>
     </div>
   );
 }
@@ -1040,46 +1017,57 @@ function DocumentsPanel({
       attachmentDataUrl,
       attachmentName: file.name,
       attachmentType: file.type || "application/octet-stream",
+      version: `${id}-${new Date().toISOString().slice(0, 10)}`,
     });
   }
 
+  const guide = documents.find((document) => document.id === "guide");
+  const waiver = documents.find((document) => document.id === "waiver");
+
   return (
     <Panel
-      title="Guide et décharge"
-      desc="Les textes officiels seront fournis et validés par Mala Madre avant publication."
+      title="Guide"
+      desc="Contenu affiché aux clients pour comprendre le fonctionnement de l'atelier."
     >
-      <div className="grid gap-4 lg:grid-cols-2">
-        {documents.map((document) => (
-          <div key={document.id} className="rounded-2xl border border-border bg-background p-4">
+      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        {guide && (
+          <div className="rounded-2xl border border-border bg-background p-4">
             <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              <h3 className="font-display text-xl">{document.title}</h3>
+              <BookOpenText className="h-5 w-5 text-primary" />
+              <h3 className="font-display text-xl">Page guide</h3>
             </div>
             <label className="mt-4 block">
-              <span className="mb-1.5 block text-sm font-medium">Version publiée</span>
-              <input
-                value={document.version}
-                onChange={(event) => updateDocument(document.id, { version: event.target.value })}
-                className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="mt-3 block">
-              <span className="mb-1.5 block text-sm font-medium">Texte</span>
+              <span className="mb-1.5 block text-sm font-medium">Texte de la page guide</span>
               <textarea
-                value={document.body}
-                onChange={(event) => updateDocument(document.id, { body: event.target.value })}
-                rows={8}
+                value={guide.body}
+                onChange={(event) => updateDocument("guide", { body: event.target.value })}
+                rows={14}
                 className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
             </label>
+            <div className="mt-3 text-xs text-muted-foreground">
+              Dernière modification : {new Date(guide.updatedAt).toLocaleString("fr-FR")}
+            </div>
+          </div>
+        )}
+
+        {waiver && (
+          <div className="rounded-2xl border border-border bg-background p-4">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              <h3 className="font-display text-xl">Décharge officielle</h3>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Importez le document qui sera présenté avant la signature sur tablette.
+            </p>
             <div className="mt-4 rounded-2xl border border-border bg-card p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <div className="text-sm font-medium">
-                    {document.id === "waiver" ? "Document officiel" : "Fichier joint"}
+                    {waiver.attachmentName ?? "Aucun document importé"}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    PDF ou image à afficher avant signature.
+                    PDF, image, Word ou document fourni par Mala Madre.
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -1090,15 +1078,15 @@ function DocumentsPanel({
                       accept="application/pdf,image/*,.doc,.docx"
                       className="sr-only"
                       onChange={async (event) => {
-                        await uploadDocument(document.id, event.currentTarget.files?.[0]);
+                        await uploadDocument("waiver", event.currentTarget.files?.[0]);
                         event.currentTarget.value = "";
                       }}
                     />
                   </label>
-                  {document.attachmentDataUrl && (
+                  {waiver.attachmentDataUrl && (
                     <button
                       onClick={() =>
-                        updateDocument(document.id, {
+                        updateDocument("waiver", {
                           attachmentDataUrl: undefined,
                           attachmentName: undefined,
                           attachmentType: undefined,
@@ -1111,13 +1099,13 @@ function DocumentsPanel({
                   )}
                 </div>
               </div>
-              <DocumentPreview document={document} className="mt-3" compact />
+              <DocumentPreview document={waiver} className="mt-3" compact />
             </div>
             <div className="mt-3 text-xs text-muted-foreground">
-              Dernière modification : {new Date(document.updatedAt).toLocaleString("fr-FR")}
+              Dernière modification : {new Date(waiver.updatedAt).toLocaleString("fr-FR")}
             </div>
           </div>
-        ))}
+        )}
       </div>
     </Panel>
   );
@@ -1218,22 +1206,6 @@ function SettingsPanel({
     saveSettings({ ...settings, ...patch });
   }
 
-  function updateSlots(value: string) {
-    update({
-      slots: value
-        .split(",")
-        .map((slot) => slot.trim())
-        .filter(Boolean),
-    });
-  }
-
-  function toggleClosedDay(day: number) {
-    const closedWeekdays = settings.closedWeekdays.includes(day)
-      ? settings.closedWeekdays.filter((item) => item !== day)
-      : [...settings.closedWeekdays, day].sort();
-    update({ closedWeekdays });
-  }
-
   return (
     <Panel
       title="Réglages"
@@ -1276,11 +1248,6 @@ function SettingsPanel({
           onChange={(value) => update({ manualConfirmationForGroups: value })}
         />
         <ToggleRow
-          label="Signature obligatoire à l'arrivée"
-          checked={settings.signatureRequiredOnArrival}
-          onChange={(value) => update({ signatureRequiredOnArrival: value })}
-        />
-        <ToggleRow
           label="Accueil café sans réservation"
           checked={settings.walkInCafeEnabled}
           onChange={(value) => update({ walkInCafeEnabled: value })}
@@ -1288,50 +1255,10 @@ function SettingsPanel({
       </div>
 
       <div className="mt-5 grid gap-4">
-        <label className="rounded-2xl border border-border bg-background p-4">
-          <span className="mb-2 block text-sm font-medium">Créneaux affichés</span>
-          <input
-            value={settings.slots.join(", ")}
-            onChange={(event) => updateSlots(event.target.value)}
-            className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-            placeholder="09:30, 10:30, 11:30..."
-          />
-          <span className="mt-2 block text-xs text-muted-foreground">
-            Sépare les horaires par une virgule. Ces créneaux sont ceux affichés dans le planning
-            client.
-          </span>
-        </label>
-
-        <div className="rounded-2xl border border-border bg-background p-4">
-          <div className="mb-3 text-sm font-medium">Jours fermés dans le planning</div>
-          <div className="flex flex-wrap gap-2">
-            {[
-              ["Dim", 0],
-              ["Lun", 1],
-              ["Mar", 2],
-              ["Mer", 3],
-              ["Jeu", 4],
-              ["Ven", 5],
-              ["Sam", 6],
-            ].map(([label, day]) => {
-              const value = Number(day);
-              const active = settings.closedWeekdays.includes(value);
-              return (
-                <button
-                  key={value}
-                  onClick={() => toggleClosedDay(value)}
-                  className={`rounded-full border px-3 py-1.5 text-sm ${
-                    active
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border hover:bg-secondary"
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <ScheduleRulesEditor
+          rules={settings.scheduleRules ?? []}
+          onChange={(scheduleRules) => update({ scheduleRules })}
+        />
 
         <TextareaField
           label="Texte affiché pour les clients qui viennent seulement au Kafé"
@@ -1348,13 +1275,143 @@ function SettingsPanel({
           value={settings.guideAcceptanceText}
           onChange={(value) => update({ guideAcceptanceText: value })}
         />
-        <TextareaField
-          label="Message de confirmation affiché après réservation"
-          value={settings.confirmationEmailText}
-          onChange={(value) => update({ confirmationEmailText: value })}
-        />
       </div>
     </Panel>
+  );
+}
+
+const weekdayOptions = [
+  ["Lun", 1],
+  ["Mar", 2],
+  ["Mer", 3],
+  ["Jeu", 4],
+  ["Ven", 5],
+  ["Sam", 6],
+  ["Dim", 0],
+] as const;
+
+function dateInput(offsetMonths = 0) {
+  const date = new Date();
+  date.setMonth(date.getMonth() + offsetMonths);
+  return date.toISOString().slice(0, 10);
+}
+
+function createScheduleRule(): ScheduleRule {
+  return {
+    id: `rule-${Date.now()}`,
+    label: "Nouvelle plage",
+    weekdays: [2, 3, 4, 5, 6],
+    startTime: "09:00",
+    endTime: "12:00",
+    validFrom: dateInput(0),
+    validUntil: dateInput(2),
+  };
+}
+
+function ScheduleRulesEditor({
+  rules,
+  onChange,
+}: {
+  rules: ScheduleRule[];
+  onChange: (rules: ScheduleRule[]) => void;
+}) {
+  function updateRule(id: string, patch: Partial<ScheduleRule>) {
+    onChange(rules.map((rule) => (rule.id === id ? { ...rule, ...patch } : rule)));
+  }
+
+  function toggleWeekday(rule: ScheduleRule, day: number) {
+    const weekdays = rule.weekdays.includes(day)
+      ? rule.weekdays.filter((value) => value !== day)
+      : [...rule.weekdays, day].sort();
+    updateRule(rule.id, { weekdays });
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-background p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="font-display text-xl">Planning des créneaux</div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Créez des plages horaires par jours et par période. Le planning client se met à jour
+            avec ces règles.
+          </p>
+        </div>
+        <button
+          onClick={() => onChange([...rules, createScheduleRule()])}
+          className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+        >
+          <Plus className="h-4 w-4" /> Ajouter une plage
+        </button>
+      </div>
+
+      <div className="mt-4 grid gap-3">
+        {rules.length === 0 ? (
+          <EmptyState text="Aucune plage active. Ajoutez une plage pour afficher des créneaux côté client." />
+        ) : (
+          rules.map((rule) => (
+            <div key={rule.id} className="rounded-2xl border border-border bg-card p-4">
+              <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-start">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Field
+                    label="Nom de la plage"
+                    value={rule.label}
+                    onChange={(value) => updateRule(rule.id, { label: value })}
+                  />
+                  <div>
+                    <span className="mb-1.5 block text-sm font-medium">Jours concernés</span>
+                    <div className="flex flex-wrap gap-2">
+                      {weekdayOptions.map(([label, day]) => {
+                        const active = rule.weekdays.includes(day);
+                        return (
+                          <button
+                            key={day}
+                            type="button"
+                            onClick={() => toggleWeekday(rule, day)}
+                            className={`rounded-full border px-3 py-1.5 text-sm ${
+                              active
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-background hover:bg-secondary"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <TimeField
+                    label="Début"
+                    value={rule.startTime}
+                    onChange={(value) => updateRule(rule.id, { startTime: value })}
+                  />
+                  <TimeField
+                    label="Fin"
+                    value={rule.endTime}
+                    onChange={(value) => updateRule(rule.id, { endTime: value })}
+                  />
+                  <DateField
+                    label="Appliquer à partir du"
+                    value={rule.validFrom}
+                    onChange={(value) => updateRule(rule.id, { validFrom: value })}
+                  />
+                  <DateField
+                    label="Jusqu'au"
+                    value={rule.validUntil}
+                    onChange={(value) => updateRule(rule.id, { validUntil: value })}
+                  />
+                </div>
+                <button
+                  onClick={() => onChange(rules.filter((item) => item.id !== rule.id))}
+                  className="inline-flex items-center gap-2 rounded-full border border-destructive/30 px-4 py-2 text-sm text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="h-4 w-4" /> Supprimer
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1450,6 +1507,50 @@ function Field({
     <label>
       <span className="mb-1.5 block text-sm font-medium">{label}</span>
       <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+      />
+    </label>
+  );
+}
+
+function TimeField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label>
+      <span className="mb-1.5 block text-sm font-medium">{label}</span>
+      <input
+        type="time"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+      />
+    </label>
+  );
+}
+
+function DateField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label>
+      <span className="mb-1.5 block text-sm font-medium">{label}</span>
+      <input
+        type="date"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"

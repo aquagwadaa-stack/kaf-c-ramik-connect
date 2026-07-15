@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ReserverRouteImport } from './routes/reserver'
 import { Route as ObjetsRouteImport } from './routes/objets'
-import { Route as GroupesRouteImport } from './routes/groupes'
 import { Route as CarteRouteImport } from './routes/carte'
 import { Route as CadeauRouteImport } from './routes/cadeau'
 import { Route as BrunchRouteImport } from './routes/brunch'
@@ -26,11 +25,6 @@ const ReserverRoute = ReserverRouteImport.update({
 const ObjetsRoute = ObjetsRouteImport.update({
   id: '/objets',
   path: '/objets',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GroupesRoute = GroupesRouteImport.update({
-  id: '/groupes',
-  path: '/groupes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CarteRoute = CarteRouteImport.update({
@@ -65,7 +59,6 @@ export interface FileRoutesByFullPath {
   '/brunch': typeof BrunchRoute
   '/cadeau': typeof CadeauRoute
   '/carte': typeof CarteRoute
-  '/groupes': typeof GroupesRoute
   '/objets': typeof ObjetsRoute
   '/reserver': typeof ReserverRoute
 }
@@ -75,7 +68,6 @@ export interface FileRoutesByTo {
   '/brunch': typeof BrunchRoute
   '/cadeau': typeof CadeauRoute
   '/carte': typeof CarteRoute
-  '/groupes': typeof GroupesRoute
   '/objets': typeof ObjetsRoute
   '/reserver': typeof ReserverRoute
 }
@@ -86,31 +78,16 @@ export interface FileRoutesById {
   '/brunch': typeof BrunchRoute
   '/cadeau': typeof CadeauRoute
   '/carte': typeof CarteRoute
-  '/groupes': typeof GroupesRoute
   '/objets': typeof ObjetsRoute
   '/reserver': typeof ReserverRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/admin'
-    | '/brunch'
-    | '/cadeau'
-    | '/carte'
-    | '/groupes'
-    | '/objets'
-    | '/reserver'
+    '/' | '/admin' | '/brunch' | '/cadeau' | '/carte' | '/objets' | '/reserver'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/admin'
-    | '/brunch'
-    | '/cadeau'
-    | '/carte'
-    | '/groupes'
-    | '/objets'
-    | '/reserver'
+    '/' | '/admin' | '/brunch' | '/cadeau' | '/carte' | '/objets' | '/reserver'
   id:
     | '__root__'
     | '/'
@@ -118,7 +95,6 @@ export interface FileRouteTypes {
     | '/brunch'
     | '/cadeau'
     | '/carte'
-    | '/groupes'
     | '/objets'
     | '/reserver'
   fileRoutesById: FileRoutesById
@@ -129,7 +105,6 @@ export interface RootRouteChildren {
   BrunchRoute: typeof BrunchRoute
   CadeauRoute: typeof CadeauRoute
   CarteRoute: typeof CarteRoute
-  GroupesRoute: typeof GroupesRoute
   ObjetsRoute: typeof ObjetsRoute
   ReserverRoute: typeof ReserverRoute
 }
@@ -148,13 +123,6 @@ declare module '@tanstack/react-router' {
       path: '/objets'
       fullPath: '/objets'
       preLoaderRoute: typeof ObjetsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/groupes': {
-      id: '/groupes'
-      path: '/groupes'
-      fullPath: '/groupes'
-      preLoaderRoute: typeof GroupesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/carte': {
@@ -201,10 +169,19 @@ const rootRouteChildren: RootRouteChildren = {
   BrunchRoute: BrunchRoute,
   CadeauRoute: CadeauRoute,
   CarteRoute: CarteRoute,
-  GroupesRoute: GroupesRoute,
   ObjetsRoute: ObjetsRoute,
   ReserverRoute: ReserverRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

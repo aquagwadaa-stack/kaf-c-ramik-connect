@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Menu, X, Coffee } from "lucide-react";
 
 const links = [
-  { to: "/reserver", label: "Réserver" },
   { to: "/brunch", label: "Brunch + Atelier" },
   { to: "/carte", label: "Carte" },
   { to: "/objets", label: "Objets" },
@@ -89,18 +88,20 @@ export function SiteHeader() {
       </div>
 
       <div
-        className={`grid overflow-hidden border-border bg-background lg:hidden transition-all duration-300 ease-out ${
-          open ? "max-h-[420px] border-t opacity-100" : "max-h-0 border-t-0 opacity-0"
+        className={`absolute right-4 top-[calc(100%+0.5rem)] w-[min(92vw,330px)] overflow-hidden rounded-2xl border border-border bg-card shadow-xl shadow-ink/15 lg:hidden transition-all duration-200 ease-out ${
+          open
+            ? "translate-y-0 scale-100 opacity-100"
+            : "pointer-events-none -translate-y-2 scale-95 opacity-0"
         }`}
       >
-        <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3">
+        <div className="flex flex-col gap-1 p-2">
           {links.map((l, i) => (
             <Link
               key={l.to}
               to={l.to}
               onClick={() => setOpen(false)}
               style={{ animationDelay: `${i * 40}ms` }}
-              className={`press rounded-xl px-3 py-2.5 text-sm hover:bg-secondary ${
+              className={`press rounded-xl px-3 py-3 text-left text-sm hover:bg-secondary ${
                 open ? "rise" : ""
               }`}
             >
@@ -110,7 +111,7 @@ export function SiteHeader() {
           <Link
             to="/reserver"
             onClick={() => setOpen(false)}
-            className="press shine mt-1 rounded-xl bg-primary px-3 py-2.5 text-center text-sm font-medium text-primary-foreground"
+            className="press shine mt-1 rounded-xl bg-primary px-3 py-3 text-center text-sm font-medium text-primary-foreground"
           >
             Réserver un atelier
           </Link>
