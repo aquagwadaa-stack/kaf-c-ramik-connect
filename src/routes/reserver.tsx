@@ -1,24 +1,31 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Palette,
-  Coffee,
-  CroissantIcon,
-  Users,
+  CalendarCheck2,
+  CalendarDays,
+  CalendarHeart,
+  Check,
   ChevronLeft,
   ChevronRight,
-  Check,
-  CalendarCheck2,
+  Coffee,
+  CroissantIcon,
+  Palette,
   Sparkles,
-  CalendarDays,
+  Users,
 } from "lucide-react";
 import { PageShell, PageHeader } from "@/components/page-shell";
+import { useKafeSettings, type KafeSettings } from "@/lib/admin-data";
 import {
   addReservation,
   experienceLabel,
+  formatReservationDate,
   getDepositAmount,
+  getRemainingCapacity,
   shouldRequireDeposit,
+  shouldWaitForManualConfirmation,
+  useReservations,
   type ExperienceType,
+  type Reservation,
 } from "@/lib/reservations";
 
 export const Route = createFileRoute("/reserver")({
@@ -43,35 +50,35 @@ const experiences: {
 }[] = [
   {
     id: "cafe_atelier",
-    title: "Atelier céramique (autour d'un café)",
-    desc: "Peinture sur céramique avec une boisson chaude ou un jus.",
+    title: "Kafé + atelier",
+    desc: "Peinture sur céramique avec une consommation sur place.",
     icon: Coffee,
-    price: "dès 28 €/pers",
+    price: "pièce + conso",
   },
   {
     id: "brunch_atelier",
-    title: "Atelier céramique (avec un brunch)",
-    desc: "Brunch gourmand puis création.",
+    title: "Brunch + atelier",
+    desc: "Déjeunette gourmande puis moment créatif.",
     icon: CroissantIcon,
-    price: "dès 38 €/pers",
+    price: "pièce + brunch",
   },
   {
     id: "groupe",
-    title: "Groupe / événement",
-    desc: "Pour une grande table ou une occasion spéciale.",
+    title: "Groupe",
+    desc: "Pour une grande table ou une demande à organiser.",
     icon: Users,
-    price: "sur demande",
+    price: "validation équipe",
   },
 ];
 
-const SLOTS = ["09:30", "10:30", "11:30", "13:30", "14:30", "15:30", "16:30"];
-
 function ReserverPage() {
+  const reservations = useReservations();
+  const [settings] = useKafeSettings();
   const [step, setStep] = useState(1);
   const [experience, setExperience] = useState<ExperienceType>("cafe_atelier");
   const [people, setPeople] = useState(2);
-  const [date, setDate] = useState<string>("");
-  const [slot, setSlot] = useState<string>("");
+  const [date, setDate] = useState("");
+  const [slot, setSlot] = useState("");
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -82,23 +89,28 @@ function ReserverPage() {
   const [guideAccepted, setGuideAccepted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState<string | null>(null);
+  const [doneNotice, setDoneNotice] = useState("");
 
-  const depositRequired = shouldRequireDeposit(people);
-  const deposit = getDepositAmount(people);
+  const depositRequired = shouldRequireDeposit(people, settings);
+  const deposit = getDepositAmount(people, settings);
+  const requiresManualReview = shouldWaitForManualConfirmation(people, experience, settings);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [step]);
 
-  const next = () => {
-    if (step === 2 && (!date || !slot)) return;
-    setStep((s) => Math.min(s + 1, 4));
-  };
-  const back = () => setStep((s) => Math.max(s - 1, 1));
-
   function chooseSlot(nextDate: string, nextSlot: string) {
     setDate(nextDate);
     setSlot(nextSlot);
+  }
+
+  function next() {
+    if (step === 2 && (!date || !slot)) return;
+    setStep((current) => Math.min(current + 1, 4));
+  }
+
+  function back() {
+    setStep((current) => Math.max(current - 1, 1));
   }
 
   function submit(payDeposit: boolean) {
@@ -106,15 +118,35 @@ function ReserverPage() {
       setStep(2);
       return;
     }
-    const e: Record<string, string> = {};
-    if (!form.firstName) e.firstName = "Requis";
-    if (!form.lastName) e.lastName = "Requis";
-    if (!form.phone || form.phone.length < 8) e.phone = "Téléphone invalide";
-    if (!form.email || !/.+@.+\..+/.test(form.email)) e.email = "Email invalide";
-    if (!guideAccepted) e.guideAccepted = "Merci de confirmer les consignes avant de continuer";
-    setErrors(e);
-    if (Object.keys(e).length) return;
-    const r = addReservation({
+
+    const remaining = getRemainingCapacity(reservations, date, slot, settings);
+    if (remaining < people) {
+      setErrors({ slot: "Ce créneau n'a plus assez de place pour ce nombre de personnes." });
+      setStep(2);
+      return;
+    }
+
+    const nextErrors: Record<string, string> = {};
+    if (!form.firstName) nextErrors.firstName = "Requis";
+    if (!form.lastName) nextErrors.lastName = "Requis";
+    if (!form.phone || form.phone.length < 8) nextErrors.phone = "Téléphone invalide";
+    if (!form.email || !/.+@.+\..+/.test(form.email)) nextErrors.email = "Email invalide";
+    if (!guideAccepted)
+      nextErrors.guideAccepted = "Merci de confirmer les consignes avant de continuer";
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+
+    const status = requiresManualReview
+      ? depositRequired && payDeposit
+        ? "deposit_paid"
+        : "pending"
+      : depositRequired
+        ? payDeposit
+          ? "deposit_paid"
+          : "pending"
+        : "confirmed";
+
+    const reservation = addReservation({
       experience,
       people,
       date,
@@ -123,10 +155,16 @@ function ReserverPage() {
       depositPaid: depositRequired ? payDeposit : false,
       depositRequired,
       depositAmount: deposit,
-      status: depositRequired ? (payDeposit ? "deposit_paid" : "pending") : "confirmed",
-      isGroupRequest: people >= 8 || experience === "groupe",
+      status,
+      isGroupRequest: people >= settings.manualConfirmationThreshold || experience === "groupe",
     });
-    setDone(r.id);
+
+    setDone(reservation.id);
+    setDoneNotice(
+      requiresManualReview
+        ? "Votre demande est enregistrée. L'équipe du Kafé confirmera le créneau dès validation."
+        : settings.confirmationEmailText,
+    );
     setStep(4);
   }
 
@@ -138,19 +176,19 @@ function ReserverPage() {
         description="La réservation concerne l'atelier céramique avec consommation sur place. Pour un café, un bagel ou une déjeunette sans peindre, vous pouvez passer librement."
       />
       <section className="mx-auto max-w-5xl px-4 py-10">
-        <div className="mb-5 grid gap-3 rounded-2xl border border-border bg-cream/75 p-4 sm:grid-cols-[auto_1fr] sm:items-center">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-secondary text-secondary-foreground">
-            <Coffee className="h-5 w-5" />
-          </span>
-          <div>
-            <div className="font-medium">Envie de venir seulement au Kafé ?</div>
-            <p className="mt-1 text-sm leading-5 text-muted-foreground">
-              Pas besoin de réserver pour boire un café, manger un bagel ou bruncher. Pour peindre,
-              l'atelier se fait avec une consommation sur place et les personnes ayant réservé sont
-              prioritaires ; des places peuvent se libérer sur place selon l'affluence.
-            </p>
+        {settings.walkInCafeEnabled && (
+          <div className="mb-5 grid gap-3 rounded-2xl border border-border bg-cream/75 p-4 sm:grid-cols-[auto_1fr] sm:items-center">
+            <span className="grid h-11 w-11 place-items-center rounded-xl bg-secondary text-secondary-foreground">
+              <Coffee className="h-5 w-5" />
+            </span>
+            <div>
+              <div className="font-medium">Envie de venir seulement au Kafé ?</div>
+              <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                {settings.walkInNoticeText}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         <Stepper step={step} />
 
@@ -158,14 +196,14 @@ function ReserverPage() {
           {step === 1 && (
             <Step title="Quelle expérience vous tente ?">
               <div className="grid gap-3 sm:grid-cols-2">
-                {experiences.map((x) => {
-                  const Icon = x.icon;
-                  const active = experience === x.id;
+                {experiences.map((item) => {
+                  const Icon = item.icon;
+                  const active = experience === item.id;
                   return (
                     <button
-                      key={x.id}
-                      onClick={() => setExperience(x.id)}
-                      className={`text-left rounded-2xl border p-4 transition ${
+                      key={item.id}
+                      onClick={() => setExperience(item.id)}
+                      className={`rounded-2xl border p-4 text-left transition ${
                         active
                           ? "border-primary bg-primary/10 ring-2 ring-primary/25"
                           : "border-border hover:border-primary/40 hover:bg-secondary/40"
@@ -175,12 +213,12 @@ function ReserverPage() {
                         <span className="grid h-10 w-10 place-items-center rounded-xl bg-secondary">
                           <Icon className="h-5 w-5" />
                         </span>
-                        <div className="min-w-0">
-                          <div className="font-medium">{x.title}</div>
-                          <div className="text-xs text-muted-foreground">{x.price}</div>
-                        </div>
+                        <span className="min-w-0">
+                          <span className="block font-medium">{item.title}</span>
+                          <span className="block text-xs text-muted-foreground">{item.price}</span>
+                        </span>
                       </div>
-                      <p className="mt-3 text-sm text-muted-foreground">{x.desc}</p>
+                      <p className="mt-3 text-sm text-muted-foreground">{item.desc}</p>
                     </button>
                   );
                 })}
@@ -189,45 +227,45 @@ function ReserverPage() {
               <div className="mt-6">
                 <div className="mb-2 text-sm font-medium">Nombre de personnes</div>
                 <div className="flex flex-wrap gap-2">
-                  {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => (
+                  {[1, 2, 3, 4, 5, 6, 8, 10].map((count) => (
                     <button
-                      key={n}
+                      key={count}
                       onClick={() => {
-                        setPeople(n);
+                        setPeople(count);
                         setDate("");
                         setSlot("");
                       }}
                       className={`min-w-12 rounded-full border px-4 py-2 text-sm ${
-                        people === n
+                        people === count
                           ? "border-primary bg-primary text-primary-foreground"
                           : "border-border hover:bg-secondary"
                       }`}
                     >
-                      {n}
+                      {count}
                     </button>
                   ))}
                 </div>
               </div>
-              {experience === "groupe" && (
+
+              {requiresManualReview && (
                 <div className="mt-4 rounded-xl bg-rose/20 p-3 text-sm">
-                  Pour un événement précis, vous pouvez aussi{" "}
-                  <Link to="/groupes" className="font-medium text-primary underline">
-                    envoyer une demande personnalisée
-                  </Link>
-                  .
+                  Cette demande passera en validation équipe avant confirmation définitive.
                 </div>
               )}
             </Step>
           )}
 
           {step === 2 && (
-            <Step title="Choisissez un créneau cette semaine">
+            <Step title="Choisissez un créneau">
               <WeekPlanner
                 people={people}
+                reservations={reservations}
+                settings={settings}
                 selectedDate={date}
                 selectedSlot={slot}
                 onSelect={chooseSlot}
               />
+              {errors.slot && <p className="mt-3 text-sm text-destructive">{errors.slot}</p>}
             </Step>
           )}
 
@@ -263,10 +301,10 @@ function ReserverPage() {
                   <label className="mb-1.5 block text-sm font-medium">Message (optionnel)</label>
                   <textarea
                     value={form.message}
-                    onChange={(e) => setForm({ ...form, message: e.target.value })}
+                    onChange={(event) => setForm({ ...form, message: event.target.value })}
                     rows={3}
                     className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="Allergies, occasion spéciale, demande particulière..."
+                    placeholder="Allergies, demande particulière, organisation groupe..."
                   />
                 </div>
               </div>
@@ -277,31 +315,36 @@ function ReserverPage() {
                   <div className="text-sm">
                     <div className="font-medium">
                       {depositRequired
-                        ? `Acompte groupe de ${deposit} €`
+                        ? `Acompte groupe de ${deposit} EUR`
                         : "Pas d'acompte en ligne pour ce créneau"}
                     </div>
                     <p className="mt-1 text-muted-foreground">
                       {depositRequired
-                        ? "Pour les groupes de 8 personnes ou plus, un acompte permet de bloquer la table. Il sera déduit de la note finale."
+                        ? "Pour les groupes concernés, l'acompte permet de bloquer la demande. Les conditions exactes sont indiquées par le Kafé."
                         : "Pour peindre, une consommation sur place reste demandée. Les personnes ayant réservé sont prioritaires sur les places atelier."}
                     </p>
                   </div>
                 </div>
               </div>
 
+              <div className="mt-4 rounded-2xl border border-border bg-background p-4 text-sm">
+                <div className="font-medium">Conditions pratiques</div>
+                <p className="mt-1 text-muted-foreground">{settings.reservationConditionsText}</p>
+              </div>
+
               <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-background p-4 text-sm">
                 <input
                   type="checkbox"
                   checked={guideAccepted}
-                  onChange={(e) => setGuideAccepted(e.target.checked)}
+                  onChange={(event) => setGuideAccepted(event.target.checked)}
                   className="mt-1 h-4 w-4 accent-primary"
                 />
                 <span>
                   <span className="font-medium">J'ai compris les consignes de l'atelier.</span>
                   <span className="mt-1 block text-muted-foreground">
-                    Le guide et la décharge devront être lus et signés à l'arrivée sur la tablette
-                    du Kafé Céramik. Le respect des consignes conditionne le rendu et la
-                    récupération de la création.
+                    {settings.guideAcceptanceText}
+                    {settings.signatureRequiredOnArrival &&
+                      " La décharge devra être lue et signée à l'arrivée sur la tablette du Kafé."}
                   </span>
                   {errors.guideAccepted && (
                     <span className="mt-1 block text-xs text-destructive">
@@ -319,13 +362,13 @@ function ReserverPage() {
                 <Check className="h-7 w-7" />
               </div>
               <h2 className="mt-4 text-2xl">Réservation enregistrée</h2>
-              <p className="mt-2 text-muted-foreground">On a hâte de vous accueillir au Kafé.</p>
+              <p className="mt-2 text-muted-foreground">{doneNotice}</p>
               <div className="mx-auto mt-6 max-w-md rounded-2xl border border-border bg-secondary/40 p-5 text-left text-sm">
                 <Row k="Formule" v={experienceLabel(experience)} />
                 <Row k="Personnes" v={`${people}`} />
-                <Row k="Date" v={formatDate(date)} />
+                <Row k="Date" v={formatReservationDate(date)} />
                 <Row k="Créneau" v={slot} />
-                <Row k="Acompte" v={`${deposit} €`} />
+                <Row k="Acompte" v={deposit > 0 ? `${deposit} EUR` : "Non requis"} />
                 <Row k="Référence" v={done} />
               </div>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
@@ -366,13 +409,13 @@ function ReserverPage() {
                     onClick={() => submit(false)}
                     className="rounded-full border border-border px-4 py-2 text-sm"
                   >
-                    Envoyer la demande groupe
+                    Envoyer la demande
                   </button>
                   <button
                     onClick={() => submit(true)}
                     className="inline-flex items-center gap-1 rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground"
                   >
-                    <CalendarCheck2 className="h-4 w-4" /> Simuler l'acompte de {deposit} €
+                    <CalendarCheck2 className="h-4 w-4" /> Simuler l'acompte de {deposit} EUR
                   </button>
                 </div>
               ) : (
@@ -394,6 +437,7 @@ function ReserverPage() {
             date={date}
             slot={slot}
             deposit={deposit}
+            requiresManualReview={requiresManualReview}
           />
         )}
       </section>
@@ -429,7 +473,7 @@ function Field({
       <input
         type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(event) => onChange(event.target.value)}
         className={`w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring ${
           error ? "border-destructive" : "border-input"
         }`}
@@ -452,12 +496,12 @@ function Stepper({ step }: { step: number }) {
   const labels = ["Formule", "Planning", "Infos", "Confirmé"];
   return (
     <div className="grid grid-cols-4 gap-2">
-      {labels.map((l, i) => {
-        const n = i + 1;
-        const active = step >= n;
+      {labels.map((label, index) => {
+        const number = index + 1;
+        const active = step >= number;
         return (
           <div
-            key={l}
+            key={label}
             className={`rounded-2xl border px-2 py-2 text-center ${
               active ? "border-primary bg-primary/10" : "border-border bg-card/70"
             }`}
@@ -467,12 +511,12 @@ function Stepper({ step }: { step: number }) {
                 active ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
               }`}
             >
-              {n}
+              {number}
             </div>
             <div
               className={`mt-1 truncate text-[11px] ${active ? "text-foreground" : "text-muted-foreground"}`}
             >
-              {l}
+              {label}
             </div>
           </div>
         );
@@ -483,11 +527,15 @@ function Stepper({ step }: { step: number }) {
 
 function WeekPlanner({
   people,
+  reservations,
+  settings,
   selectedDate,
   selectedSlot,
   onSelect,
 }: {
   people: number;
+  reservations: Reservation[];
+  settings: KafeSettings;
   selectedDate: string;
   selectedSlot: string;
   onSelect: (date: string, slot: string) => void;
@@ -496,14 +544,14 @@ function WeekPlanner({
   const [weekStart, setWeekStart] = useState(currentWeek);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const days = useMemo(() => buildWeek(weekStart), [weekStart]);
-  const weekLabel = `${formatShortDate(days[0])} – ${formatShortDate(days[6])}`;
+  const weekLabel = `${formatShortDate(days[0])} - ${formatShortDate(days[6])}`;
   const canGoBack = weekStart.getTime() > currentWeek.getTime();
 
   useEffect(() => {
     const node = scrollerRef.current;
     if (!node) return;
     const todayIso = toISODate(new Date());
-    const todayIndex = days.findIndex((d) => toISODate(d) === todayIso);
+    const todayIndex = days.findIndex((day) => toISODate(day) === todayIso);
     const targetIndex = todayIndex >= 0 ? todayIndex : 0;
     if (node.scrollWidth > node.clientWidth) {
       const columnWidth = node.scrollWidth / 7;
@@ -542,7 +590,7 @@ function WeekPlanner({
         <div className="grid min-w-[840px] grid-cols-7 gap-2">
           {days.map((day) => {
             const iso = toISODate(day);
-            const closed = day.getDay() === 1;
+            const closed = settings.closedWeekdays.includes(day.getDay());
             return (
               <div
                 key={iso}
@@ -560,14 +608,20 @@ function WeekPlanner({
                   </div>
                 ) : (
                   <div className="mt-3 grid gap-1.5">
-                    {SLOTS.map((s) => {
-                      const state = getSlotAvailability(day, s, people);
-                      const selected = selectedDate === iso && selectedSlot === s;
+                    {settings.slots.map((slotOption) => {
+                      const state = getSlotAvailability(
+                        day,
+                        slotOption,
+                        people,
+                        reservations,
+                        settings,
+                      );
+                      const selected = selectedDate === iso && selectedSlot === slotOption;
                       return (
                         <button
-                          key={s}
+                          key={slotOption}
                           disabled={state.disabled}
-                          onClick={() => onSelect(iso, s)}
+                          onClick={() => onSelect(iso, slotOption)}
                           className={`rounded-xl border px-2 py-2 text-left transition ${
                             selected
                               ? "border-primary bg-primary text-primary-foreground"
@@ -576,7 +630,7 @@ function WeekPlanner({
                                 : "border-border bg-card hover:border-primary/45 hover:bg-secondary/60"
                           }`}
                         >
-                          <span className="block text-sm font-medium">{s}</span>
+                          <span className="block text-sm font-medium">{slotOption}</span>
                           <span
                             className={`block text-[11px] ${selected ? "text-primary-foreground/75" : "text-muted-foreground"}`}
                           >
@@ -594,29 +648,29 @@ function WeekPlanner({
       </div>
 
       <p className="mt-3 text-xs text-muted-foreground">
-        Planning de démonstration : les disponibilités changent selon le jour et le nombre de
-        personnes.
+        Durée indicative d'un créneau : {settings.slotDurationMinutes} min. Les créneaux complets ne
+        peuvent pas être réservés.
       </p>
     </div>
   );
 }
 
-function getSlotAvailability(day: Date, slot: string, people: number) {
+function getSlotAvailability(
+  day: Date,
+  slot: string,
+  people: number,
+  reservations: Reservation[],
+  settings: KafeSettings,
+) {
   const today = startOfDay(new Date());
   const current = startOfDay(day);
   if (current < today) return { disabled: true, label: "passé" };
 
-  const dow = day.getDay();
-  const full =
-    (dow === 6 && (slot === "10:30" || slot === "14:30")) ||
-    (dow === 0 && slot === "15:30") ||
-    (people > 4 && slot === "16:30");
-
-  if (full) return { disabled: true, label: "complet" };
-
-  const limited = (dow === 5 && slot === "10:30") || (people > 3 && slot === "11:30");
-  if (limited) return { disabled: false, label: "reste 2 places" };
-
+  const date = toISODate(day);
+  const remaining = getRemainingCapacity(reservations, date, slot, settings);
+  if (remaining <= 0) return { disabled: true, label: "complet" };
+  if (remaining < people) return { disabled: true, label: `${remaining} place(s) restante(s)` };
+  if (remaining <= 2) return { disabled: false, label: `${remaining} place(s) restante(s)` };
   return { disabled: false, label: "disponible" };
 }
 
@@ -653,27 +707,20 @@ function formatShortDate(date: Date) {
   return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
 
-export function formatDate(iso: string) {
-  if (!iso) return "—";
-  return new Date(iso + "T00:00:00").toLocaleDateString("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
-}
-
 function Summary({
   experience,
   people,
   date,
   slot,
   deposit,
+  requiresManualReview,
 }: {
   experience: ExperienceType;
   people: number;
   date: string;
   slot: string;
   deposit: number;
+  requiresManualReview: boolean;
 }) {
   return (
     <div className="mt-4 rounded-2xl border border-border bg-cream/70 p-4 text-sm">
@@ -682,13 +729,20 @@ function Summary({
           <div className="text-xs uppercase text-muted-foreground">Récap</div>
           <div className="font-medium">
             {experienceLabel(experience)} · {people} pers
-            {date && ` · ${formatDate(date)}`}
+            {date && ` · ${formatReservationDate(date)}`}
             {slot && ` · ${slot}`}
           </div>
+          {requiresManualReview && (
+            <div className="mt-1 text-xs text-muted-foreground">
+              Validation équipe nécessaire avant confirmation définitive.
+            </div>
+          )}
         </div>
         <div className="text-right">
           <div className="text-xs text-muted-foreground">Acompte</div>
-          <div className="font-display text-xl">{deposit > 0 ? `${deposit} €` : "Non requis"}</div>
+          <div className="font-display text-xl">
+            {deposit > 0 ? `${deposit} EUR` : "Non requis"}
+          </div>
         </div>
       </div>
     </div>

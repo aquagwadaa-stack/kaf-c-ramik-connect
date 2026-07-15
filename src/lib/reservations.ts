@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { settingsSeed, type KafeSettings } from "./admin-data";
 
 export type ReservationStatus = "pending" | "deposit_paid" | "confirmed" | "cancelled";
 export type ExperienceType = "atelier" | "cafe_atelier" | "brunch_atelier" | "groupe";
@@ -8,8 +9,8 @@ export interface Reservation {
   createdAt: string;
   experience: ExperienceType;
   people: number;
-  date: string; // ISO yyyy-mm-dd
-  slot: string; // "10:30"
+  date: string;
+  slot: string;
   firstName: string;
   lastName: string;
   phone: string;
@@ -31,7 +32,7 @@ const seed: Reservation[] = [
   {
     id: "r1",
     createdAt: new Date().toISOString(),
-    experience: "atelier",
+    experience: "cafe_atelier",
     people: 2,
     date: nextWeekday(5),
     slot: "10:30",
@@ -50,7 +51,7 @@ const seed: Reservation[] = [
     experience: "brunch_atelier",
     people: 4,
     date: nextWeekday(6),
-    slot: "14:00",
+    slot: "14:30",
     firstName: "Camille",
     lastName: "Marie-Jeanne",
     phone: "0690 44 55 66",
@@ -66,7 +67,7 @@ const seed: Reservation[] = [
     experience: "groupe",
     people: 8,
     date: nextWeekday(6, 14),
-    slot: "16:00",
+    slot: "16:30",
     firstName: "Laura",
     lastName: "Petit",
     phone: "0690 77 88 99",
@@ -76,25 +77,9 @@ const seed: Reservation[] = [
     depositAmount: 80,
     status: "pending",
     isGroupRequest: true,
-    eventType: "Anniversaire",
-    budget: "300-500€",
-    message: "Anniversaire surprise pour ma sœur, 8 personnes.",
-  },
-  {
-    id: "r4",
-    createdAt: new Date().toISOString(),
-    experience: "atelier",
-    people: 3,
-    date: nextWeekday(0),
-    slot: "11:00",
-    firstName: "Sophie",
-    lastName: "Lacroix",
-    phone: "0690 12 34 56",
-    email: "sophie@example.com",
-    depositPaid: false,
-    depositRequired: false,
-    depositAmount: 0,
-    status: "confirmed",
+    eventType: "Groupe",
+    budget: "300-500 EUR",
+    message: "Table de 8 personnes, besoin de confirmer l'organisation.",
   },
 ];
 
@@ -125,7 +110,7 @@ function read(): Reservation[] {
 function write(list: Reservation[]) {
   if (typeof window === "undefined") return;
   localStorage.setItem(KEY, JSON.stringify(list));
-  listeners.forEach((l) => l());
+  listeners.forEach((listener) => listener());
 }
 
 export function useReservations() {
@@ -154,33 +139,73 @@ export function addReservation(r: Omit<Reservation, "id" | "createdAt">): Reserv
   return full;
 }
 
-export function shouldRequireDeposit(people: number) {
-  return people >= 8;
+export function shouldRequireDeposit(people: number, settings: KafeSettings = settingsSeed) {
+  return people >= settings.depositThreshold;
 }
 
-export function getDepositAmount(people: number) {
-  return shouldRequireDeposit(people) ? people * 10 : 0;
+export function getDepositAmount(people: number, settings: KafeSettings = settingsSeed) {
+  return shouldRequireDeposit(people, settings) ? people * settings.depositPerPerson : 0;
+}
+
+export function shouldWaitForManualConfirmation(
+  people: number,
+  experience: ExperienceType,
+  settings: KafeSettings = settingsSeed,
+) {
+  return (
+    settings.manualConfirmationForGroups &&
+    (experience === "groupe" || people >= settings.manualConfirmationThreshold)
+  );
+}
+
+export function getReservedPeopleForSlot(reservations: Reservation[], date: string, slot: string) {
+  return reservations
+    .filter((reservation) => {
+      if (reservation.date !== date || reservation.slot !== slot) return false;
+      return reservation.status !== "cancelled";
+    })
+    .reduce((total, reservation) => total + reservation.people, 0);
+}
+
+export function getRemainingCapacity(
+  reservations: Reservation[],
+  date: string,
+  slot: string,
+  settings: KafeSettings,
+) {
+  return Math.max(0, settings.defaultCapacity - getReservedPeopleForSlot(reservations, date, slot));
 }
 
 export function updateStatus(id: string, status: ReservationStatus) {
-  const list = read().map((r) => (r.id === id ? { ...r, status } : r));
+  const list = read().map((reservation) =>
+    reservation.id === id ? { ...reservation, status } : reservation,
+  );
   write(list);
 }
 
-export function experienceLabel(e: ExperienceType): string {
+export function experienceLabel(experience: ExperienceType): string {
   return {
     atelier: "Atelier céramique",
-    cafe_atelier: "Atelier céramique (autour d'un café)",
-    brunch_atelier: "Atelier céramique (avec un brunch)",
-    groupe: "Groupe / Événement",
-  }[e];
+    cafe_atelier: "Kafé + atelier",
+    brunch_atelier: "Brunch + atelier",
+    groupe: "Groupe",
+  }[experience];
 }
 
-export function statusLabel(s: ReservationStatus) {
+export function statusLabel(status: ReservationStatus) {
   return {
     pending: "En attente",
     deposit_paid: "Acompte payé",
     confirmed: "Confirmé",
     cancelled: "Annulé",
-  }[s];
+  }[status];
+}
+
+export function formatReservationDate(iso: string) {
+  if (!iso) return "-";
+  return new Date(`${iso}T00:00:00`).toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
 }

@@ -22,7 +22,21 @@ function readStore<T>(key: string, seed: T): T {
       localStorage.setItem(key, JSON.stringify(seed));
       return seed;
     }
-    return JSON.parse(raw) as T;
+    return { ...seed, ...(JSON.parse(raw) as T) };
+  } catch {
+    return seed;
+  }
+}
+
+function readList<T>(key: string, seed: T[]): T[] {
+  if (typeof window === "undefined") return seed;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      localStorage.setItem(key, JSON.stringify(seed));
+      return seed;
+    }
+    return JSON.parse(raw) as T[];
   } catch {
     return seed;
   }
@@ -38,7 +52,7 @@ export function useStoredList<T>(key: string, seed: T[]) {
   const [list, setList] = useState<T[]>(() => (typeof window === "undefined" ? seed : []));
 
   useEffect(() => {
-    const update = () => setList(readStore(key, seed));
+    const update = () => setList(readList(key, seed));
     update();
     return subscribe(key, update);
   }, [key, seed]);
@@ -142,14 +156,14 @@ export const contentDocumentsSeed: ContentDocument[] = [
     title: "Guide de peinture",
     version: "v1-demo",
     updatedAt: new Date().toISOString(),
-    body: "Guide provisoire. Le texte officiel sera fourni par Mala Madre : preparation de la piece, consignes de peinture, delais de cuisson et recuperation.",
+    body: "Guide provisoire. Le texte officiel sera fourni par Mala Madre : préparation de la pièce, consignes de peinture, délais de cuisson et récupération.",
   },
   {
     id: "waiver",
-    title: "Decharge atelier",
+    title: "Décharge atelier",
     version: "v1-demo",
     updatedAt: new Date().toISOString(),
-    body: "Decharge provisoire. Le texte officiel sera fourni par Mala Madre et valide par le client avant publication.",
+    body: "Décharge provisoire. Le texte officiel sera fourni par Mala Madre et validé par le client avant publication.",
   },
 ];
 
@@ -180,16 +194,38 @@ export interface KafeSettings {
   depositThreshold: number;
   depositPerPerson: number;
   defaultCapacity: number;
+  slotDurationMinutes: number;
+  slots: string[];
+  closedWeekdays: number[];
+  manualConfirmationForGroups: boolean;
+  manualConfirmationThreshold: number;
   signatureRequiredOnArrival: boolean;
   walkInCafeEnabled: boolean;
+  walkInNoticeText: string;
+  reservationConditionsText: string;
+  guideAcceptanceText: string;
+  confirmationEmailText: string;
 }
 
 export const settingsSeed: KafeSettings = {
   depositThreshold: 8,
   depositPerPerson: 10,
   defaultCapacity: 12,
+  slotDurationMinutes: 90,
+  slots: ["09:30", "10:30", "11:30", "13:30", "14:30", "15:30", "16:30"],
+  closedWeekdays: [1],
+  manualConfirmationForGroups: true,
+  manualConfirmationThreshold: 8,
   signatureRequiredOnArrival: true,
   walkInCafeEnabled: true,
+  walkInNoticeText:
+    "Pas besoin de réserver pour boire un café, manger un bagel ou bruncher. Pour peindre, l'atelier se fait avec une consommation sur place et les personnes ayant réservé sont prioritaires.",
+  reservationConditionsText:
+    "Pour toute annulation, retard ou modification, merci de prévenir le Kafé dès que possible. Les règles définitives seront précisées par Mala Madre.",
+  guideAcceptanceText:
+    "J'ai pris connaissance des informations importantes de l'atelier et je m'engage à respecter le guide transmis par le Kafé Céramik.",
+  confirmationEmailText:
+    "Votre réservation est enregistrée. Le guide et les informations pratiques vous seront envoyés avant votre venue.",
 };
 
 export function useCeramicObjects() {

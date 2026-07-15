@@ -26,6 +26,7 @@ import { PageShell, PageHeader } from "@/components/page-shell";
 import {
   useReservations,
   experienceLabel,
+  formatReservationDate,
   statusLabel,
   updateStatus,
   type Reservation,
@@ -41,7 +42,6 @@ import {
   type KafeSettings,
   type WaiverSignature,
 } from "@/lib/admin-data";
-import { formatDate } from "./reserver";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -281,7 +281,7 @@ function ReservationCard({ reservation, signed }: { reservation: Reservation; si
             {experienceLabel(reservation.experience)} · {reservation.people} pers
           </div>
           <div className="text-xs text-muted-foreground">
-            {formatDate(reservation.date)}
+            {formatReservationDate(reservation.date)}
             {reservation.slot !== "—" && ` · ${reservation.slot}`}
             {reservation.eventType && ` · ${reservation.eventType}`}
           </div>
@@ -409,8 +409,8 @@ function WaiversPanel({
                 <option value="">Sans réservation liée</option>
                 {reservations.map((reservation) => (
                   <option key={reservation.id} value={reservation.id}>
-                    {reservation.firstName} {reservation.lastName} · {formatDate(reservation.date)}{" "}
-                    · {reservation.slot}
+                    {reservation.firstName} {reservation.lastName} ·{" "}
+                    {formatReservationDate(reservation.date)} · {reservation.slot}
                   </option>
                 ))}
               </select>
@@ -905,8 +905,27 @@ function SettingsPanel({
     saveSettings({ ...settings, ...patch });
   }
 
+  function updateSlots(value: string) {
+    update({
+      slots: value
+        .split(",")
+        .map((slot) => slot.trim())
+        .filter(Boolean),
+    });
+  }
+
+  function toggleClosedDay(day: number) {
+    const closedWeekdays = settings.closedWeekdays.includes(day)
+      ? settings.closedWeekdays.filter((item) => item !== day)
+      : [...settings.closedWeekdays, day].sort();
+    update({ closedWeekdays });
+  }
+
   return (
-    <Panel title="Réglages" desc="Paramètres métier qui pourront ensuite être reliés à Supabase.">
+    <Panel
+      title="Réglages"
+      desc="Chaque paramètre modifie réellement le parcours client ou le travail de l'équipe."
+    >
       <div className="grid gap-4 md:grid-cols-2">
         <NumberField
           label="Acompte à partir de"
@@ -917,7 +936,7 @@ function SettingsPanel({
         <NumberField
           label="Acompte par personne"
           value={settings.depositPerPerson}
-          suffix="€"
+          suffix="EUR"
           onChange={(value) => update({ depositPerPerson: value })}
         />
         <NumberField
@@ -925,6 +944,23 @@ function SettingsPanel({
           value={settings.defaultCapacity}
           suffix="places"
           onChange={(value) => update({ defaultCapacity: value })}
+        />
+        <NumberField
+          label="Durée d'un créneau"
+          value={settings.slotDurationMinutes}
+          suffix="minutes"
+          onChange={(value) => update({ slotDurationMinutes: value })}
+        />
+        <NumberField
+          label="Validation équipe à partir de"
+          value={settings.manualConfirmationThreshold}
+          suffix="personnes"
+          onChange={(value) => update({ manualConfirmationThreshold: value })}
+        />
+        <ToggleRow
+          label="Les groupes attendent une validation équipe"
+          checked={settings.manualConfirmationForGroups}
+          onChange={(value) => update({ manualConfirmationForGroups: value })}
         />
         <ToggleRow
           label="Signature obligatoire à l'arrivée"
@@ -935,6 +971,74 @@ function SettingsPanel({
           label="Accueil café sans réservation"
           checked={settings.walkInCafeEnabled}
           onChange={(value) => update({ walkInCafeEnabled: value })}
+        />
+      </div>
+
+      <div className="mt-5 grid gap-4">
+        <label className="rounded-2xl border border-border bg-background p-4">
+          <span className="mb-2 block text-sm font-medium">Créneaux affichés</span>
+          <input
+            value={settings.slots.join(", ")}
+            onChange={(event) => updateSlots(event.target.value)}
+            className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+            placeholder="09:30, 10:30, 11:30..."
+          />
+          <span className="mt-2 block text-xs text-muted-foreground">
+            Sépare les horaires par une virgule. Ces créneaux sont ceux affichés dans le planning
+            client.
+          </span>
+        </label>
+
+        <div className="rounded-2xl border border-border bg-background p-4">
+          <div className="mb-3 text-sm font-medium">Jours fermés dans le planning</div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              ["Dim", 0],
+              ["Lun", 1],
+              ["Mar", 2],
+              ["Mer", 3],
+              ["Jeu", 4],
+              ["Ven", 5],
+              ["Sam", 6],
+            ].map(([label, day]) => {
+              const value = Number(day);
+              const active = settings.closedWeekdays.includes(value);
+              return (
+                <button
+                  key={value}
+                  onClick={() => toggleClosedDay(value)}
+                  className={`rounded-full border px-3 py-1.5 text-sm ${
+                    active
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border hover:bg-secondary"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <TextareaField
+          label="Texte affiché pour les clients qui viennent seulement au Kafé"
+          value={settings.walkInNoticeText}
+          onChange={(value) => update({ walkInNoticeText: value })}
+        />
+        <TextareaField
+          label="Conditions pratiques affichées avant confirmation"
+          value={settings.reservationConditionsText}
+          onChange={(value) => update({ reservationConditionsText: value })}
+        />
+        <TextareaField
+          label="Phrase d'acceptation du guide"
+          value={settings.guideAcceptanceText}
+          onChange={(value) => update({ guideAcceptanceText: value })}
+        />
+        <TextareaField
+          label="Message de confirmation affiché après réservation"
+          value={settings.confirmationEmailText}
+          onChange={(value) => update({ confirmationEmailText: value })}
         />
       </div>
     </Panel>
@@ -1086,6 +1190,28 @@ function ToggleRow({
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
         className="h-5 w-5 accent-primary"
+      />
+    </label>
+  );
+}
+
+function TextareaField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="rounded-2xl border border-border bg-background p-4">
+      <span className="mb-2 block text-sm font-medium">{label}</span>
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        rows={3}
+        className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
       />
     </label>
   );
