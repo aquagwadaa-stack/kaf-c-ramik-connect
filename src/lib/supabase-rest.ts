@@ -21,9 +21,14 @@ const SESSION_KEY = "kafe-ceramik-admin-session";
 const AUTH_EVENT = "kafe-ceramik-auth-change";
 
 export const supabaseConfig = {
-  url: import.meta.env.VITE_SUPABASE_URL as string | undefined,
-  anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined,
+  url: (import.meta.env.VITE_SUPABASE_URL as string | undefined),
+  anonKey: (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ??
+    (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined),
 };
+
+function isOpaqueKey(value: string) {
+  return value.startsWith("sb_publishable_") || value.startsWith("sb_secret_");
+}
 
 export function isSupabaseConfigured() {
   return Boolean(supabaseConfig.url && supabaseConfig.anonKey);
@@ -38,6 +43,7 @@ function anonKey() {
   if (!supabaseConfig.anonKey) throw new Error("Supabase anon key missing");
   return supabaseConfig.anonKey;
 }
+
 
 export function readAdminSession(): SupabaseSession | null {
   if (typeof window === "undefined") return null;
