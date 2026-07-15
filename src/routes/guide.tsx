@@ -1,12 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BookOpenText, CheckCircle2, ClipboardSignature, Coffee } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
 import { PageShell, PageHeader } from "@/components/page-shell";
 import { getGuideDocument, useContentDocuments, type GuideSection } from "@/lib/admin-data";
 
 export const Route = createFileRoute("/guide")({
   head: () => ({
     meta: [
-      { title: "Guide atelier — Kafé Céramik" },
+      { title: "Guide atelier - Kafé Céramik" },
       {
         name: "description",
         content:
@@ -33,28 +32,12 @@ function GuidePage() {
     <PageShell>
       <PageHeader eyebrow="Guide atelier" title={guide.title} description={guide.intro} />
 
-      <section className="mx-auto grid max-w-6xl gap-6 px-4 py-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
-        <aside className="rounded-3xl border border-border bg-card p-5 lg:sticky lg:top-24">
-          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary text-primary-foreground">
-            <BookOpenText className="h-5 w-5" />
+      <section className="mx-auto max-w-6xl px-4 py-10">
+        {guide.body && (
+          <div className="mb-6 rounded-3xl border border-border bg-card p-5 text-sm leading-7 text-muted-foreground shadow-sm shadow-ink/5 sm:p-6">
+            {guide.body}
           </div>
-          <h2 className="mt-5 font-display text-3xl leading-none">Avant de peindre</h2>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">{guide.body}</p>
-          <div className="mt-5 space-y-3 text-sm">
-            <GuidePill icon={Coffee} text="Une consommation est prévue pour l'atelier." />
-            <GuidePill
-              icon={ClipboardSignature}
-              text="La décharge se signe à l'arrivée sur tablette."
-            />
-            <GuidePill icon={CheckCircle2} text="Les consignes évitent les soucis après cuisson." />
-          </div>
-          <Link
-            to="/reserver"
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
-          >
-            Réserver un atelier <ArrowRight className="h-4 w-4" />
-          </Link>
-        </aside>
+        )}
 
         <div className="grid gap-5">
           {sections.map((section, index) => (
@@ -67,15 +50,6 @@ function GuidePage() {
         </div>
       </section>
     </PageShell>
-  );
-}
-
-function GuidePill({ icon: Icon, text }: { icon: typeof Coffee; text: string }) {
-  return (
-    <div className="flex items-start gap-2 rounded-2xl border border-border bg-background p-3">
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-      <span className="text-muted-foreground">{text}</span>
-    </div>
   );
 }
 

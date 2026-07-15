@@ -14,7 +14,7 @@ import {
 import { PageShell } from "@/components/page-shell";
 import { OrganicShapes } from "@/components/organic-shapes";
 import { CeramicPiece, type CeramicKind } from "@/components/ceramic-piece";
-import { useKafeSettings } from "@/lib/admin-data";
+import { creationInspirationsSeed, useKafeSettings } from "@/lib/admin-data";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -71,29 +71,6 @@ const pieces: { name: string; detail: string; kind: CeramicKind; tone: string }[
   { name: "Bols", detail: "dès 15 €", kind: "bowl", tone: "bg-mustard/25" },
 ];
 
-const creationPhotos = [
-  {
-    src: "/creations/assiette-tortue.webp",
-    title: "Assiette tortue tropicale",
-    body: "Une pièce peinte avec des motifs fins et une ambiance très Guadeloupe.",
-  },
-  {
-    src: "/creations/bol-vache.webp",
-    title: "Bol vache",
-    body: "Un exemple fun et accessible pour montrer que chacun peut partir sur son univers.",
-  },
-  {
-    src: "/creations/tasse-feuillage.webp",
-    title: "Tasse feuillage bleu",
-    body: "Un rendu plus délicat, parfait pour inspirer les motifs végétaux.",
-  },
-  {
-    src: "/creations/assiette-bateau.webp",
-    title: "Assiette bateau",
-    body: "Une pièce plus artistique qui donne envie de prendre le temps.",
-  },
-] as const;
-
 const moodCards = [
   {
     icon: Coffee,
@@ -117,6 +94,11 @@ const moodCards = [
 
 function HomePage() {
   const [settings] = useKafeSettings();
+  const featuredCreations = (
+    settings.creationInspirations?.length ? settings.creationInspirations : creationInspirationsSeed
+  )
+    .filter((creation) => creation.visible)
+    .slice(0, 4);
 
   return (
     <PageShell>
@@ -288,15 +270,15 @@ function HomePage() {
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {creationPhotos.map((photo) => (
+          {featuredCreations.map((photo) => (
             <Link
-              key={photo.src}
+              key={photo.id}
               to="/creations"
               className="group overflow-hidden rounded-2xl border border-border bg-card/90 shadow-sm shadow-ink/5 transition hover:-translate-y-0.5 hover:border-primary/40"
             >
               <div className="aspect-[4/5] overflow-hidden bg-cream">
                 <img
-                  src={photo.src}
+                  src={photo.imageDataUrl || photo.imageSrc || "/creations/assiette-tortue.webp"}
                   alt={photo.title}
                   loading="lazy"
                   className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"

@@ -1,6 +1,8 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Menu, X, Coffee, ShieldCheck } from "lucide-react";
+import { Facebook, Instagram, Menu, Music2, X, Coffee, ShieldCheck } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { useKafeSettings } from "@/lib/admin-data";
 import { useAdminAccess } from "@/lib/supabase-rest";
 
 const links = [
@@ -148,6 +150,15 @@ export function SiteHeader() {
 }
 
 export function SiteFooter() {
+  const [settings] = useKafeSettings();
+  const socials = [
+    settings.instagramUrl
+      ? { label: "Instagram", href: settings.instagramUrl, icon: Instagram }
+      : null,
+    settings.facebookUrl ? { label: "Facebook", href: settings.facebookUrl, icon: Facebook } : null,
+    settings.tiktokUrl ? { label: "TikTok", href: settings.tiktokUrl, icon: Music2 } : null,
+  ].filter(Boolean) as { label: string; href: string; icon: LucideIcon }[];
+
   return (
     <footer className="mt-20 border-t border-border bg-cream">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-3">
@@ -180,6 +191,30 @@ export function SiteFooter() {
           >
             0690 28 47 88
           </a>
+          {settings.contactEmail && (
+            <a
+              href={`mailto:${settings.contactEmail}`}
+              className="nav-link mt-1 block px-0 py-1 font-medium text-primary"
+            >
+              {settings.contactEmail}
+            </a>
+          )}
+          {socials.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {socials.map(({ label, href, icon: Icon }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={label}
+                  className="grid h-9 w-9 place-items-center rounded-full border border-border bg-background text-primary transition hover:bg-secondary"
+                >
+                  <Icon className="h-4 w-4" />
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       <div className="border-t border-border/60 py-4 text-center text-xs text-muted-foreground">

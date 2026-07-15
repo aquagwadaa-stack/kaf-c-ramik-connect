@@ -247,12 +247,46 @@ export async function patchRow<T extends Record<string, unknown>>(
   });
 }
 
+export async function patchRowsByColumn<T extends Record<string, unknown>>(
+  table: string,
+  column: string,
+  value: string,
+  patch: T,
+  auth = true,
+) {
+  return request<T[]>(
+    `/rest/v1/${table}?${encodeURIComponent(column)}=eq.${encodeURIComponent(value)}`,
+    {
+      method: "PATCH",
+      body: patch,
+      auth,
+      prefer: "return=representation",
+    },
+  );
+}
+
 export async function deleteRow(table: string, id: string, auth = true) {
   return request<void>(`/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
     method: "DELETE",
     auth,
     prefer: "return=minimal",
   });
+}
+
+export async function deleteRowsByColumn(
+  table: string,
+  column: string,
+  value: string,
+  auth = true,
+) {
+  return request<void>(
+    `/rest/v1/${table}?${encodeURIComponent(column)}=eq.${encodeURIComponent(value)}`,
+    {
+      method: "DELETE",
+      auth,
+      prefer: "return=minimal",
+    },
+  );
 }
 
 export async function callRpc<T>(name: string, args: Record<string, unknown>, auth = false) {

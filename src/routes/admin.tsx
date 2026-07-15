@@ -42,9 +42,11 @@ import {
   useCeramicObjects,
   useContentDocuments,
   contentDocumentsSeed,
+  creationInspirationsSeed,
   getGuideDocument,
   useKafeSettings,
   useWaiverSignatures,
+  type CreationInspiration,
   type GuideSection,
   type CeramicObject,
   type ContentDocument,
@@ -54,7 +56,9 @@ import {
 } from "@/lib/admin-data";
 import {
   deleteRow,
+  deleteRowsByColumn,
   isSupabaseConfigured,
+  patchRowsByColumn,
   selectRows,
   signInAdmin,
   signOutAdmin,
@@ -74,7 +78,8 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type AdminTab = "reservations" | "waivers" | "objects" | "documents" | "settings" | "team";
+type AdminTab =
+  "reservations" | "waivers" | "objects" | "creations" | "documents" | "settings" | "team";
 
 const objectCategories: CeramicObject["category"][] = [
   "Tasses",
@@ -90,6 +95,7 @@ const tabs: { id: AdminTab; label: string; icon: LucideIcon }[] = [
   { id: "reservations", label: "Réservations", icon: CalendarDays },
   { id: "waivers", label: "Décharges", icon: ClipboardSignature },
   { id: "objects", label: "Objets", icon: PackageOpen },
+  { id: "creations", label: "Créations", icon: ImageIcon },
   { id: "documents", label: "Guide", icon: BookOpenText },
   { id: "settings", label: "Réglages", icon: Settings },
   { id: "team", label: "Équipe", icon: UserCog },
@@ -182,6 +188,7 @@ function AdminPage() {
   return (
     <AdminWorkspace
       remoteMode={admin.configured}
+      adminUserId={admin.session?.user?.id}
       adminEmail={admin.profile?.email ?? admin.session?.user?.email}
       adminRole={admin.profile?.role}
     />
@@ -190,10 +197,12 @@ function AdminPage() {
 
 function AdminWorkspace({
   remoteMode,
+  adminUserId,
   adminEmail,
   adminRole,
 }: {
   remoteMode: boolean;
+  adminUserId?: string;
   adminEmail?: string | null;
   adminRole?: string;
 }) {
@@ -203,6 +212,13 @@ function AdminWorkspace({
   const [signatures, saveSignatures] = useWaiverSignatures();
   const [settings, saveSettings] = useKafeSettings();
   const [tab, setTab] = useState<AdminTab>("reservations");
+  const creations = settings.creationInspirations?.length
+    ? settings.creationInspirations
+    : creationInspirationsSeed;
+
+  function saveCreations(next: CreationInspiration[]) {
+    saveSettings({ ...settings, creationInspirations: next });
+  }
 
   const today = new Date().toISOString().slice(0, 10);
   const stats = useMemo(() => {
@@ -312,12 +328,20 @@ function AdminWorkspace({
           />
         )}
         {tab === "objects" && <ObjectsPanel objects={objects} saveObjects={saveObjects} />}
+        {tab === "creations" && (
+          <CreationsPanel creations={creations} saveCreations={saveCreations} />
+        )}
         {tab === "documents" && (
           <DocumentsPanel documents={documents} saveDocuments={saveDocuments} />
         )}
         {tab === "settings" && <SettingsPanel settings={settings} saveSettings={saveSettings} />}
         {tab === "team" && (
-          <TeamPanel remoteMode={remoteMode} adminEmail={adminEmail} adminRole={adminRole} />
+          <TeamPanel
+            remoteMode={remoteMode}
+            adminUserId={adminUserId}
+            adminEmail={adminEmail}
+            adminRole={adminRole}
+          />
         )}
       </main>
     </div>
@@ -465,19 +489,55 @@ function useAdminTeam(remoteMode: boolean) {
     };
   }, [remoteMode]);
 
-  return { members, error };
+  return { members, setMembers, error };
 }
 
 function TeamPanel({
   remoteMode,
+  adminUserId,
   adminEmail,
   adminRole,
 }: {
   remoteMode: boolean;
+  adminUserId?: string;
   adminEmail?: string | null;
   adminRole?: string;
 }) {
-  const { members, error } = useAdminTeam(remoteMode);
+  const { members, setMembers, error } = useAdminTeam(remoteMode);
+  const [savingId, setSavingId] = useState("");
+  const canManageTeam = adminRole === "owner";
+
+  async function updateMemberRole(member: AdminTeamRow, role: AdminTeamRow["role"]) {
+    if (!canManageTeam || member.user_id === adminUserId) return;
+    setSavingId(member.user_id);
+    try {
+      await patchRowsByColumn(
+        "kafe_admin_profiles",
+        "user_id",
+        member.user_id,
+        { role, updated_at: new Date().toISOString() },
+        true,
+      );
+      setMembers((current) =>
+        current.map((item) => (item.user_id === member.user_id ? { ...item, role } : item)),
+      );
+    } finally {
+      setSavingId("");
+    }
+  }
+
+  async function removeMember(member: AdminTeamRow) {
+    if (!canManageTeam || member.user_id === adminUserId) return;
+    const confirmed = window.confirm(`Retirer l'accès admin de ${member.email ?? "ce compte"} ?`);
+    if (!confirmed) return;
+    setSavingId(member.user_id);
+    try {
+      await deleteRowsByColumn("kafe_admin_profiles", "user_id", member.user_id, true);
+      setMembers((current) => current.filter((item) => item.user_id !== member.user_id));
+    } finally {
+      setSavingId("");
+    }
+  }
 
   return (
     <Panel
@@ -514,7 +574,39 @@ function TeamPanel({
                         : "-"}
                     </div>
                   </div>
-                  <RoleBadge role={member.role} />
+                  {canManageTeam && member.user_id !== adminUserId ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <select
+                        value={member.role}
+                        disabled={savingId === member.user_id}
+                        onChange={(event) =>
+                          updateMemberRole(member, event.target.value as AdminTeamRow["role"])
+                        }
+                        className="rounded-full border border-input bg-background px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        <option value="owner">owner</option>
+                        <option value="manager">manager</option>
+                        <option value="team">team</option>
+                        <option value="readonly">readonly</option>
+                      </select>
+                      <button
+                        onClick={() => removeMember(member)}
+                        disabled={savingId === member.user_id}
+                        className="rounded-full border border-destructive/30 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                      >
+                        Retirer
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-right">
+                      <RoleBadge role={member.role} />
+                      {member.user_id === adminUserId && (
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          Votre propre rôle est verrouillé ici.
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -546,6 +638,9 @@ function TeamPanel({
             <span className="font-medium text-foreground">{adminEmail ?? "-"}</span>
             {adminRole && <> · rôle {adminRole}</>}. Pour ajouter Anouk ou une autre personne, il
             faudra créer son compte puis lui attribuer un rôle ici ou via Supabase.
+            {canManageTeam
+              ? " Les rôles des autres comptes peuvent ensuite être modifiés depuis cette page."
+              : " La modification des rôles est réservée au compte owner."}
           </div>
         </div>
       </div>
@@ -1152,6 +1247,141 @@ function ObjectsPanel({
   );
 }
 
+function CreationsPanel({
+  creations,
+  saveCreations,
+}: {
+  creations: CreationInspiration[];
+  saveCreations: (next: CreationInspiration[]) => void;
+}) {
+  function updateCreation(id: string, patch: Partial<CreationInspiration>) {
+    saveCreations(
+      creations.map((creation) => (creation.id === id ? { ...creation, ...patch } : creation)),
+    );
+  }
+
+  async function uploadCreationImage(id: string, file?: File) {
+    if (!file) return;
+    const imageDataUrl = await readFileAsDataUrl(file);
+    updateCreation(id, { imageDataUrl, imageName: file.name });
+  }
+
+  function addCreation() {
+    saveCreations([
+      ...creations,
+      {
+        id: `creation-${Date.now()}`,
+        title: "Nouvelle inspiration",
+        body: "Description visible sur la page créations.",
+        visible: true,
+      },
+    ]);
+  }
+
+  function removeCreation(id: string) {
+    saveCreations(creations.filter((creation) => creation.id !== id));
+  }
+
+  return (
+    <Panel
+      title="Créations"
+      desc="Photos et inspirations visibles sur la page Créations et dans la section d'accueil."
+    >
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+          Chaque carte peut être affichée, masquée, renommée et illustrée avec une photo. Les quatre
+          premières cartes visibles remontent aussi sur l'accueil.
+        </p>
+        <button
+          onClick={addCreation}
+          className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+        >
+          <Plus className="h-4 w-4" /> Ajouter une création
+        </button>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {creations.map((creation) => (
+          <div key={creation.id} className="rounded-2xl border border-border bg-background p-4">
+            <div className="grid gap-4 sm:grid-cols-[170px_1fr]">
+              <div>
+                <div className="flex aspect-[4/5] items-center justify-center overflow-hidden rounded-2xl border border-border bg-secondary/40">
+                  {creation.imageDataUrl || creation.imageSrc ? (
+                    <img
+                      src={creation.imageDataUrl || creation.imageSrc}
+                      alt={creation.title}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <ImageIcon className="h-9 w-9 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs hover:bg-secondary">
+                    <UploadCloud className="h-3.5 w-3.5" /> Photo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={async (event) => {
+                        await uploadCreationImage(creation.id, event.currentTarget.files?.[0]);
+                        event.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
+                  {(creation.imageDataUrl || creation.imageSrc) && (
+                    <button
+                      onClick={() =>
+                        updateCreation(creation.id, {
+                          imageDataUrl: undefined,
+                          imageName: undefined,
+                          imageSrc: undefined,
+                        })
+                      }
+                      className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary"
+                    >
+                      Retirer
+                    </button>
+                  )}
+                </div>
+                {creation.imageName && (
+                  <p className="mt-2 text-xs text-muted-foreground">{creation.imageName}</p>
+                )}
+              </div>
+
+              <div className="grid gap-3">
+                <Field
+                  label="Titre"
+                  value={creation.title}
+                  onChange={(value) => updateCreation(creation.id, { title: value })}
+                />
+                <TextareaField
+                  label="Description"
+                  value={creation.body}
+                  onChange={(value) => updateCreation(creation.id, { body: value })}
+                />
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <ToggleRow
+                    label="Visible sur le site"
+                    checked={creation.visible}
+                    onChange={(value) => updateCreation(creation.id, { visible: value })}
+                  />
+                  <button
+                    onClick={() => removeCreation(creation.id)}
+                    className="inline-flex items-center gap-2 rounded-full border border-destructive/30 px-3 py-2 text-xs text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Supprimer
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
 function DocumentsPanel({
   documents,
   saveDocuments,
@@ -1567,6 +1797,35 @@ function SettingsPanel({
       </div>
 
       <div className="mt-5 grid gap-4">
+        <div className="rounded-2xl border border-border bg-background p-4">
+          <div className="flex items-center gap-2">
+            <Settings className="h-5 w-5 text-primary" />
+            <h3 className="font-display text-xl">Réseaux & contact</h3>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <Field
+              label="Instagram"
+              value={settings.instagramUrl}
+              onChange={(value) => update({ instagramUrl: value })}
+            />
+            <Field
+              label="Facebook"
+              value={settings.facebookUrl}
+              onChange={(value) => update({ facebookUrl: value })}
+            />
+            <Field
+              label="TikTok"
+              value={settings.tiktokUrl}
+              onChange={(value) => update({ tiktokUrl: value })}
+            />
+            <Field
+              label="Email de contact"
+              value={settings.contactEmail}
+              onChange={(value) => update({ contactEmail: value })}
+            />
+          </div>
+        </div>
+
         <ScheduleRulesEditor
           rules={settings.scheduleRules ?? []}
           onChange={(scheduleRules) => update({ scheduleRules })}
@@ -1931,13 +2190,13 @@ function TextareaField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="rounded-2xl border border-border bg-background p-4">
+    <label className="block">
       <span className="mb-2 block text-sm font-medium">{label}</span>
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
         rows={3}
-        className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+        className="w-full resize-y rounded-2xl border border-input bg-background px-4 py-3 text-sm leading-6 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
       />
     </label>
   );

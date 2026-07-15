@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Brush, Camera, Palette, Sparkles } from "lucide-react";
 import { PageShell, PageHeader } from "@/components/page-shell";
+import { creationInspirationsSeed, useKafeSettings } from "@/lib/admin-data";
 
 export const Route = createFileRoute("/creations")({
   head: () => ({
     meta: [
-      { title: "Créations & inspirations — Kafé Céramik" },
+      { title: "Créations & inspirations - Kafé Céramik" },
       {
         name: "description",
         content:
@@ -15,33 +16,6 @@ export const Route = createFileRoute("/creations")({
   }),
   component: CreationsPage,
 });
-
-const creations = [
-  {
-    src: "/creations/assiette-tortue.webp",
-    title: "Assiette tortue tropicale",
-    body: "Motifs fins, fleurs, feuillages et esprit Guadeloupe.",
-    tone: "bg-sage/20",
-  },
-  {
-    src: "/creations/bol-vache.webp",
-    title: "Bol vache",
-    body: "Une idée drôle et simple, parfaite pour un atelier sans pression.",
-    tone: "bg-rose/30",
-  },
-  {
-    src: "/creations/tasse-feuillage.webp",
-    title: "Tasse feuillage bleu",
-    body: "Un rendu végétal plus délicat, avec un motif qui fait vite son effet.",
-    tone: "bg-cream",
-  },
-  {
-    src: "/creations/assiette-bateau.webp",
-    title: "Assiette bateau",
-    body: "Une pièce plus travaillée pour celles et ceux qui veulent prendre leur temps.",
-    tone: "bg-mustard/25",
-  },
-] as const;
 
 const ideas = [
   {
@@ -62,36 +36,51 @@ const ideas = [
 ] as const;
 
 function CreationsPage() {
+  const [settings] = useKafeSettings();
+  const creations = (
+    settings.creationInspirations?.length ? settings.creationInspirations : creationInspirationsSeed
+  ).filter((creation) => creation.visible);
+
   return (
     <PageShell>
       <PageHeader
         eyebrow="Inspirations"
         title="Des créations pour imaginer la vôtre."
-        description="Quelques exemples de pièces peintes au Kafé. Chaque atelier reste libre : l'idée est surtout de donner envie, pas d'imposer un modèle."
+        description="Quelques exemples de pièces peintes au Kafé. Chaque atelier reste libre dans l'esprit : l'idée est surtout de donner envie, pas d'imposer un modèle."
       />
 
       <section className="mx-auto max-w-6xl px-4 py-10">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {creations.map((creation, index) => (
-            <article
-              key={creation.src}
-              className={`group overflow-hidden rounded-2xl border border-border shadow-sm shadow-ink/5 ${creation.tone}`}
-            >
-              <div className="aspect-[4/5] overflow-hidden bg-cream">
-                <img
-                  src={creation.src}
-                  alt={creation.title}
-                  loading={index === 0 ? "eager" : "lazy"}
-                  className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
-                />
-              </div>
-              <div className="p-4">
-                <div className="font-display text-2xl leading-none">{creation.title}</div>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">{creation.body}</p>
-              </div>
-            </article>
-          ))}
-        </div>
+        {creations.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {creations.map((creation, index) => (
+              <article
+                key={creation.id}
+                className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm shadow-ink/5"
+              >
+                <div className="aspect-[4/5] overflow-hidden bg-cream">
+                  <img
+                    src={
+                      creation.imageDataUrl ||
+                      creation.imageSrc ||
+                      "/creations/assiette-tortue.webp"
+                    }
+                    alt={creation.title}
+                    loading={index === 0 ? "eager" : "lazy"}
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                  />
+                </div>
+                <div className="p-4">
+                  <div className="font-display text-2xl leading-none">{creation.title}</div>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{creation.body}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+            Les inspirations seront ajoutées prochainement.
+          </div>
+        )}
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-6">

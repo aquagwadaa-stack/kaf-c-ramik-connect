@@ -288,6 +288,47 @@ export function getGuideDocument(documents: ContentDocument[]) {
   };
 }
 
+export interface CreationInspiration {
+  id: string;
+  title: string;
+  body: string;
+  imageSrc?: string;
+  imageDataUrl?: string;
+  imageName?: string;
+  visible: boolean;
+}
+
+export const creationInspirationsSeed: CreationInspiration[] = [
+  {
+    id: "creation-tortue",
+    title: "Assiette tortue tropicale",
+    body: "Motifs fins, fleurs, feuillages et esprit Guadeloupe.",
+    imageSrc: "/creations/assiette-tortue.webp",
+    visible: true,
+  },
+  {
+    id: "creation-vache",
+    title: "Bol vache",
+    body: "Une idée drôle et simple, parfaite pour un atelier sans pression.",
+    imageSrc: "/creations/bol-vache.webp",
+    visible: true,
+  },
+  {
+    id: "creation-feuillage",
+    title: "Tasse feuillage bleu",
+    body: "Un rendu végétal plus délicat, avec un motif qui fait vite son effet.",
+    imageSrc: "/creations/tasse-feuillage.webp",
+    visible: true,
+  },
+  {
+    id: "creation-bateau",
+    title: "Assiette bateau",
+    body: "Une pièce plus travaillée pour celles et ceux qui veulent prendre leur temps.",
+    imageSrc: "/creations/assiette-bateau.webp",
+    visible: true,
+  },
+];
+
 export interface WaiverSignature {
   id: string;
   firstName: string;
@@ -327,6 +368,11 @@ export interface KafeSettings {
   reservationConditionsText: string;
   guideAcceptanceText: string;
   confirmationEmailText: string;
+  instagramUrl: string;
+  facebookUrl: string;
+  tiktokUrl: string;
+  contactEmail: string;
+  creationInspirations: CreationInspiration[];
 }
 
 export const settingsSeed: KafeSettings = {
@@ -359,6 +405,11 @@ export const settingsSeed: KafeSettings = {
     "J'ai pris connaissance des informations importantes de l'atelier et je m'engage à respecter le guide transmis par le Kafé Céramik.",
   confirmationEmailText:
     "Votre réservation est enregistrée. Le guide et les informations pratiques vous seront envoyés avant votre venue.",
+  instagramUrl: "https://www.instagram.com/kafeceramik_guadeloupe/",
+  facebookUrl: "",
+  tiktokUrl: "",
+  contactEmail: "",
+  creationInspirations: creationInspirationsSeed,
 };
 
 export function useCeramicObjects() {
