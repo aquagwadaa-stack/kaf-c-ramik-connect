@@ -21,8 +21,9 @@ const SESSION_KEY = "kafe-ceramik-admin-session";
 const AUTH_EVENT = "kafe-ceramik-auth-change";
 
 export const supabaseConfig = {
-  url: (import.meta.env.VITE_SUPABASE_URL as string | undefined),
-  anonKey: (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ??
+  url: import.meta.env.VITE_SUPABASE_URL as string | undefined,
+  anonKey:
+    (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ??
     (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined),
 };
 
@@ -43,7 +44,6 @@ function anonKey() {
   if (!supabaseConfig.anonKey) throw new Error("Supabase anon key missing");
   return supabaseConfig.anonKey;
 }
-
 
 export function readAdminSession(): SupabaseSession | null {
   if (typeof window === "undefined") return null;
@@ -198,9 +198,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   if (!response.ok) throw new Error(await errorMessage(response));
   if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+  const text = await response.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
-
 
 export async function selectRows<T>(table: string, query = "", auth = false) {
   return request<T[]>(`/rest/v1/${table}${query}`, { auth });
@@ -228,7 +228,7 @@ export async function insertRow<T extends Record<string, unknown>>(
     method: "POST",
     body: row,
     auth,
-    prefer: "return=representation",
+    prefer: auth ? "return=representation" : "return=minimal",
   });
 }
 
