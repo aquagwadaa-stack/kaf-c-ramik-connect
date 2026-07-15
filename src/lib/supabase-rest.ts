@@ -86,6 +86,50 @@ export function useAdminSession() {
   );
 }
 
+export type AdminProfile = {
+  email: string | null;
+  role: "owner" | "manager" | "team" | "readonly";
+};
+
+export function useAdminAccess() {
+  const auth = useAdminSession();
+  const [checking, setChecking] = useState(false);
+  const [profile, setProfile] = useState<AdminProfile | null>(null);
+
+  useEffect(() => {
+    if (!auth.configured || !auth.signedIn) {
+      setChecking(false);
+      setProfile(null);
+      return;
+    }
+
+    let alive = true;
+    setChecking(true);
+    callRpc<AdminProfile[]>("get_current_kafe_admin", {}, true)
+      .then((rows) => {
+        if (!alive) return;
+        setProfile(rows[0] ?? null);
+      })
+      .catch(() => {
+        if (alive) setProfile(null);
+      })
+      .finally(() => {
+        if (alive) setChecking(false);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [auth.configured, auth.session?.access_token, auth.signedIn]);
+
+  return {
+    ...auth,
+    checking,
+    allowed: !auth.configured || Boolean(profile),
+    profile,
+  };
+}
+
 export async function signInAdmin(email: string, password: string) {
   const response = await fetch(`${baseUrl()}/auth/v1/token?grant_type=password`, {
     method: "POST",

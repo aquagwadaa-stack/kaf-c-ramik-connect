@@ -44,7 +44,7 @@ import {
   type KafeSettings,
   type WaiverSignature,
 } from "@/lib/admin-data";
-import { signInAdmin, signOutAdmin, useAdminSession } from "@/lib/supabase-rest";
+import { signInAdmin, signOutAdmin, useAdminAccess } from "@/lib/supabase-rest";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -79,16 +79,43 @@ function readFileAsDataUrl(file: File) {
 }
 
 function AdminPage() {
-  const admin = useAdminSession();
+  const admin = useAdminAccess();
 
   if (admin.configured && !admin.signedIn) {
     return <AdminLogin />;
   }
 
-  return <AdminWorkspace remoteMode={admin.configured} adminEmail={admin.session?.user?.email} />;
+  if (admin.configured && admin.checking) {
+    return <AdminGate message="Vérification de l'accès équipe..." />;
+  }
+
+  if (admin.configured && !admin.allowed) {
+    return (
+      <AdminGate
+        message="Ce compte est connecté, mais il n'a pas encore d'accès administrateur au Kafé Céramik."
+        action
+      />
+    );
+  }
+
+  return (
+    <AdminWorkspace
+      remoteMode={admin.configured}
+      adminEmail={admin.profile?.email ?? admin.session?.user?.email}
+      adminRole={admin.profile?.role}
+    />
+  );
 }
 
-function AdminWorkspace({ remoteMode, adminEmail }: { remoteMode: boolean; adminEmail?: string }) {
+function AdminWorkspace({
+  remoteMode,
+  adminEmail,
+  adminRole,
+}: {
+  remoteMode: boolean;
+  adminEmail?: string | null;
+  adminRole?: string;
+}) {
   const reservations = useReservations();
   const [objects, saveObjects] = useCeramicObjects();
   const [documents, saveDocuments] = useContentDocuments();
@@ -127,7 +154,7 @@ function AdminWorkspace({ remoteMode, adminEmail }: { remoteMode: boolean; admin
               <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
               <p>
                 {remoteMode
-                  ? `Mode connecté : les données sont synchronisées avec la base Supabase${adminEmail ? ` pour ${adminEmail}` : ""}.`
+                  ? `Mode connecté : les données sont synchronisées avec la base Supabase${adminEmail ? ` pour ${adminEmail}` : ""}${adminRole ? ` · rôle ${adminRole}` : ""}.`
                   : "Version de travail : les données sont simulées côté navigateur. Dès que Supabase est configuré, cet espace demande une connexion administrateur et synchronise les données."}
               </p>
             </div>
@@ -257,6 +284,29 @@ function AdminLogin() {
             {loading ? "Connexion..." : "Se connecter"}
           </button>
         </form>
+      </section>
+    </PageShell>
+  );
+}
+
+function AdminGate({ message, action }: { message: string; action?: boolean }) {
+  return (
+    <PageShell>
+      <section className="mx-auto grid min-h-[70vh] max-w-md place-items-center px-4 py-12">
+        <div className="w-full rounded-3xl border border-border bg-card p-6 text-center shadow-sm">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-secondary text-secondary-foreground">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
+          <p className="mt-5 text-sm text-muted-foreground">{message}</p>
+          {action && (
+            <button
+              onClick={signOutAdmin}
+              className="mt-5 rounded-full border border-border px-5 py-2 text-sm hover:bg-secondary"
+            >
+              Se déconnecter
+            </button>
+          )}
+        </div>
       </section>
     </PageShell>
   );
