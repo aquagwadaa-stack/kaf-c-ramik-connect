@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { settingsSeed, type KafeSettings } from "./admin-data";
-import { callRpc, insertRow, isSupabaseConfigured, patchRow, selectRows } from "./supabase-rest";
+import {
+  callRpc,
+  deleteRow,
+  insertRow,
+  isSupabaseConfigured,
+  patchRow,
+  readAdminSession,
+  selectRows,
+} from "./supabase-rest";
 
 export type ReservationStatus = "pending" | "deposit_paid" | "confirmed" | "cancelled";
 export type ExperienceType = "atelier" | "cafe_atelier" | "brunch_atelier" | "groupe";
@@ -146,12 +154,13 @@ function read(): Reservation[] {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) {
-      localStorage.setItem(KEY, JSON.stringify(seed));
-      return seed;
+      const initial = isSupabaseConfigured() ? [] : seed;
+      localStorage.setItem(KEY, JSON.stringify(initial));
+      return initial;
     }
     return JSON.parse(raw);
   } catch {
-    return seed;
+    return isSupabaseConfigured() ? [] : seed;
   }
 }
 
@@ -171,10 +180,10 @@ export function useReservations() {
     const update = () => setList(read());
     listeners.add(update);
 
-    if (isSupabaseConfigured()) {
+    if (isSupabaseConfigured() && readAdminSession()) {
       loadRemoteReservations()
         .then((remoteList) => {
-          if (!alive || remoteList.length === 0) return;
+          if (!alive) return;
           write(remoteList);
           setList(remoteList);
         })
@@ -287,6 +296,15 @@ export function updateStatus(id: string, status: ReservationStatus) {
     if (!updated) return;
     updateRemoteReservationStatus(updated).catch((error) => {
       console.warn("Remote reservation status save skipped:", error);
+    });
+  }
+}
+
+export function removeReservation(id: string) {
+  write(read().filter((reservation) => reservation.id !== id));
+  if (isSupabaseConfigured() && readAdminSession()) {
+    deleteRow("kafe_reservations", id, true).catch((error) => {
+      console.warn("Remote reservation delete skipped:", error);
     });
   }
 }

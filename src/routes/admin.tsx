@@ -20,6 +20,7 @@ import {
   Save,
   Settings,
   ShieldCheck,
+  SlidersHorizontal,
   Trash2,
   UploadCloud,
   X,
@@ -29,6 +30,7 @@ import {
   useReservations,
   experienceLabel,
   formatReservationDate,
+  removeReservation,
   statusLabel,
   updateStatus,
   type Reservation,
@@ -44,7 +46,13 @@ import {
   type KafeSettings,
   type WaiverSignature,
 } from "@/lib/admin-data";
-import { signInAdmin, signOutAdmin, useAdminAccess } from "@/lib/supabase-rest";
+import {
+  deleteRow,
+  isSupabaseConfigured,
+  signInAdmin,
+  signOutAdmin,
+  useAdminAccess,
+} from "@/lib/supabase-rest";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -61,6 +69,16 @@ export const Route = createFileRoute("/admin")({
 
 type AdminTab = "reservations" | "waivers" | "objects" | "documents" | "settings";
 
+const objectCategories: CeramicObject["category"][] = [
+  "Tasses",
+  "Bols",
+  "Assiettes",
+  "Figurines",
+  "Deco",
+  "Vases",
+  "Petites pieces",
+];
+
 const tabs: { id: AdminTab; label: string; icon: LucideIcon }[] = [
   { id: "reservations", label: "Réservations", icon: CalendarDays },
   { id: "waivers", label: "Décharges", icon: ClipboardSignature },
@@ -76,6 +94,61 @@ function readFileAsDataUrl(file: File) {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
   });
+}
+
+function csvCell(value: unknown) {
+  const text = value === undefined || value === null ? "" : String(value);
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
+function downloadCsv(filename: string, rows: unknown[][]) {
+  const csv = rows.map((row) => row.map(csvCell).join(";")).join("\n");
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportReservationsCsv(reservations: Reservation[]) {
+  downloadCsv("reservations-kafe-ceramik.csv", [
+    [
+      "Date",
+      "Creneau",
+      "Prenom",
+      "Nom",
+      "Telephone",
+      "Email",
+      "Personnes",
+      "Formule",
+      "Statut",
+      "Acompte requis",
+      "Acompte recu",
+      "Montant acompte",
+      "Message",
+      "Reference",
+    ],
+    ...reservations.map((reservation) => [
+      reservation.date,
+      reservation.slot,
+      reservation.firstName,
+      reservation.lastName,
+      reservation.phone,
+      reservation.email,
+      reservation.people,
+      experienceLabel(reservation.experience),
+      statusLabel(reservation.status),
+      reservation.depositRequired ? "oui" : "non",
+      reservation.depositPaid ? "oui" : "non",
+      reservation.depositAmount ?? "",
+      reservation.message ?? "",
+      reservation.id,
+    ]),
+  ]);
 }
 
 function AdminPage() {
@@ -190,6 +263,8 @@ function AdminWorkspace({
             sub="signées aujourd'hui"
           />
         </div>
+
+        <OperationalFocus />
 
         <div className="flex gap-2 overflow-x-auto pb-1">
           {tabs.map(({ id, label, icon: Icon }) => (
@@ -334,6 +409,31 @@ function Stat({
   );
 }
 
+function OperationalFocus() {
+  return (
+    <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 md:grid-cols-[auto_1fr] md:items-center">
+      <div className="grid h-12 w-12 place-items-center rounded-xl bg-secondary text-secondary-foreground">
+        <SlidersHorizontal className="h-5 w-5" />
+      </div>
+      <div className="grid gap-3 md:grid-cols-4">
+        <AdminCue title="Journee" body="reservations et signatures" />
+        <AdminCue title="Groupes" body="acomptes et validation" />
+        <AdminCue title="Objets" body="prix, photos, disponibilite" />
+        <AdminCue title="Contenus" body="guide, decharge, messages" />
+      </div>
+    </div>
+  );
+}
+
+function AdminCue({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-xl bg-background px-3 py-2">
+      <div className="text-sm font-medium">{title}</div>
+      <div className="text-xs text-muted-foreground">{body}</div>
+    </div>
+  );
+}
+
 function ReservationsPanel({
   reservations,
   signatures,
@@ -372,7 +472,11 @@ function ReservationsPanel({
             </button>
           ))}
         </div>
-        <button className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm hover:bg-secondary">
+        <button
+          onClick={() => exportReservationsCsv(filtered)}
+          disabled={filtered.length === 0}
+          className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-45"
+        >
           <Download className="h-4 w-4" /> Export CSV
         </button>
       </div>
@@ -471,6 +575,12 @@ function ReservationCard({ reservation, signed }: { reservation: Reservation; si
           label="Annuler"
           danger
         />
+        <button
+          onClick={() => removeReservation(reservation.id)}
+          className="rounded-full border border-destructive/30 px-3 py-1 text-xs text-destructive hover:bg-destructive/10"
+        >
+          Supprimer
+        </button>
       </div>
     </div>
   );
@@ -513,6 +623,15 @@ function WaiversPanel({
     setSignatureDataUrl(undefined);
     setGuideAccepted(true);
     setError("");
+  }
+
+  function removeSignature(id: string) {
+    saveSignatures(signatures.filter((signature) => signature.id !== id));
+    if (isSupabaseConfigured()) {
+      deleteRow("kafe_waiver_signatures", id).catch((remoteError) => {
+        console.warn("Remote signature delete skipped:", remoteError);
+      });
+    }
   }
 
   return (
@@ -592,7 +711,16 @@ function WaiversPanel({
                         {signature.documentVersion}
                       </div>
                     </div>
-                    <InfoPill tone="success">Signé</InfoPill>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <InfoPill tone="success">Signé</InfoPill>
+                      <button
+                        onClick={() => removeSignature(signature.id)}
+                        className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        aria-label="Supprimer la signature"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                   {signature.signatureDataUrl && (
                     <img
@@ -704,6 +832,15 @@ function ObjectsPanel({
     saveObjects(objects.map((object) => (object.id === id ? { ...object, ...patch } : object)));
   }
 
+  function removeObject(id: string) {
+    saveObjects(objects.filter((object) => object.id !== id));
+    if (isSupabaseConfigured()) {
+      deleteRow("kafe_ceramic_objects", id).catch((remoteError) => {
+        console.warn("Remote object delete skipped:", remoteError);
+      });
+    }
+  }
+
   async function uploadObjectImage(id: string, file?: File) {
     if (!file) return;
     const imageDataUrl = await readFileAsDataUrl(file);
@@ -745,11 +882,9 @@ function ObjectsPanel({
             }
             className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
           >
-            {["Tasses", "Bols", "Assiettes", "Figurines", "Deco", "Vases", "Petites pieces"].map(
-              (category) => (
-                <option key={category}>{category}</option>
-              ),
-            )}
+            {objectCategories.map((category) => (
+              <option key={category}>{category}</option>
+            ))}
           </select>
         </label>
         <Field
@@ -788,6 +923,41 @@ function ObjectsPanel({
                 <option value="limited">Stock limité</option>
                 <option value="unavailable">Indisponible</option>
               </select>
+              <button
+                onClick={() => removeObject(object.id)}
+                className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                aria-label="Supprimer l'objet"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_150px_96px]">
+              <Field
+                label="Nom"
+                value={object.name}
+                onChange={(value) => updateObject(object.id, { name: value })}
+              />
+              <label>
+                <span className="mb-1.5 block text-sm font-medium">Categorie</span>
+                <select
+                  value={object.category}
+                  onChange={(event) =>
+                    updateObject(object.id, {
+                      category: event.target.value as CeramicObject["category"],
+                    })
+                  }
+                  className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {objectCategories.map((category) => (
+                    <option key={category}>{category}</option>
+                  ))}
+                </select>
+              </label>
+              <Field
+                label="Prix"
+                value={`${object.price}`}
+                onChange={(value) => updateObject(object.id, { price: Number(value) || 0 })}
+              />
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-[96px_1fr] sm:items-center">
               <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-border bg-secondary/40">
@@ -829,7 +999,16 @@ function ObjectsPanel({
                 )}
               </div>
             </div>
-            {object.note && <p className="mt-2 text-sm text-muted-foreground">{object.note}</p>}
+            <label className="mt-3 block">
+              <span className="mb-1.5 block text-sm font-medium">Note visible / precision</span>
+              <textarea
+                value={object.note ?? ""}
+                onChange={(event) => updateObject(object.id, { note: event.target.value })}
+                rows={2}
+                className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                placeholder="Stock limite, modele populaire, grande piece..."
+              />
+            </label>
           </div>
         ))}
       </div>

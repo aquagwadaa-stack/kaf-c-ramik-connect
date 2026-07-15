@@ -59,15 +59,15 @@ type RemoteJsonRow<T> = {
 type RemoteListOptions<T> = {
   table: string;
   authLoad?: boolean;
+  hasSortOrder?: boolean;
   toRow?: (item: T, index: number) => RemoteJsonRow<T>;
 };
 
-async function loadRemoteList<T>(table: string, authLoad = false) {
-  const rows = await selectRows<RemoteJsonRow<T>>(
-    table,
-    "?select=id,value,sort_order,updated_at&order=sort_order.asc.nullslast,updated_at.desc",
-    authLoad,
-  );
+async function loadRemoteList<T>(table: string, authLoad = false, hasSortOrder = true) {
+  const query = hasSortOrder
+    ? "?select=id,value,sort_order,updated_at&order=sort_order.asc.nullslast,updated_at.desc"
+    : "?select=id,value,updated_at&order=updated_at.desc";
+  const rows = await selectRows<RemoteJsonRow<T>>(table, query, authLoad);
   return rows.map((row) => row.value);
 }
 
@@ -87,6 +87,7 @@ export function useStoredList<T extends { id: string }>(
   const [list, setList] = useState<T[]>(() => (typeof window === "undefined" ? seed : []));
   const remoteTable = remote?.table;
   const remoteAuthLoad = remote?.authLoad;
+  const remoteHasSortOrder = remote?.hasSortOrder;
 
   useEffect(() => {
     let alive = true;
@@ -95,9 +96,9 @@ export function useStoredList<T extends { id: string }>(
     const unsubscribe = subscribe(key, update);
 
     if (remoteTable && isSupabaseConfigured()) {
-      loadRemoteList<T>(remoteTable, remoteAuthLoad)
+      loadRemoteList<T>(remoteTable, remoteAuthLoad, remoteHasSortOrder !== false)
         .then((remoteList) => {
-          if (!alive || remoteList.length === 0) return;
+          if (!alive || (remoteList.length === 0 && !remoteAuthLoad)) return;
           writeStore(key, remoteList);
           setList(remoteList);
         })
@@ -110,7 +111,7 @@ export function useStoredList<T extends { id: string }>(
       alive = false;
       unsubscribe();
     };
-  }, [key, remoteAuthLoad, remoteTable, seed]);
+  }, [key, remoteAuthLoad, remoteHasSortOrder, remoteTable, seed]);
 
   const save = (next: T[]) => {
     writeStore(key, next);
@@ -248,17 +249,7 @@ export interface WaiverSignature {
   guideAccepted: boolean;
 }
 
-export const waiverSignaturesSeed: WaiverSignature[] = [
-  {
-    id: "sig-demo-1",
-    firstName: "Camille",
-    lastName: "Marie-Jeanne",
-    reservationRef: "r2",
-    documentVersion: "v1-demo",
-    signedAt: new Date().toISOString(),
-    guideAccepted: true,
-  },
-];
+export const waiverSignaturesSeed: WaiverSignature[] = [];
 
 export interface KafeSettings {
   depositThreshold: number;
@@ -314,6 +305,7 @@ export function useWaiverSignatures() {
   return useStoredList<WaiverSignature>("kafe-ceramik-waiver-signatures", waiverSignaturesSeed, {
     table: "kafe_waiver_signatures",
     authLoad: true,
+    hasSortOrder: false,
     toRow: (signature) => ({
       id: signature.id,
       value: signature,

@@ -70,10 +70,11 @@ function saveAdminSession(session: SupabaseSession | null) {
 
 export function useAdminSession() {
   const configured = isSupabaseConfigured();
-  const [session, setSession] = useState<SupabaseSession | null>(() => readAdminSession());
+  const [session, setSession] = useState<SupabaseSession | null>(null);
 
   useEffect(() => {
     const update = () => setSession(readAdminSession());
+    update();
     window.addEventListener(AUTH_EVENT, update);
     window.addEventListener("storage", update);
     return () => {
@@ -243,6 +244,14 @@ export async function patchRow<T extends Record<string, unknown>>(
     body: patch,
     auth,
     prefer: "return=representation",
+  });
+}
+
+export async function deleteRow(table: string, id: string, auth = true) {
+  return request<void>(`/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    auth,
+    prefer: "return=minimal",
   });
 }
 

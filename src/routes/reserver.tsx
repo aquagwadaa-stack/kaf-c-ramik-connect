@@ -379,12 +379,6 @@ function ReserverPage() {
                 <Link to="/" className="rounded-full border border-border px-4 py-2 text-sm">
                   Accueil
                 </Link>
-                <Link
-                  to="/admin"
-                  className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-                >
-                  Voir côté équipe
-                </Link>
               </div>
             </div>
           )}
@@ -408,20 +402,12 @@ function ReserverPage() {
                   <ChevronRight className="h-4 w-4" />
                 </button>
               ) : depositRequired ? (
-                <div className="flex flex-wrap justify-end gap-2">
-                  <button
-                    onClick={() => submit(false)}
-                    className="rounded-full border border-border px-4 py-2 text-sm"
-                  >
-                    Envoyer la demande
-                  </button>
-                  <button
-                    onClick={() => submit(true)}
-                    className="inline-flex items-center gap-1 rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground"
-                  >
-                    <CalendarCheck2 className="h-4 w-4" /> Simuler l'acompte de {deposit} EUR
-                  </button>
-                </div>
+                <button
+                  onClick={() => submit(false)}
+                  className="inline-flex items-center gap-1 rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground"
+                >
+                  <CalendarCheck2 className="h-4 w-4" /> Envoyer la demande groupe
+                </button>
               ) : (
                 <button
                   onClick={() => submit(false)}

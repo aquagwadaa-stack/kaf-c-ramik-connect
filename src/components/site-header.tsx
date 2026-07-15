@@ -7,7 +7,6 @@ const links = [
   { to: "/brunch", label: "Brunch + Atelier" },
   { to: "/carte", label: "Carte" },
   { to: "/objets", label: "Objets" },
-  { to: "/cadeau", label: "Carte cadeau" },
 ] as const;
 
 export function SiteHeader() {
@@ -53,7 +52,9 @@ export function SiteHeader() {
               key={l.to}
               to={l.to}
               className="nav-link rounded-full px-3 py-1.5 text-sm text-foreground/70 hover:text-foreground"
-              activeProps={{ className: "nav-link rounded-full px-3 py-1.5 text-sm text-foreground" }}
+              activeProps={{
+                className: "nav-link rounded-full px-3 py-1.5 text-sm text-foreground",
+              }}
             >
               {l.label}
             </Link>
@@ -112,13 +113,6 @@ export function SiteHeader() {
             className="press shine mt-1 rounded-xl bg-primary px-3 py-2.5 text-center text-sm font-medium text-primary-foreground"
           >
             Réserver un atelier
-          </Link>
-          <Link
-            to="/admin"
-            onClick={() => setOpen(false)}
-            className="press rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:bg-secondary"
-          >
-            Espace équipe
           </Link>
         </div>
       </div>

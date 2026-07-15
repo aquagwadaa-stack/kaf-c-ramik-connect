@@ -61,7 +61,6 @@ const quickLinks = [
     icon: Coffee,
   },
   { to: "/objets", label: "Objets à peindre", desc: "Tasses, bols, vases", icon: Sparkles },
-  { to: "/cadeau", label: "Carte cadeau", desc: "Offrir un atelier", icon: Gift },
 ] as const;
 
 const pieces: { name: string; detail: string; kind: CeramicKind; tone: string }[] = [
