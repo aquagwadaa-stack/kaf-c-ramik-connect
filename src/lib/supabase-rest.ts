@@ -21,9 +21,14 @@ const SESSION_KEY = "kafe-ceramik-admin-session";
 const AUTH_EVENT = "kafe-ceramik-auth-change";
 
 export const supabaseConfig = {
-  url: import.meta.env.VITE_SUPABASE_URL as string | undefined,
-  anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined,
+  url: (import.meta.env.VITE_SUPABASE_URL as string | undefined),
+  anonKey: (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ??
+    (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined),
 };
+
+function isOpaqueKey(value: string) {
+  return value.startsWith("sb_publishable_") || value.startsWith("sb_secret_");
+}
 
 export function isSupabaseConfigured() {
   return Boolean(supabaseConfig.url && supabaseConfig.anonKey);
@@ -38,6 +43,7 @@ function anonKey() {
   if (!supabaseConfig.anonKey) throw new Error("Supabase anon key missing");
   return supabaseConfig.anonKey;
 }
+
 
 export function readAdminSession(): SupabaseSession | null {
   if (typeof window === "undefined") return null;
@@ -169,14 +175,24 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const token = options.auth ? session?.access_token : undefined;
   if (options.auth && !token) throw new Error("Admin session required");
 
+  const key = anonKey();
+  const headers: Record<string, string> = {
+    apikey: key,
+    "Content-Type": "application/json",
+    ...(options.prefer ? { Prefer: options.prefer } : {}),
+  };
+  // New-format publishable keys are opaque, not JWTs. PostgREST rejects
+  // them when sent as a Bearer token, so only attach Authorization when
+  // we have a real user access token from signInAdmin.
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  } else if (!isOpaqueKey(key)) {
+    headers.Authorization = `Bearer ${key}`;
+  }
+
   const response = await fetch(`${baseUrl()}${path}`, {
     method: options.method ?? "GET",
-    headers: {
-      apikey: anonKey(),
-      Authorization: `Bearer ${token ?? anonKey()}`,
-      "Content-Type": "application/json",
-      ...(options.prefer ? { Prefer: options.prefer } : {}),
-    },
+    headers,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
 
@@ -184,6 +200,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
+
 
 export async function selectRows<T>(table: string, query = "", auth = false) {
   return request<T[]>(`/rest/v1/${table}${query}`, { auth });
