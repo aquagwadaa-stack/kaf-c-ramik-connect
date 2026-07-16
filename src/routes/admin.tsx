@@ -8,12 +8,12 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardSignature,
-  Clock,
   Coins,
   Download,
   FileText,
   Home,
   Image as ImageIcon,
+  LayoutDashboard,
   LockKeyhole,
   LogOut,
   PackageOpen,
@@ -34,6 +34,7 @@ import {
   formatReservationDate,
   removeReservation,
   statusLabel,
+  seatingUnitLabel,
   updateStatus,
   type Reservation,
   type ReservationStatus,
@@ -80,7 +81,14 @@ export const Route = createFileRoute("/admin")({
 });
 
 type AdminTab =
-  "reservations" | "waivers" | "objects" | "creations" | "documents" | "settings" | "team";
+  | "overview"
+  | "reservations"
+  | "waivers"
+  | "objects"
+  | "creations"
+  | "documents"
+  | "settings"
+  | "team";
 
 const objectCategories: CeramicObject["category"][] = [
   "Tasses",
@@ -93,6 +101,7 @@ const objectCategories: CeramicObject["category"][] = [
 ];
 
 const tabs: { id: AdminTab; label: string; icon: LucideIcon }[] = [
+  { id: "overview", label: "Vue d'ensemble", icon: LayoutDashboard },
   { id: "reservations", label: "Réservations", icon: CalendarDays },
   { id: "waivers", label: "Décharges", icon: ClipboardSignature },
   { id: "objects", label: "Objets", icon: PackageOpen },
@@ -129,7 +138,16 @@ function downloadCsv(filename: string, rows: unknown[][]) {
   URL.revokeObjectURL(url);
 }
 
-function exportReservationsCsv(reservations: Reservation[]) {
+function reservationIsSigned(reservation: Reservation, signatures: WaiverSignature[]) {
+  return signatures.some(
+    (signature) =>
+      signature.reservationRef === reservation.id ||
+      `${signature.firstName} ${signature.lastName}`.toLowerCase() ===
+        `${reservation.firstName} ${reservation.lastName}`.toLowerCase(),
+  );
+}
+
+function exportReservationsCsv(reservations: Reservation[], settings: KafeSettings) {
   downloadCsv("reservations-kafe-ceramik.csv", [
     [
       "Date",
@@ -140,6 +158,7 @@ function exportReservationsCsv(reservations: Reservation[]) {
       "Email",
       "Personnes",
       "Formule",
+      "Emplacement",
       "Statut",
       "Acompte requis",
       "Acompte recu",
@@ -156,6 +175,7 @@ function exportReservationsCsv(reservations: Reservation[]) {
       reservation.email,
       reservation.people,
       experienceLabel(reservation.experience),
+      seatingUnitLabel(reservation.seatingUnitId, settings) ?? "À attribuer",
       statusLabel(reservation.status),
       reservation.depositRequired ? "oui" : "non",
       reservation.depositPaid ? "oui" : "non",
@@ -212,7 +232,7 @@ function AdminWorkspace({
   const [documents, saveDocuments] = useContentDocuments();
   const [signatures, saveSignatures] = useWaiverSignatures();
   const [settings, saveSettings] = useKafeSettings();
-  const [tab, setTab] = useState<AdminTab>("reservations");
+  const [tab, setTab] = useState<AdminTab>("overview");
   const creations = settings.creationInspirations?.length
     ? settings.creationInspirations
     : creationInspirationsSeed;
@@ -220,22 +240,6 @@ function AdminWorkspace({
   function saveCreations(next: CreationInspiration[]) {
     saveSettings({ ...settings, creationInspirations: next });
   }
-
-  const today = new Date().toISOString().slice(0, 10);
-  const stats = useMemo(() => {
-    const todayReservations = reservations.filter((r) => r.date === today);
-    const upcoming = reservations.filter((r) => r.date >= today && r.status !== "cancelled");
-    const pendingDeposit = reservations.filter(
-      (r) => r.depositRequired && !r.depositPaid && r.status !== "cancelled",
-    );
-    const signedToday = signatures.filter((s) => s.signedAt.slice(0, 10) === today);
-    return {
-      todayReservations: todayReservations.length,
-      upcoming: upcoming.length,
-      pendingDeposit: pendingDeposit.length,
-      signedToday: signedToday.length,
-    };
-  }, [reservations, signatures, today]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -279,28 +283,6 @@ function AdminWorkspace({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat
-            icon={CalendarDays}
-            label="Aujourd'hui"
-            value={`${stats.todayReservations}`}
-            sub="réservations"
-          />
-          <Stat icon={Clock} label="À venir" value={`${stats.upcoming}`} sub="créneaux actifs" />
-          <Stat
-            icon={Coins}
-            label="Acomptes"
-            value={`${stats.pendingDeposit}`}
-            sub="groupes à suivre"
-          />
-          <Stat
-            icon={ClipboardSignature}
-            label="Décharges"
-            value={`${stats.signedToday}`}
-            sub="signées aujourd'hui"
-          />
-        </div>
-
         <div className="flex gap-2 overflow-x-auto pb-1">
           {tabs.map(({ id, label, icon: Icon }) => (
             <button
@@ -317,8 +299,20 @@ function AdminWorkspace({
           ))}
         </div>
 
+        {tab === "overview" && (
+          <OverviewPanel
+            reservations={reservations}
+            signatures={signatures}
+            settings={settings}
+            onNavigate={setTab}
+          />
+        )}
         {tab === "reservations" && (
-          <ReservationsPanel reservations={reservations} signatures={signatures} />
+          <ReservationsPanel
+            reservations={reservations}
+            signatures={signatures}
+            settings={settings}
+          />
         )}
         {tab === "waivers" && (
           <WaiversPanel
@@ -345,6 +339,161 @@ function AdminWorkspace({
           />
         )}
       </main>
+    </div>
+  );
+}
+
+function OverviewPanel({
+  reservations,
+  signatures,
+  settings,
+  onNavigate,
+}: {
+  reservations: Reservation[];
+  signatures: WaiverSignature[];
+  settings: KafeSettings;
+  onNavigate: (tab: AdminTab) => void;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const activeReservations = reservations.filter(
+    (reservation) => reservation.status !== "cancelled",
+  );
+  const todayReservations = activeReservations
+    .filter((reservation) => reservation.date === today)
+    .sort((a, b) => a.slot.localeCompare(b.slot));
+  const pendingGroups = activeReservations.filter(
+    (reservation) =>
+      (reservation.isGroupRequest || reservation.people >= settings.manualConfirmationThreshold) &&
+      reservation.status === "pending",
+  );
+  const pendingDeposits = activeReservations.filter(
+    (reservation) => reservation.depositRequired && !reservation.depositPaid,
+  );
+  const unsignedToday = todayReservations.filter(
+    (reservation) => !reservationIsSigned(reservation, signatures),
+  );
+
+  const actions: {
+    label: string;
+    detail: string;
+    icon: LucideIcon;
+    tab: AdminTab;
+  }[] = [
+    {
+      label: "Réservations du jour",
+      detail: "Consulter les arrivées et les emplacements",
+      icon: CalendarDays,
+      tab: "reservations",
+    },
+    {
+      label: "Faire signer une décharge",
+      detail: "Retrouver une réservation et enregistrer la signature",
+      icon: ClipboardSignature,
+      tab: "waivers",
+    },
+    {
+      label: "Gérer les objets",
+      detail: "Mettre à jour les prix, photos et disponibilités",
+      icon: PackageOpen,
+      tab: "objects",
+    },
+    {
+      label: "Modifier le guide",
+      detail: "Mettre à jour les textes et les étapes visibles",
+      icon: BookOpenText,
+      tab: "documents",
+    },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat
+          icon={CalendarDays}
+          label="Aujourd'hui"
+          value={`${todayReservations.length}`}
+          sub="réservations actives"
+        />
+        <Stat
+          icon={Users}
+          label="Demandes groupes"
+          value={`${pendingGroups.length}`}
+          sub="à confirmer"
+        />
+        <Stat icon={Coins} label="Acomptes" value={`${pendingDeposits.length}`} sub="à suivre" />
+        <Stat
+          icon={ClipboardSignature}
+          label="À signer"
+          value={`${unsignedToday.length}`}
+          sub="décharges aujourd'hui"
+        />
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+        <Panel
+          title="Actions rapides"
+          desc="Les tâches les plus utiles sont accessibles directement."
+        >
+          <div className="divide-y divide-border border-y border-border">
+            {actions.map(({ label, detail, icon: Icon, tab }) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => onNavigate(tab)}
+                className="flex w-full items-center gap-3 py-4 text-left hover:text-primary"
+              >
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary">
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium">{label}</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">{detail}</span>
+                </span>
+                <span aria-hidden="true" className="text-lg text-muted-foreground">
+                  →
+                </span>
+              </button>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel
+          title="Déroulé du jour"
+          desc="Horaires, groupes et placement prévus pour chaque arrivée."
+        >
+          {todayReservations.length === 0 ? (
+            <EmptyState text="Aucune réservation active aujourd'hui." />
+          ) : (
+            <div className="divide-y divide-border border-y border-border">
+              {todayReservations.map((reservation) => {
+                const location = seatingUnitLabel(reservation.seatingUnitId, settings);
+                const signed = reservationIsSigned(reservation, signatures);
+                return (
+                  <button
+                    key={reservation.id}
+                    type="button"
+                    onClick={() => onNavigate("reservations")}
+                    className="grid w-full gap-2 py-4 text-left sm:grid-cols-[4.5rem_minmax(0,1fr)_auto] sm:items-center"
+                  >
+                    <span className="font-display text-lg">{reservation.slot}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium">
+                        {reservation.firstName} {reservation.lastName} · {reservation.people} pers.
+                      </span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        {location ?? "Emplacement à attribuer"}
+                      </span>
+                    </span>
+                    <InfoPill tone={signed ? "success" : "warning"}>
+                      {signed ? "Arrivée enregistrée" : "Décharge à signer"}
+                    </InfoPill>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </Panel>
+      </div>
     </div>
   );
 }
@@ -669,9 +818,11 @@ function RoleLine({ title, body }: { title: string; body: string }) {
 function ReservationsPanel({
   reservations,
   signatures,
+  settings,
 }: {
   reservations: Reservation[];
   signatures: WaiverSignature[];
+  settings: KafeSettings;
 }) {
   const [filter, setFilter] = useState<"today" | "upcoming" | "groups" | "all">("today");
   const today = new Date().toISOString().slice(0, 10);
@@ -705,7 +856,7 @@ function ReservationsPanel({
           ))}
         </div>
         <button
-          onClick={() => exportReservationsCsv(filtered)}
+          onClick={() => exportReservationsCsv(filtered, settings)}
           disabled={filtered.length === 0}
           className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-45"
         >
@@ -718,14 +869,14 @@ function ReservationsPanel({
           <EmptyState text="Aucune réservation pour ce filtre." />
         ) : (
           filtered.map((reservation) => {
-            const signed = signatures.some(
-              (signature) =>
-                signature.reservationRef === reservation.id ||
-                `${signature.firstName} ${signature.lastName}`.toLowerCase() ===
-                  `${reservation.firstName} ${reservation.lastName}`.toLowerCase(),
-            );
+            const signed = reservationIsSigned(reservation, signatures);
             return (
-              <ReservationCard key={reservation.id} reservation={reservation} signed={signed} />
+              <ReservationCard
+                key={reservation.id}
+                reservation={reservation}
+                signed={signed}
+                settings={settings}
+              />
             );
           })
         )}
@@ -734,7 +885,16 @@ function ReservationsPanel({
   );
 }
 
-function ReservationCard({ reservation, signed }: { reservation: Reservation; signed: boolean }) {
+function ReservationCard({
+  reservation,
+  signed,
+  settings,
+}: {
+  reservation: Reservation;
+  signed: boolean;
+  settings: KafeSettings;
+}) {
+  const location = seatingUnitLabel(reservation.seatingUnitId, settings);
   return (
     <div className="rounded-2xl border border-border bg-background p-4">
       <div className="grid gap-3 sm:grid-cols-[1fr_1.4fr_auto] sm:items-center">
@@ -760,6 +920,9 @@ function ReservationCard({ reservation, signed }: { reservation: Reservation; si
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
+        <InfoPill tone={location ? "success" : "warning"}>
+          {location ? `Emplacement · ${location}` : "Emplacement à attribuer"}
+        </InfoPill>
         {reservation.depositRequired ? (
           <InfoPill tone={reservation.depositPaid ? "success" : "warning"}>
             {reservation.depositPaid

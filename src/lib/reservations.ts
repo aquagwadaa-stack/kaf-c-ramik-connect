@@ -58,6 +58,7 @@ const seed: Reservation[] = [
     depositRequired: false,
     depositAmount: 0,
     status: "confirmed",
+    seatingUnitId: "table-2-1",
   },
   {
     id: "r2",
@@ -76,6 +77,7 @@ const seed: Reservation[] = [
     depositRequired: false,
     depositAmount: 0,
     status: "confirmed",
+    seatingUnitId: "pique-nique-1",
   },
   {
     id: "r3",
@@ -98,6 +100,7 @@ const seed: Reservation[] = [
     eventType: "Groupe",
     budget: "300-500 EUR",
     message: "Table de 8 personnes, besoin de confirmer l'organisation.",
+    seatingUnitId: "carbet-1",
   },
 ];
 
@@ -156,12 +159,25 @@ async function loadRemoteReservations() {
   await callRpc<number>("expire_kafe_no_shows", {}, true).catch((error) => {
     console.warn("No-show expiration skipped:", error);
   });
-  const rows = await selectRows<ReservationRow>(
-    "kafe_reservations",
-    "?select=id,value,created_at,date,slot,people,status,updated_at&order=date.asc,slot.asc",
-    true,
-  );
-  return rows.map((row) => row.value);
+  let rows: ReservationRow[];
+  try {
+    rows = await selectRows<ReservationRow>(
+      "kafe_reservations",
+      "?select=id,value,created_at,date,slot,people,status,seating_unit_id,updated_at&order=date.asc,slot.asc",
+      true,
+    );
+  } catch (error) {
+    console.warn("Detailed seating load skipped, using legacy reservations:", error);
+    rows = await selectRows<ReservationRow>(
+      "kafe_reservations",
+      "?select=id,value,created_at,date,slot,people,status,updated_at&order=date.asc,slot.asc",
+      true,
+    );
+  }
+  return rows.map((row) => ({
+    ...row.value,
+    seatingUnitId: row.seating_unit_id ?? row.value.seatingUnitId,
+  }));
 }
 
 async function insertRemoteReservation(reservation: Reservation) {
@@ -376,11 +392,16 @@ function expandSeatingUnits(settings: KafeSettings): SeatingUnitAvailability[] {
   return areas.flatMap((area) =>
     Array.from({ length: Math.max(0, area.quantity) }, (_, index) => ({
       id: `${area.id}-${index + 1}`,
-      label: area.quantity > 1 ? `${area.label} ${index + 1}` : area.label,
+      label: area.quantity > 1 ? `${area.label} n°${index + 1}` : area.label,
       capacity: Math.max(0, area.capacity),
       remaining: Math.max(0, area.capacity),
     })),
   );
+}
+
+export function seatingUnitLabel(unitId: string | undefined, settings: KafeSettings) {
+  if (!unitId) return null;
+  return expandSeatingUnits(settings).find((unit) => unit.id === unitId)?.label ?? unitId;
 }
 
 function overlaps(slotA: string, slotB: string, durationMinutes: number) {
