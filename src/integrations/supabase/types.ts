@@ -86,7 +86,6 @@ export type Database = {
           date: string
           id: string
           people: number
-          seating_unit_id: string | null
           slot: string
           status: string
           updated_at: string
@@ -97,7 +96,6 @@ export type Database = {
           date: string
           id?: string
           people: number
-          seating_unit_id?: string | null
           slot: string
           status: string
           updated_at?: string
@@ -108,7 +106,6 @@ export type Database = {
           date?: string
           id?: string
           people?: number
-          seating_unit_id?: string | null
           slot?: string
           status?: string
           updated_at?: string
@@ -171,29 +168,6 @@ export type Database = {
         Returns: {
           email: string
           role: string
-        }[]
-      }
-      create_kafe_reservation: {
-        Args: {
-          p_date: string
-          p_people: number
-          p_slot: string
-          p_value: Json
-        }
-        Returns: {
-          id: string
-          seating_unit_id: string
-        }[]
-      }
-      expire_kafe_no_shows: { Args: never; Returns: number }
-      get_kafe_slot_occupancy: {
-        Args: { from_date: string; to_date: string }
-        Returns: {
-          date: string
-          people: number
-          reservation_id: string
-          seating_unit_id: string | null
-          slot: string
         }[]
       }
       get_kafe_slot_capacity: {
