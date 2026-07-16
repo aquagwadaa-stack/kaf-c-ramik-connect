@@ -65,7 +65,7 @@ begin
   select coalesce((value ->> 'lateArrivalGraceMinutes')::integer, 35)
   into grace_minutes
   from public.kafe_settings
-  where id = 'main';
+  where public.kafe_settings.id = 'main';
 
   update public.kafe_reservations r
   set
@@ -125,7 +125,7 @@ declare
 begin
   select value into settings_value
   from public.kafe_settings
-  where id = 'main';
+  where public.kafe_settings.id = 'main';
 
   duration_minutes := coalesce((settings_value ->> 'slotDurationMinutes')::integer, 120);
 
@@ -243,7 +243,7 @@ begin
 
   select value into settings_value
   from public.kafe_settings
-  where id = 'main';
+  where public.kafe_settings.id = 'main';
 
   if settings_value is null then
     raise exception 'KAFE_SETTINGS_MISSING';
@@ -340,7 +340,7 @@ begin
 
   new_id := coalesce(
     nullif(p_value ->> 'id', ''),
-    'r' || extract(epoch from clock_timestamp())::bigint || '-' || encode(gen_random_bytes(4), 'hex')
+    'r' || extract(epoch from clock_timestamp())::bigint || '-' || replace(gen_random_uuid()::text, '-', '')
   );
   reservation_status := case
     when p_people >= manual_threshold or p_value ->> 'experience' = 'groupe' then 'pending'
