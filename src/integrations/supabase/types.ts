@@ -178,8 +178,6 @@ export type Database = {
           slot: string
         }[]
       }
-      is_kafe_admin: { Args: never; Returns: boolean }
-      is_kafe_owner: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
