@@ -381,7 +381,6 @@ export interface KafeSettings {
   cancellationNoticeHours: number;
   groupDepositForfeitHours: number;
   reservationFieldRequirements: ReservationFieldRequirements;
-  manualConfirmationForGroups: boolean;
   manualConfirmationThreshold: number;
   signatureRequiredOnArrival: boolean;
   walkInCafeEnabled: boolean;
@@ -431,7 +430,6 @@ export const settingsSeed: KafeSettings = {
     childrenAgesRequired: true,
     messageRequired: true,
   },
-  manualConfirmationForGroups: true,
   manualConfirmationThreshold: 8,
   signatureRequiredOnArrival: true,
   walkInCafeEnabled: true,
@@ -505,7 +503,6 @@ function normalizeKafeSettings(value?: Partial<KafeSettings> | null): KafeSettin
     cancellationNoticeHours: settingsSeed.cancellationNoticeHours,
     groupDepositForfeitHours: settingsSeed.groupDepositForfeitHours,
     reservationFieldRequirements: settingsSeed.reservationFieldRequirements,
-    manualConfirmationForGroups: settingsSeed.manualConfirmationForGroups,
     manualConfirmationThreshold: settingsSeed.manualConfirmationThreshold,
     signatureRequiredOnArrival: settingsSeed.signatureRequiredOnArrival,
     reservationConditionsText: settingsSeed.reservationConditionsText,

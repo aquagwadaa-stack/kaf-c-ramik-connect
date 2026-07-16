@@ -722,20 +722,29 @@ function WeekPlanner({
                           key={slotOption}
                           disabled={state.disabled}
                           onClick={() => onSelect(iso, slotOption)}
-                          className={`rounded-xl border px-2 py-2 text-left transition ${
+                          className={`border text-left transition ${
                             selected
-                              ? "border-primary bg-primary text-primary-foreground"
+                              ? "min-h-14 rounded-xl border-primary bg-primary px-2 py-2 text-primary-foreground"
                               : state.disabled
-                                ? "border-border bg-muted/55 text-muted-foreground line-through"
-                                : "border-border bg-card hover:border-primary/45 hover:bg-secondary/60"
+                                ? "h-8 rounded-md border-dashed border-border/70 bg-muted/45 px-2 text-muted-foreground"
+                                : "min-h-14 rounded-xl border-border bg-card px-2 py-2 hover:border-primary/45 hover:bg-secondary/60"
                           }`}
                         >
-                          <span className="block text-sm font-medium">{slotOption}</span>
-                          <span
-                            className={`block text-[11px] ${selected ? "text-primary-foreground/75" : "text-muted-foreground"}`}
-                          >
-                            {state.label}
-                          </span>
+                          {state.disabled ? (
+                            <span className="flex items-center justify-between gap-1">
+                              <span className="text-xs font-medium line-through">{slotOption}</span>
+                              <span className="truncate text-[10px]">{state.label}</span>
+                            </span>
+                          ) : (
+                            <>
+                              <span className="block text-sm font-medium">{slotOption}</span>
+                              <span
+                                className={`block text-[11px] ${selected ? "text-primary-foreground/75" : "text-muted-foreground"}`}
+                              >
+                                {state.label}
+                              </span>
+                            </>
+                          )}
                         </button>
                       );
                     })}

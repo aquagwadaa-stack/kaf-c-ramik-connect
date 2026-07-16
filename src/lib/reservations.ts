@@ -245,17 +245,17 @@ export function useReservationOccupancies() {
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
     let alive = true;
-    const today = new Date();
-    const until = new Date();
-    until.setDate(until.getDate() + 90);
-    callRpc<SlotOccupancy[]>("get_kafe_slot_occupancy", {
-      from_date: today.toISOString().slice(0, 10),
-      to_date: until.toISOString().slice(0, 10),
-    })
-      .then((rows) => {
+    async function loadOccupancies() {
+      const today = new Date();
+      const until = new Date();
+      until.setDate(until.getDate() + 90);
+      try {
+        const rows = await callRpc<SlotOccupancy[]>("get_kafe_slot_occupancy", {
+          from_date: today.toISOString().slice(0, 10),
+          to_date: until.toISOString().slice(0, 10),
+        });
         if (alive) setOccupancies(rows);
-      })
-      .catch(async (error) => {
+      } catch (error) {
         console.warn("Detailed occupancy load skipped, using aggregate fallback:", error);
         try {
           const rows = await callRpc<LegacySlotCapacity[]>("get_kafe_slot_capacity", {
@@ -275,10 +275,17 @@ export function useReservationOccupancies() {
         } catch (fallbackError) {
           console.warn("Remote occupancy load skipped:", fallbackError);
         }
-      });
+      }
+    }
+
+    void loadOccupancies();
+    const refreshInterval = window.setInterval(loadOccupancies, 30_000);
+    window.addEventListener("focus", loadOccupancies);
 
     return () => {
       alive = false;
+      window.clearInterval(refreshInterval);
+      window.removeEventListener("focus", loadOccupancies);
     };
   }, []);
 
@@ -338,13 +345,10 @@ export function getDepositAmount(people: number, settings: KafeSettings = settin
 
 export function shouldWaitForManualConfirmation(
   people: number,
-  experience: ExperienceType,
+  _experience: ExperienceType,
   settings: KafeSettings = settingsSeed,
 ) {
-  return (
-    settings.manualConfirmationForGroups &&
-    (experience === "groupe" || people >= settings.manualConfirmationThreshold)
-  );
+  return people >= settings.manualConfirmationThreshold;
 }
 
 export function getReservedPeopleForSlot(reservations: Reservation[], date: string, slot: string) {
@@ -382,6 +386,13 @@ export interface SlotPlacement {
   unitLabel: string | null;
   maxGroupSize: number;
   totalRemaining: number;
+}
+
+export interface SeatingAvailability {
+  units: SeatingUnitAvailability[];
+  maxGroupSize: number;
+  totalRemaining: number;
+  hasUnassignedOverflow: boolean;
 }
 
 function expandSeatingUnits(settings: KafeSettings): SeatingUnitAvailability[] {
@@ -424,12 +435,43 @@ export function getSlotPlacement(
   people: number,
   settings: KafeSettings,
 ): SlotPlacement {
+  const availability = getSeatingAvailability(
+    reservations,
+    occupancies,
+    date,
+    slot,
+    settings,
+  );
+  if (availability.hasUnassignedOverflow) {
+    return { unitId: null, unitLabel: null, maxGroupSize: 0, totalRemaining: 0 };
+  }
+  const chosen = findBestFitUnit(availability.units, people);
+  return {
+    unitId: chosen?.id ?? null,
+    unitLabel: chosen?.label ?? null,
+    maxGroupSize: availability.maxGroupSize,
+    totalRemaining: availability.totalRemaining,
+  };
+}
+
+export function getSeatingAvailability(
+  reservations: Reservation[],
+  occupancies: SlotOccupancy[],
+  date: string,
+  slot: string,
+  settings: KafeSettings,
+): SeatingAvailability {
   const units = expandSeatingUnits(settings);
   const duration = Math.max(15, settings.slotDurationMinutes || 120);
-  const remoteIds = new Set(occupancies.map((occupancy) => occupancy.reservation_id));
+  const localIds = new Set(reservations.map((reservation) => reservation.id));
   const active = [
     ...occupancies
-      .filter((occupancy) => occupancy.date === date && overlaps(occupancy.slot, slot, duration))
+      .filter(
+        (occupancy) =>
+          !localIds.has(occupancy.reservation_id) &&
+          occupancy.date === date &&
+          overlaps(occupancy.slot, slot, duration),
+      )
       .map((occupancy) => ({
         id: occupancy.reservation_id,
         people: occupancy.people,
@@ -438,7 +480,6 @@ export function getSlotPlacement(
     ...reservations
       .filter(
         (reservation) =>
-          !remoteIds.has(reservation.id) &&
           reservation.status !== "cancelled" &&
           reservation.date === date &&
           overlaps(reservation.slot, slot, duration),
@@ -463,17 +504,21 @@ export function getSlotPlacement(
   for (const reservation of unassigned.sort((a, b) => b.people - a.people)) {
     const assigned = findBestFitUnit(units, reservation.people);
     if (!assigned) {
-      return { unitId: null, unitLabel: null, maxGroupSize: 0, totalRemaining: 0 };
+      return {
+        units,
+        maxGroupSize: 0,
+        totalRemaining: 0,
+        hasUnassignedOverflow: true,
+      };
     }
     assigned.remaining -= reservation.people;
   }
 
-  const chosen = findBestFitUnit(units, people);
   return {
-    unitId: chosen?.id ?? null,
-    unitLabel: chosen?.label ?? null,
+    units,
     maxGroupSize: Math.max(0, ...units.map((unit) => unit.remaining)),
     totalRemaining: units.reduce((total, unit) => total + unit.remaining, 0),
+    hasUnassignedOverflow: false,
   };
 }
 

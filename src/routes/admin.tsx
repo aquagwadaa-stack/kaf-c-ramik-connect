@@ -8,6 +8,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardSignature,
+  Clock3,
   Coins,
   Download,
   FileText,
@@ -32,12 +33,16 @@ import {
   useReservations,
   experienceLabel,
   formatReservationDate,
+  getSeatingAvailability,
+  getSlotsForDate,
   removeReservation,
   statusLabel,
   seatingUnitLabel,
   updateStatus,
+  useReservationOccupancies,
   type Reservation,
   type ReservationStatus,
+  type SlotOccupancy,
 } from "@/lib/reservations";
 import {
   useCeramicObjects,
@@ -228,6 +233,7 @@ function AdminWorkspace({
   adminRole?: string;
 }) {
   const reservations = useReservations();
+  const occupancies = useReservationOccupancies();
   const [objects, saveObjects] = useCeramicObjects();
   const [documents, saveDocuments] = useContentDocuments();
   const [signatures, saveSignatures] = useWaiverSignatures();
@@ -302,6 +308,7 @@ function AdminWorkspace({
         {tab === "overview" && (
           <OverviewPanel
             reservations={reservations}
+            occupancies={occupancies}
             signatures={signatures}
             settings={settings}
             onNavigate={setTab}
@@ -345,11 +352,13 @@ function AdminWorkspace({
 
 function OverviewPanel({
   reservations,
+  occupancies,
   signatures,
   settings,
   onNavigate,
 }: {
   reservations: Reservation[];
+  occupancies: SlotOccupancy[];
   signatures: WaiverSignature[];
   settings: KafeSettings;
   onNavigate: (tab: AdminTab) => void;
@@ -494,7 +503,144 @@ function OverviewPanel({
           )}
         </Panel>
       </div>
+
+      <WalkInAvailability
+        reservations={reservations}
+        occupancies={occupancies}
+        settings={settings}
+      />
     </div>
+  );
+}
+
+function localDateValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function localTimeValue(date: Date) {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function WalkInAvailability({
+  reservations,
+  occupancies,
+  settings,
+}: {
+  reservations: Reservation[];
+  occupancies: SlotOccupancy[];
+  settings: KafeSettings;
+}) {
+  const [now, setNow] = useState(() => new Date());
+  const today = localDateValue(now);
+  const [date, setDate] = useState(today);
+  const [timeChoice, setTimeChoice] = useState("now");
+  const slots = useMemo(() => getSlotsForDate(date, settings), [date, settings]);
+  const observedTime = timeChoice === "now" ? localTimeValue(now) : timeChoice;
+  const availability = useMemo(
+    () =>
+      observedTime
+        ? getSeatingAvailability(reservations, occupancies, date, observedTime, settings)
+        : null,
+    [date, observedTime, occupancies, reservations, settings],
+  );
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  function chooseDate(nextDate: string) {
+    setDate(nextDate);
+    const nextSlots = getSlotsForDate(nextDate, settings);
+    setTimeChoice(nextDate === today ? "now" : (nextSlots[0] ?? ""));
+  }
+
+  return (
+    <Panel
+      title="Places disponibles sur place"
+      desc="Consultez chaque espace séparément pour accueillir un groupe sans le répartir entre plusieurs tables."
+    >
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label>
+          <span className="mb-1.5 block text-sm font-medium">Date</span>
+          <input
+            type="date"
+            value={date}
+            onChange={(event) => chooseDate(event.target.value)}
+            className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+          />
+        </label>
+        <label>
+          <span className="mb-1.5 block text-sm font-medium">Heure observée</span>
+          <select
+            value={timeChoice}
+            onChange={(event) => setTimeChoice(event.target.value)}
+            className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+          >
+            {date === today && <option value="now">Maintenant · {localTimeValue(now)}</option>}
+            {date !== today && slots.length === 0 && <option value="">Aucun créneau</option>}
+            {slots.map((slot) => (
+              <option key={slot} value={slot}>
+                Créneau de {slot}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {!observedTime || !availability ? (
+        <div className="mt-4">
+          <EmptyState text="Aucun horaire n'est configuré pour cette date." />
+        </div>
+      ) : (
+        <>
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-border py-3 text-sm">
+            <span className="inline-flex items-center gap-2 font-medium">
+              <Clock3 className="h-4 w-4 text-primary" /> {observedTime}
+            </span>
+            <span>
+              <strong>{availability.totalRemaining}</strong> places libres au total
+            </span>
+            <span>
+              plus grand groupe installable : <strong>{availability.maxGroupSize}</strong>
+            </span>
+          </div>
+
+          {availability.hasUnassignedOverflow && (
+            <div className="mt-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              Une réservation sans emplacement compatible doit être réattribuée avant d'accueillir d'autres personnes.
+            </div>
+          )}
+
+          <div className="mt-4 grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
+            {availability.units.map((unit) => {
+              const full = unit.remaining === 0;
+              const used = Math.max(0, unit.capacity - unit.remaining);
+              return (
+                <div key={unit.id} className={`bg-background p-3 ${full ? "text-muted-foreground" : ""}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-sm font-medium">{unit.label}</span>
+                    <span className={`text-xs ${full ? "text-muted-foreground" : "text-sage"}`}>
+                      {full ? "Complet" : `${unit.remaining}/${unit.capacity} libres`}
+                    </span>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={`h-full ${full ? "bg-muted-foreground/45" : "bg-sage"}`}
+                      style={{ width: `${unit.capacity ? (used / unit.capacity) * 100 : 100}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </Panel>
   );
 }
 
@@ -1977,11 +2123,6 @@ function SettingsPanel({
           value={settings.manualConfirmationThreshold}
           suffix="personnes"
           onChange={(value) => update({ manualConfirmationThreshold: value })}
-        />
-        <ToggleRow
-          label="Les groupes attendent une validation équipe"
-          checked={settings.manualConfirmationForGroups}
-          onChange={(value) => update({ manualConfirmationForGroups: value })}
         />
         <ToggleRow
           label="Accueil café sans réservation"

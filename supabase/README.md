@@ -54,7 +54,7 @@ Pour l'instant, creer un seul compte `owner` suffit. Les niveaux plus fins pourr
 
 - Les visiteurs peuvent lire les reglages publics, les objets et les documents publies.
 - Les visiteurs peuvent creer une reservation, mais ne peuvent pas lire les reservations.
-- La disponibilite des creneaux passe par la fonction `get_kafe_slot_capacity`, qui renvoie seulement des totaux par date/creneau.
+- La disponibilite publique passe par `get_kafe_slot_occupancy`, sans exposer les coordonnees des clients. La creation atomique avec `create_kafe_reservation` attribue une vraie table et refuse un groupe lorsqu'aucun espace unique ne peut l'accueillir.
 - Les reservations completes, signatures et modifications admin demandent une session Supabase Auth autorisee dans `kafe_admin_profiles`.
 
 ## A faire avant livraison
