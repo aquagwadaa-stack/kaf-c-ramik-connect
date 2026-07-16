@@ -9,7 +9,9 @@ import {
   ChevronRight,
   Coffee,
   CroissantIcon,
+  Minus,
   Palette,
+  Plus,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -21,15 +23,15 @@ import {
   formatDuration,
   formatReservationDate,
   getDepositAmount,
-  getRemainingCapacity,
+  getSlotPlacement,
   getSlotsForDate,
   shouldRequireDeposit,
   shouldWaitForManualConfirmation,
-  useReservationCapacities,
+  useReservationOccupancies,
   useReservations,
   type ExperienceType,
   type Reservation,
-  type SlotCapacity,
+  type SlotOccupancy,
 } from "@/lib/reservations";
 
 export const Route = createFileRoute("/reserver")({
@@ -77,7 +79,7 @@ const experiences: {
 
 function ReserverPage() {
   const reservations = useReservations();
-  const capacities = useReservationCapacities();
+  const occupancies = useReservationOccupancies();
   const [settings] = useKafeSettings();
   const [step, setStep] = useState(1);
   const [experience, setExperience] = useState<ExperienceType>("cafe_atelier");
@@ -89,12 +91,15 @@ function ReserverPage() {
     lastName: "",
     phone: "",
     email: "",
+    childrenAges: "",
     message: "",
   });
   const [guideAccepted, setGuideAccepted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState<string | null>(null);
   const [doneNotice, setDoneNotice] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const depositRequired = shouldRequireDeposit(people, settings);
   const deposit = getDepositAmount(people, settings);
@@ -118,15 +123,20 @@ function ReserverPage() {
     setStep((current) => Math.max(current - 1, 1));
   }
 
-  function submit(payDeposit: boolean) {
+  async function submit(payDeposit: boolean) {
     if (!date || !slot) {
       setStep(2);
       return;
     }
 
-    const remaining = getRemainingCapacity(reservations, date, slot, settings, capacities);
-    if (remaining < people) {
-      setErrors({ slot: "Ce créneau n'a plus assez de place pour ce nombre de personnes." });
+    const placement = getSlotPlacement(reservations, occupancies, date, slot, people, settings);
+    if (!placement.unitId) {
+      setErrors({
+        slot:
+          placement.maxGroupSize > 0
+            ? `Il reste des places, mais aucun espace ne peut accueillir votre groupe de ${people} personnes ensemble.`
+            : "Ce créneau est complet.",
+      });
       setStep(2);
       return;
     }
@@ -135,7 +145,15 @@ function ReserverPage() {
     if (!form.firstName) nextErrors.firstName = "Requis";
     if (!form.lastName) nextErrors.lastName = "Requis";
     if (!form.phone || form.phone.length < 8) nextErrors.phone = "Téléphone invalide";
-    if (!form.email || !/.+@.+\..+/.test(form.email)) nextErrors.email = "Email invalide";
+    if (
+      (settings.reservationFieldRequirements.emailRequired && !form.email) ||
+      (form.email && !/.+@.+\..+/.test(form.email))
+    )
+      nextErrors.email = "Email invalide";
+    if (settings.reservationFieldRequirements.childrenAgesRequired && !form.childrenAges.trim())
+      nextErrors.childrenAges = "Merci d'indiquer les enfants et leurs âges, ou “Aucun”.";
+    if (settings.reservationFieldRequirements.messageRequired && !form.message.trim())
+      nextErrors.message = "Merci d'indiquer votre demande, ou “RAS”.";
     if (!guideAccepted)
       nextErrors.guideAccepted = "Merci de confirmer les consignes avant de continuer";
     setErrors(nextErrors);
@@ -151,18 +169,38 @@ function ReserverPage() {
           : "pending"
         : "confirmed";
 
-    const reservation = addReservation({
-      experience,
-      people,
-      date,
-      slot,
-      ...form,
-      depositPaid: depositRequired ? payDeposit : false,
-      depositRequired,
-      depositAmount: deposit,
-      status,
-      isGroupRequest: people >= settings.manualConfirmationThreshold || experience === "groupe",
-    });
+    setSubmitting(true);
+    setSubmitError("");
+    let reservation: Reservation;
+    try {
+      reservation = await addReservation({
+        experience,
+        people,
+        date,
+        slot,
+        ...form,
+        guideAccepted,
+        seatingUnitId: placement.unitId,
+        depositPaid: depositRequired ? payDeposit : false,
+        depositRequired,
+        depositAmount: deposit,
+        status,
+        isGroupRequest: people >= settings.manualConfirmationThreshold || experience === "groupe",
+      });
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error && error.message.includes("KAFE_SLOT_FULL")
+          ? "Ce créneau vient d'être rempli. Choisissez un autre horaire."
+          : error instanceof Error &&
+              (error.message.includes("KAFE_INVALID_SLOT") ||
+                error.message.includes("KAFE_INVALID_DATE"))
+            ? "Ce créneau n'est plus réservable. Choisissez une autre date ou un autre horaire."
+            : "La réservation n'a pas pu être enregistrée. Réessayez dans un instant.",
+      );
+      setSubmitting(false);
+      return;
+    }
+    setSubmitting(false);
 
     setDone(reservation.id);
     setDoneNotice(
@@ -230,26 +268,53 @@ function ReserverPage() {
               </div>
 
               <div className="mt-6">
-                <div className="mb-2 text-sm font-medium">Nombre de personnes</div>
-                <div className="flex flex-wrap gap-2">
-                  {[1, 2, 3, 4, 5, 6, 8, 10].map((count) => (
-                    <button
-                      key={count}
-                      onClick={() => {
-                        setPeople(count);
-                        setDate("");
-                        setSlot("");
-                      }}
-                      className={`min-w-12 rounded-full border px-4 py-2 text-sm ${
-                        people === count
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border hover:bg-secondary"
-                      }`}
-                    >
-                      {count}
-                    </button>
-                  ))}
+                <div className="mb-2 text-sm font-medium">Nombre total de personnes</div>
+                <div className="inline-grid grid-cols-[2.75rem_5rem_2.75rem] items-center overflow-hidden rounded-xl border border-border bg-background">
+                  <button
+                    type="button"
+                    aria-label="Retirer une personne"
+                    disabled={people <= 1}
+                    onClick={() => {
+                      setPeople((current) => Math.max(1, current - 1));
+                      setDate("");
+                      setSlot("");
+                    }}
+                    className="grid h-11 place-items-center border-r border-border hover:bg-secondary disabled:opacity-35"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <input
+                    aria-label="Nombre total de personnes"
+                    type="number"
+                    min={1}
+                    max={15}
+                    value={people}
+                    onChange={(event) => {
+                      const value = Math.min(15, Math.max(1, Number(event.target.value) || 1));
+                      setPeople(value);
+                      setDate("");
+                      setSlot("");
+                    }}
+                    className="h-11 w-full bg-transparent text-center text-lg font-medium outline-none"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Ajouter une personne"
+                    disabled={people >= 15}
+                    onClick={() => {
+                      setPeople((current) => Math.min(15, current + 1));
+                      setDate("");
+                      setSlot("");
+                    }}
+                    className="grid h-11 place-items-center border-l border-border hover:bg-secondary disabled:opacity-35"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
                 </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Jusqu'à 15 personnes par réservation. À partir de 8 personnes, l'équipe valide la
+                  demande.
+                </p>
               </div>
 
               {requiresManualReview && (
@@ -265,7 +330,7 @@ function ReserverPage() {
               <WeekPlanner
                 people={people}
                 reservations={reservations}
-                capacities={capacities}
+                occupancies={occupancies}
                 settings={settings}
                 selectedDate={date}
                 selectedSlot={slot}
@@ -302,16 +367,33 @@ function ReserverPage() {
                   value={form.email}
                   onChange={(v) => setForm({ ...form, email: v })}
                   error={errors.email}
+                  hint={
+                    settings.reservationFieldRequirements.emailRequired ? undefined : "Facultatif"
+                  }
                 />
                 <div className="sm:col-span-2">
-                  <label className="mb-1.5 block text-sm font-medium">Message (optionnel)</label>
+                  <Field
+                    label="Présence d'enfants et âges"
+                    value={form.childrenAges}
+                    onChange={(v) => setForm({ ...form, childrenAges: v })}
+                    error={errors.childrenAges}
+                    placeholder="Ex. Aucun enfant, ou 2 enfants de 6 et 9 ans"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1.5 block text-sm font-medium">
+                    Message ou demande particulière
+                  </label>
                   <textarea
                     value={form.message}
                     onChange={(event) => setForm({ ...form, message: event.target.value })}
                     rows={3}
                     className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="Allergies, demande particulière, organisation groupe..."
+                    placeholder="Allergies, organisation du groupe… Indiquez RAS si vous n'avez rien à signaler."
                   />
+                  {errors.message && (
+                    <span className="mt-1 block text-xs text-destructive">{errors.message}</span>
+                  )}
                 </div>
               </div>
 
@@ -336,6 +418,10 @@ function ReserverPage() {
               <div className="mt-4 rounded-2xl border border-border bg-background p-4 text-sm">
                 <div className="font-medium">Conditions pratiques</div>
                 <p className="mt-1 text-muted-foreground">{settings.reservationConditionsText}</p>
+                <p className="mt-2 text-muted-foreground">
+                  La cuisine ferme à {settings.kitchenClosingTime}. Pensez à commander votre
+                  consommation à votre arrivée.
+                </p>
               </div>
 
               <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-background p-4 text-sm">
@@ -360,6 +446,12 @@ function ReserverPage() {
                 </span>
               </label>
             </Step>
+          )}
+
+          {submitError && (
+            <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {submitError}
+            </div>
           )}
 
           {step === 4 && done && (
@@ -406,16 +498,20 @@ function ReserverPage() {
               ) : depositRequired ? (
                 <button
                   onClick={() => submit(false)}
+                  disabled={submitting}
                   className="inline-flex items-center gap-1 rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground"
                 >
-                  <CalendarCheck2 className="h-4 w-4" /> Envoyer la demande groupe
+                  <CalendarCheck2 className="h-4 w-4" />
+                  {submitting ? "Enregistrement…" : "Envoyer la demande groupe"}
                 </button>
               ) : (
                 <button
                   onClick={() => submit(false)}
+                  disabled={submitting}
                   className="inline-flex items-center gap-1 rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground"
                 >
-                  <CalendarCheck2 className="h-4 w-4" /> Confirmer la réservation
+                  <CalendarCheck2 className="h-4 w-4" />
+                  {submitting ? "Enregistrement…" : "Confirmer la réservation"}
                 </button>
               )}
             </div>
@@ -452,19 +548,27 @@ function Field({
   onChange,
   type = "text",
   error,
+  hint,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   type?: string;
   error?: string;
+  hint?: string;
+  placeholder?: string;
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium">{label}</label>
+      <label className="mb-1.5 flex items-center justify-between gap-3 text-sm font-medium">
+        <span>{label}</span>
+        {hint && <span className="text-xs font-normal text-muted-foreground">{hint}</span>}
+      </label>
       <input
         type={type}
         value={value}
+        placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
         className={`w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring ${
           error ? "border-destructive" : "border-input"
@@ -520,7 +624,7 @@ function Stepper({ step }: { step: number }) {
 function WeekPlanner({
   people,
   reservations,
-  capacities,
+  occupancies,
   settings,
   selectedDate,
   selectedSlot,
@@ -528,7 +632,7 @@ function WeekPlanner({
 }: {
   people: number;
   reservations: Reservation[];
-  capacities: SlotCapacity[];
+  occupancies: SlotOccupancy[];
   settings: KafeSettings;
   selectedDate: string;
   selectedSlot: string;
@@ -609,7 +713,7 @@ function WeekPlanner({
                         slotOption,
                         people,
                         reservations,
-                        capacities,
+                        occupancies,
                         settings,
                       );
                       const selected = selectedDate === iso && selectedSlot === slotOption;
@@ -656,7 +760,7 @@ function getSlotAvailability(
   slot: string,
   people: number,
   reservations: Reservation[],
-  capacities: SlotCapacity[],
+  occupancies: SlotOccupancy[],
   settings: KafeSettings,
 ) {
   const today = startOfDay(new Date());
@@ -664,10 +768,17 @@ function getSlotAvailability(
   if (current < today) return { disabled: true, label: "passé" };
 
   const date = toISODate(day);
-  const remaining = getRemainingCapacity(reservations, date, slot, settings, capacities);
-  if (remaining <= 0) return { disabled: true, label: "complet" };
-  if (remaining < people) return { disabled: true, label: `${remaining} place(s) restante(s)` };
-  if (remaining <= 2) return { disabled: false, label: `${remaining} place(s) restante(s)` };
+  if (new Date(`${date}T${slot}:00`).getTime() <= Date.now()) {
+    return { disabled: true, label: "passé" };
+  }
+
+  const placement = getSlotPlacement(reservations, occupancies, date, slot, people, settings);
+  if (!placement.unitId && placement.totalRemaining <= 0) {
+    return { disabled: true, label: "complet" };
+  }
+  if (!placement.unitId) {
+    return { disabled: true, label: "places restantes séparées" };
+  }
   return { disabled: false, label: "disponible" };
 }
 

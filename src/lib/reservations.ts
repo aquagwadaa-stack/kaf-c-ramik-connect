@@ -10,7 +10,7 @@ import {
   selectRows,
 } from "./supabase-rest";
 
-export type ReservationStatus = "pending" | "deposit_paid" | "confirmed" | "cancelled";
+export type ReservationStatus = "pending" | "deposit_paid" | "confirmed" | "arrived" | "cancelled";
 export type ExperienceType = "atelier" | "cafe_atelier" | "brunch_atelier" | "groupe";
 
 export interface Reservation {
@@ -24,6 +24,8 @@ export interface Reservation {
   lastName: string;
   phone: string;
   email: string;
+  childrenAges: string;
+  guideAccepted: boolean;
   message?: string;
   depositPaid: boolean;
   depositRequired?: boolean;
@@ -33,6 +35,7 @@ export interface Reservation {
   isGroupRequest?: boolean;
   eventType?: string;
   budget?: string;
+  seatingUnitId?: string;
 }
 
 const KEY = "kafe-ceramik-reservations";
@@ -49,6 +52,8 @@ const seed: Reservation[] = [
     lastName: "Bertrand",
     phone: "0690 11 22 33",
     email: "anais@example.com",
+    childrenAges: "Aucun enfant",
+    guideAccepted: true,
     depositPaid: false,
     depositRequired: false,
     depositAmount: 0,
@@ -65,6 +70,8 @@ const seed: Reservation[] = [
     lastName: "Marie-Jeanne",
     phone: "0690 44 55 66",
     email: "camille@example.com",
+    childrenAges: "2 enfants : 6 et 9 ans",
+    guideAccepted: true,
     depositPaid: false,
     depositRequired: false,
     depositAmount: 0,
@@ -81,6 +88,8 @@ const seed: Reservation[] = [
     lastName: "Petit",
     phone: "0690 77 88 99",
     email: "laura@example.com",
+    childrenAges: "Aucun enfant",
+    guideAccepted: true,
     depositPaid: false,
     depositRequired: true,
     depositAmount: 80,
@@ -110,17 +119,26 @@ type ReservationRow = {
   slot: string;
   people: number;
   status: ReservationStatus;
+  seating_unit_id?: string | null;
   updated_at?: string;
 };
 
-export type SlotCapacity = {
+export type SlotOccupancy = {
+  reservation_id: string;
+  date: string;
+  slot: string;
+  people: number;
+  seating_unit_id: string | null;
+};
+
+type LegacySlotCapacity = {
   date: string;
   slot: string;
   reserved_people: number;
 };
 
 function toReservationRow(reservation: Reservation): ReservationRow {
-  return {
+  const row: ReservationRow = {
     id: reservation.id,
     value: reservation,
     created_at: reservation.createdAt,
@@ -130,9 +148,14 @@ function toReservationRow(reservation: Reservation): ReservationRow {
     status: reservation.status,
     updated_at: new Date().toISOString(),
   };
+  if (reservation.seatingUnitId) row.seating_unit_id = reservation.seatingUnitId;
+  return row;
 }
 
 async function loadRemoteReservations() {
+  await callRpc<number>("expire_kafe_no_shows", {}, true).catch((error) => {
+    console.warn("No-show expiration skipped:", error);
+  });
   const rows = await selectRows<ReservationRow>(
     "kafe_reservations",
     "?select=id,value,created_at,date,slot,people,status,updated_at&order=date.asc,slot.asc",
@@ -200,8 +223,8 @@ export function useReservations() {
   return list;
 }
 
-export function useReservationCapacities() {
-  const [capacities, setCapacities] = useState<SlotCapacity[]>([]);
+export function useReservationOccupancies() {
+  const [occupancies, setOccupancies] = useState<SlotOccupancy[]>([]);
 
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
@@ -209,15 +232,33 @@ export function useReservationCapacities() {
     const today = new Date();
     const until = new Date();
     until.setDate(until.getDate() + 90);
-    callRpc<SlotCapacity[]>("get_kafe_slot_capacity", {
+    callRpc<SlotOccupancy[]>("get_kafe_slot_occupancy", {
       from_date: today.toISOString().slice(0, 10),
       to_date: until.toISOString().slice(0, 10),
     })
       .then((rows) => {
-        if (alive) setCapacities(rows);
+        if (alive) setOccupancies(rows);
       })
-      .catch((error) => {
-        console.warn("Remote capacity load skipped:", error);
+      .catch(async (error) => {
+        console.warn("Detailed occupancy load skipped, using aggregate fallback:", error);
+        try {
+          const rows = await callRpc<LegacySlotCapacity[]>("get_kafe_slot_capacity", {
+            from_date: today.toISOString().slice(0, 10),
+            to_date: until.toISOString().slice(0, 10),
+          });
+          if (!alive) return;
+          setOccupancies(
+            rows.map((row) => ({
+              reservation_id: `legacy-${row.date}-${row.slot}`,
+              date: row.date,
+              slot: row.slot,
+              people: row.reserved_people,
+              seating_unit_id: null,
+            })),
+          );
+        } catch (fallbackError) {
+          console.warn("Remote occupancy load skipped:", fallbackError);
+        }
       });
 
     return () => {
@@ -225,22 +266,49 @@ export function useReservationCapacities() {
     };
   }, []);
 
-  return capacities;
+  return occupancies;
 }
 
-export function addReservation(r: Omit<Reservation, "id" | "createdAt">): Reservation {
-  const full: Reservation = {
+function isMissingReservationRpc(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("create_kafe_reservation") && message.includes("schema cache");
+}
+
+export async function addReservation(
+  r: Omit<Reservation, "id" | "createdAt">,
+): Promise<Reservation> {
+  let full: Reservation = {
     ...r,
     id: `r${Date.now()}`,
     createdAt: new Date().toISOString(),
   };
+
+  if (isSupabaseConfigured()) {
+    try {
+      const rows = await callRpc<{ id: string; seating_unit_id: string }[]>(
+        "create_kafe_reservation",
+        {
+          p_value: full,
+          p_date: full.date,
+          p_slot: full.slot,
+          p_people: full.people,
+        },
+      );
+      if (!rows[0]?.id) throw new Error("La réservation n'a pas pu être enregistrée.");
+      full = {
+        ...full,
+        id: rows[0].id,
+        seatingUnitId: rows[0].seating_unit_id,
+      };
+    } catch (error) {
+      if (!isMissingReservationRpc(error)) throw error;
+      console.warn("Atomic reservation RPC unavailable, using legacy insert:", error);
+      await insertRemoteReservation(full);
+    }
+  }
+
   const list = read();
   write([full, ...list]);
-  if (isSupabaseConfigured()) {
-    insertRemoteReservation(full).catch((error) => {
-      console.warn("Remote reservation insert skipped:", error);
-    });
-  }
   return full;
 }
 
@@ -277,13 +345,115 @@ export function getRemainingCapacity(
   date: string,
   slot: string,
   settings: KafeSettings,
-  capacities?: SlotCapacity[],
+  capacities?: LegacySlotCapacity[],
 ) {
   const remoteCapacity = capacities?.find(
     (capacity) => capacity.date === date && capacity.slot === slot,
   );
   if (remoteCapacity) return Math.max(0, settings.defaultCapacity - remoteCapacity.reserved_people);
   return Math.max(0, settings.defaultCapacity - getReservedPeopleForSlot(reservations, date, slot));
+}
+
+export interface SeatingUnitAvailability {
+  id: string;
+  label: string;
+  capacity: number;
+  remaining: number;
+}
+
+export interface SlotPlacement {
+  unitId: string | null;
+  unitLabel: string | null;
+  maxGroupSize: number;
+  totalRemaining: number;
+}
+
+function expandSeatingUnits(settings: KafeSettings): SeatingUnitAvailability[] {
+  const areas = settings.seatingAreas?.length
+    ? settings.seatingAreas
+    : [{ id: "atelier", label: "Atelier", capacity: settings.defaultCapacity, quantity: 1 }];
+
+  return areas.flatMap((area) =>
+    Array.from({ length: Math.max(0, area.quantity) }, (_, index) => ({
+      id: `${area.id}-${index + 1}`,
+      label: area.quantity > 1 ? `${area.label} ${index + 1}` : area.label,
+      capacity: Math.max(0, area.capacity),
+      remaining: Math.max(0, area.capacity),
+    })),
+  );
+}
+
+function overlaps(slotA: string, slotB: string, durationMinutes: number) {
+  const startA = timeToMinutes(slotA);
+  const startB = timeToMinutes(slotB);
+  return startA < startB + durationMinutes && startB < startA + durationMinutes;
+}
+
+function findBestFitUnit(units: SeatingUnitAvailability[], people: number) {
+  return units
+    .filter((unit) => unit.remaining >= people)
+    .sort((a, b) => a.remaining - people - (b.remaining - people) || a.capacity - b.capacity)[0];
+}
+
+export function getSlotPlacement(
+  reservations: Reservation[],
+  occupancies: SlotOccupancy[],
+  date: string,
+  slot: string,
+  people: number,
+  settings: KafeSettings,
+): SlotPlacement {
+  const units = expandSeatingUnits(settings);
+  const duration = Math.max(15, settings.slotDurationMinutes || 120);
+  const remoteIds = new Set(occupancies.map((occupancy) => occupancy.reservation_id));
+  const active = [
+    ...occupancies
+      .filter((occupancy) => occupancy.date === date && overlaps(occupancy.slot, slot, duration))
+      .map((occupancy) => ({
+        id: occupancy.reservation_id,
+        people: occupancy.people,
+        seatingUnitId: occupancy.seating_unit_id ?? undefined,
+      })),
+    ...reservations
+      .filter(
+        (reservation) =>
+          !remoteIds.has(reservation.id) &&
+          reservation.status !== "cancelled" &&
+          reservation.date === date &&
+          overlaps(reservation.slot, slot, duration),
+      )
+      .map((reservation) => ({
+        id: reservation.id,
+        people: reservation.people,
+        seatingUnitId: reservation.seatingUnitId,
+      })),
+  ];
+
+  const unassigned: typeof active = [];
+  active.forEach((reservation) => {
+    const assigned = units.find((unit) => unit.id === reservation.seatingUnitId);
+    if (!assigned) {
+      unassigned.push(reservation);
+      return;
+    }
+    assigned.remaining = Math.max(0, assigned.remaining - reservation.people);
+  });
+
+  for (const reservation of unassigned.sort((a, b) => b.people - a.people)) {
+    const assigned = findBestFitUnit(units, reservation.people);
+    if (!assigned) {
+      return { unitId: null, unitLabel: null, maxGroupSize: 0, totalRemaining: 0 };
+    }
+    assigned.remaining -= reservation.people;
+  }
+
+  const chosen = findBestFitUnit(units, people);
+  return {
+    unitId: chosen?.id ?? null,
+    unitLabel: chosen?.label ?? null,
+    maxGroupSize: Math.max(0, ...units.map((unit) => unit.remaining)),
+    totalRemaining: units.reduce((total, unit) => total + unit.remaining, 0),
+  };
 }
 
 function timeToMinutes(value: string) {
@@ -313,7 +483,7 @@ function dateMatchesRule(
 
 export function getSlotsForDate(isoDate: string, settings: KafeSettings) {
   const weekday = new Date(`${isoDate}T00:00:00`).getDay();
-  const duration = Math.max(15, settings.slotDurationMinutes || 90);
+  const interval = Math.max(15, settings.slotIntervalMinutes || 60);
 
   if (!settings.scheduleRules?.length) {
     return settings.closedWeekdays.includes(weekday) ? [] : settings.slots;
@@ -325,7 +495,7 @@ export function getSlotsForDate(isoDate: string, settings: KafeSettings) {
     const start = timeToMinutes(rule.startTime);
     const end = timeToMinutes(rule.endTime);
     if (end <= start) return;
-    for (let minute = start; minute < end; minute += duration) {
+    for (let minute = start; minute <= end; minute += interval) {
       slots.add(minutesToTime(minute));
     }
   });
@@ -381,6 +551,7 @@ export function statusLabel(status: ReservationStatus) {
     pending: "En attente",
     deposit_paid: "Acompte payé",
     confirmed: "Confirmé",
+    arrived: "Arrivé",
     cancelled: "Annulé",
   }[status];
 }

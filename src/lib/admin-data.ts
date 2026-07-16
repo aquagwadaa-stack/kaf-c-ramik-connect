@@ -352,14 +352,35 @@ export interface ScheduleRule {
   validUntil: string;
 }
 
+export interface SeatingArea {
+  id: string;
+  label: string;
+  capacity: number;
+  quantity: number;
+}
+
+export interface ReservationFieldRequirements {
+  emailRequired: boolean;
+  childrenAgesRequired: boolean;
+  messageRequired: boolean;
+}
+
 export interface KafeSettings {
+  configurationVersion: number;
   depositThreshold: number;
   depositPerPerson: number;
   defaultCapacity: number;
   slotDurationMinutes: number;
+  slotIntervalMinutes: number;
   slots: string[];
   scheduleRules: ScheduleRule[];
+  seatingAreas: SeatingArea[];
   closedWeekdays: number[];
+  kitchenClosingTime: string;
+  lateArrivalGraceMinutes: number;
+  cancellationNoticeHours: number;
+  groupDepositForfeitHours: number;
+  reservationFieldRequirements: ReservationFieldRequirements;
   manualConfirmationForGroups: boolean;
   manualConfirmationThreshold: number;
   signatureRequiredOnArrival: boolean;
@@ -376,23 +397,40 @@ export interface KafeSettings {
 }
 
 export const settingsSeed: KafeSettings = {
+  configurationVersion: 2,
   depositThreshold: 8,
   depositPerPerson: 10,
-  defaultCapacity: 12,
-  slotDurationMinutes: 90,
-  slots: ["09:30", "10:30", "11:30", "13:30", "14:30", "15:30", "16:30"],
+  defaultCapacity: 63,
+  slotDurationMinutes: 120,
+  slotIntervalMinutes: 60,
+  slots: ["09:30", "10:30", "11:30", "12:30", "13:30", "14:30", "15:30", "16:30"],
   scheduleRules: [
     {
       id: "rule-standard",
       label: "Semaine type",
       weekdays: [2, 3, 4, 5, 6, 0],
       startTime: "09:30",
-      endTime: "18:00",
+      endTime: "16:30",
       validFrom: "2026-01-01",
-      validUntil: "2026-12-31",
+      validUntil: "2030-12-31",
     },
   ],
+  seatingAreas: [
+    { id: "carbet", label: "Carbet", capacity: 15, quantity: 1 },
+    { id: "pique-nique", label: "Table de pique-nique", capacity: 5, quantity: 8 },
+    { id: "table-2", label: "Table de 2", capacity: 2, quantity: 2 },
+    { id: "salon-2", label: "Espace salon", capacity: 2, quantity: 2 },
+  ],
   closedWeekdays: [1],
+  kitchenClosingTime: "17:30",
+  lateArrivalGraceMinutes: 35,
+  cancellationNoticeHours: 48,
+  groupDepositForfeitHours: 24,
+  reservationFieldRequirements: {
+    emailRequired: false,
+    childrenAgesRequired: true,
+    messageRequired: true,
+  },
   manualConfirmationForGroups: true,
   manualConfirmationThreshold: 8,
   signatureRequiredOnArrival: true,
@@ -400,7 +438,7 @@ export const settingsSeed: KafeSettings = {
   walkInNoticeText:
     "Pas besoin de réserver pour boire un café, manger un bagel ou bruncher. Pour peindre, l'atelier se fait avec une consommation sur place et les personnes ayant réservé sont prioritaires.",
   reservationConditionsText:
-    "Pour toute annulation, retard ou modification, merci de prévenir le Kafé dès que possible. Les règles définitives seront précisées par Mala Madre.",
+    "Annulation possible jusqu'à 48 h avant. Au-delà, merci d'appeler le Kafé. Une réservation est libérée après plus de 30 minutes de retard. Pour les groupes, l'acompte est conservé si l'annulation intervient moins de 24 h avant.",
   guideAcceptanceText:
     "J'ai pris connaissance des informations importantes de l'atelier et je m'engage à respecter le guide transmis par le Kafé Céramik.",
   confirmationEmailText:
@@ -437,6 +475,55 @@ export function useWaiverSignatures() {
   });
 }
 
+function normalizeKafeSettings(value?: Partial<KafeSettings> | null): KafeSettings {
+  const merged: KafeSettings = {
+    ...settingsSeed,
+    ...value,
+    reservationFieldRequirements: {
+      ...settingsSeed.reservationFieldRequirements,
+      ...value?.reservationFieldRequirements,
+    },
+  };
+
+  if ((value?.configurationVersion ?? 0) >= settingsSeed.configurationVersion) {
+    return merged;
+  }
+
+  // Apply the first validated operating rules once to settings saved before the client cadrage.
+  return {
+    ...merged,
+    configurationVersion: settingsSeed.configurationVersion,
+    defaultCapacity: settingsSeed.defaultCapacity,
+    slotDurationMinutes: settingsSeed.slotDurationMinutes,
+    slotIntervalMinutes: settingsSeed.slotIntervalMinutes,
+    slots: settingsSeed.slots,
+    scheduleRules: settingsSeed.scheduleRules,
+    seatingAreas: settingsSeed.seatingAreas,
+    closedWeekdays: settingsSeed.closedWeekdays,
+    kitchenClosingTime: settingsSeed.kitchenClosingTime,
+    lateArrivalGraceMinutes: settingsSeed.lateArrivalGraceMinutes,
+    cancellationNoticeHours: settingsSeed.cancellationNoticeHours,
+    groupDepositForfeitHours: settingsSeed.groupDepositForfeitHours,
+    reservationFieldRequirements: settingsSeed.reservationFieldRequirements,
+    manualConfirmationForGroups: settingsSeed.manualConfirmationForGroups,
+    manualConfirmationThreshold: settingsSeed.manualConfirmationThreshold,
+    signatureRequiredOnArrival: settingsSeed.signatureRequiredOnArrival,
+    reservationConditionsText: settingsSeed.reservationConditionsText,
+  };
+}
+
+function readKafeSettings() {
+  if (typeof window === "undefined") return settingsSeed;
+  try {
+    const raw = localStorage.getItem("kafe-ceramik-settings");
+    const next = normalizeKafeSettings(raw ? (JSON.parse(raw) as Partial<KafeSettings>) : null);
+    localStorage.setItem("kafe-ceramik-settings", JSON.stringify(next));
+    return next;
+  } catch {
+    return settingsSeed;
+  }
+}
+
 export function useKafeSettings() {
   const [settings, setSettings] = useState<KafeSettings>(() =>
     typeof window === "undefined" ? settingsSeed : settingsSeed,
@@ -444,7 +531,7 @@ export function useKafeSettings() {
 
   useEffect(() => {
     let alive = true;
-    const update = () => setSettings(readStore("kafe-ceramik-settings", settingsSeed));
+    const update = () => setSettings(readKafeSettings());
     update();
     const unsubscribe = subscribe("kafe-ceramik-settings", update);
 
@@ -455,7 +542,7 @@ export function useKafeSettings() {
       )
         .then((rows) => {
           if (!alive || !rows[0]?.value) return;
-          const next = { ...settingsSeed, ...rows[0].value };
+          const next = normalizeKafeSettings(rows[0].value);
           writeStore("kafe-ceramik-settings", next);
           setSettings(next);
         })
@@ -471,11 +558,15 @@ export function useKafeSettings() {
   }, []);
 
   const save = (next: KafeSettings) => {
-    writeStore("kafe-ceramik-settings", next);
+    const normalized = normalizeKafeSettings({
+      ...next,
+      configurationVersion: settingsSeed.configurationVersion,
+    });
+    writeStore("kafe-ceramik-settings", normalized);
     if (isSupabaseConfigured()) {
       upsertRows(
         "kafe_settings",
-        [{ id: "main", value: next, updated_at: new Date().toISOString() }],
+        [{ id: "main", value: normalized, updated_at: new Date().toISOString() }],
         true,
       ).catch((error) => {
         console.warn("Remote settings save skipped:", error);

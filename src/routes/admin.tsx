@@ -52,6 +52,7 @@ import {
   type ContentDocument,
   type KafeSettings,
   type ScheduleRule,
+  type SeatingArea,
   type WaiverSignature,
 } from "@/lib/admin-data";
 import {
@@ -850,6 +851,7 @@ function WaiversPanel({
       guideAccepted,
     };
     saveSignatures([next, ...signatures]);
+    if (form.reservationRef) updateStatus(form.reservationRef, "arrived");
     setForm({ firstName: "", lastName: "", reservationRef: "" });
     setSignatureDataUrl(undefined);
     setGuideAccepted(true);
@@ -1748,6 +1750,14 @@ function SettingsPanel({
     saveSettings({ ...settings, ...patch });
   }
 
+  function updateSeatingAreas(seatingAreas: SeatingArea[]) {
+    const defaultCapacity = seatingAreas.reduce(
+      (total, area) => total + Math.max(0, area.capacity) * Math.max(0, area.quantity),
+      0,
+    );
+    update({ seatingAreas, defaultCapacity });
+  }
+
   return (
     <Panel
       title="Réglages"
@@ -1767,16 +1777,37 @@ function SettingsPanel({
           onChange={(value) => update({ depositPerPerson: value })}
         />
         <NumberField
-          label="Capacité atelier par défaut"
-          value={settings.defaultCapacity}
-          suffix="places"
-          onChange={(value) => update({ defaultCapacity: value })}
-        />
-        <NumberField
           label="Durée d'un créneau"
           value={settings.slotDurationMinutes}
           suffix="minutes"
           onChange={(value) => update({ slotDurationMinutes: value })}
+        />
+        <IntervalField
+          value={settings.slotIntervalMinutes}
+          onChange={(slotIntervalMinutes) => update({ slotIntervalMinutes })}
+        />
+        <TimeField
+          label="Fermeture de la cuisine"
+          value={settings.kitchenClosingTime}
+          onChange={(kitchenClosingTime) => update({ kitchenClosingTime })}
+        />
+        <NumberField
+          label="Libérer une réservation sans signature après"
+          value={settings.lateArrivalGraceMinutes}
+          suffix="minutes"
+          onChange={(lateArrivalGraceMinutes) => update({ lateArrivalGraceMinutes })}
+        />
+        <NumberField
+          label="Annulation classique jusqu'à"
+          value={settings.cancellationNoticeHours}
+          suffix="heures avant"
+          onChange={(cancellationNoticeHours) => update({ cancellationNoticeHours })}
+        />
+        <NumberField
+          label="Acompte groupe conservé à moins de"
+          value={settings.groupDepositForfeitHours}
+          suffix="heures avant"
+          onChange={(groupDepositForfeitHours) => update({ groupDepositForfeitHours })}
         />
         <NumberField
           label="Validation équipe à partir de"
@@ -1831,6 +1862,8 @@ function SettingsPanel({
           onChange={(scheduleRules) => update({ scheduleRules })}
         />
 
+        <SeatingAreasEditor areas={settings.seatingAreas ?? []} onChange={updateSeatingAreas} />
+
         <TextareaField
           label="Texte affiché pour les clients qui viennent seulement au Kafé"
           value={settings.walkInNoticeText}
@@ -1872,11 +1905,33 @@ function createScheduleRule(): ScheduleRule {
     id: `rule-${Date.now()}`,
     label: "Nouvelle plage",
     weekdays: [2, 3, 4, 5, 6],
-    startTime: "09:00",
-    endTime: "12:00",
+    startTime: "09:30",
+    endTime: "16:30",
     validFrom: dateInput(0),
-    validUntil: dateInput(2),
+    validUntil: "2030-12-31",
   };
+}
+
+function IntervalField({ value, onChange }: { value: number; onChange: (value: number) => void }) {
+  return (
+    <div>
+      <span className="mb-1.5 block text-sm font-medium">Départ des créneaux</span>
+      <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-input bg-background">
+        {[30, 60].map((minutes) => (
+          <button
+            key={minutes}
+            type="button"
+            onClick={() => onChange(minutes)}
+            className={`h-11 px-3 text-sm transition ${
+              value === minutes ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+            }`}
+          >
+            Toutes les {minutes === 60 ? "heures" : "30 minutes"}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function ScheduleRulesEditor({
@@ -1903,8 +1958,8 @@ function ScheduleRulesEditor({
         <div>
           <div className="font-display text-xl">Planning des créneaux</div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Créez des plages horaires par jours et par période. Le planning client se met à jour
-            avec ces règles.
+            Définissez le premier et le dernier départ par jour et par période. Le planning client
+            se met à jour avec ces règles.
           </p>
         </div>
         <button
@@ -1951,12 +2006,12 @@ function ScheduleRulesEditor({
                     </div>
                   </div>
                   <TimeField
-                    label="Début"
+                    label="Premier départ"
                     value={rule.startTime}
                     onChange={(value) => updateRule(rule.id, { startTime: value })}
                   />
                   <TimeField
-                    label="Fin"
+                    label="Dernier départ"
                     value={rule.endTime}
                     onChange={(value) => updateRule(rule.id, { endTime: value })}
                   />
@@ -1986,6 +2041,89 @@ function ScheduleRulesEditor({
   );
 }
 
+function SeatingAreasEditor({
+  areas,
+  onChange,
+}: {
+  areas: SeatingArea[];
+  onChange: (areas: SeatingArea[]) => void;
+}) {
+  const total = areas.reduce(
+    (sum, area) => sum + Math.max(0, area.capacity) * Math.max(0, area.quantity),
+    0,
+  );
+
+  function updateArea(id: string, patch: Partial<SeatingArea>) {
+    onChange(areas.map((area) => (area.id === id ? { ...area, ...patch } : area)));
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-background p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="font-display text-xl">Espaces et capacité</div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Un groupe doit tenir entièrement dans un même espace. Capacité totale actuelle : {total}
+            places.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() =>
+            onChange([
+              ...areas,
+              {
+                id: `espace-${Date.now()}`,
+                label: "Nouvel espace",
+                capacity: 2,
+                quantity: 1,
+              },
+            ])
+          }
+          className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+        >
+          <Plus className="h-4 w-4" /> Ajouter un espace
+        </button>
+      </div>
+
+      <div className="mt-4 grid gap-3">
+        {areas.map((area) => (
+          <div
+            key={area.id}
+            className="grid gap-3 rounded-2xl border border-border bg-card p-4 md:grid-cols-[1fr_11rem_11rem_auto] md:items-end"
+          >
+            <Field
+              label="Nom"
+              value={area.label}
+              onChange={(label) => updateArea(area.id, { label })}
+            />
+            <NumberField
+              label="Nombre d'espaces"
+              value={area.quantity}
+              suffix=""
+              onChange={(quantity) => updateArea(area.id, { quantity })}
+            />
+            <NumberField
+              label="Places par espace"
+              value={area.capacity}
+              suffix="places"
+              onChange={(capacity) => updateArea(area.id, { capacity })}
+            />
+            <button
+              type="button"
+              aria-label={`Supprimer ${area.label}`}
+              onClick={() => onChange(areas.filter((item) => item.id !== area.id))}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-destructive/30 px-3 text-sm text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="h-4 w-4" /> Supprimer
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Panel({ title, desc, children }: { title: string; desc: string; children: ReactNode }) {
   return (
     <div className="rounded-3xl border border-border bg-card p-4 sm:p-6">
@@ -2003,6 +2141,7 @@ function StatusBadge({ status }: { status: ReservationStatus }) {
     pending: "bg-mustard/30 text-brick",
     deposit_paid: "bg-sage/25 text-sage",
     confirmed: "bg-primary/15 text-primary",
+    arrived: "bg-sage/25 text-sage",
     cancelled: "bg-destructive/15 text-destructive",
   };
   return (
