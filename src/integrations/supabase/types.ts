@@ -86,6 +86,7 @@ export type Database = {
           date: string
           id: string
           people: number
+          seating_unit_id: string | null
           slot: string
           status: string
           updated_at: string
@@ -96,6 +97,7 @@ export type Database = {
           date: string
           id?: string
           people: number
+          seating_unit_id?: string | null
           slot: string
           status: string
           updated_at?: string
@@ -106,6 +108,7 @@ export type Database = {
           date?: string
           id?: string
           people?: number
+          seating_unit_id?: string | null
           slot?: string
           status?: string
           updated_at?: string
@@ -163,6 +166,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_kafe_reservation: {
+        Args: {
+          p_date: string
+          p_people: number
+          p_slot: string
+          p_value: Json
+        }
+        Returns: {
+          id: string
+          seating_unit_id: string
+        }[]
+      }
+      create_kafe_walk_in: {
+        Args: {
+          p_date: string
+          p_label?: string
+          p_people: number
+          p_seating_unit_id: string
+          p_slot: string
+        }
+        Returns: {
+          id: string
+          seating_unit_id: string
+        }[]
+      }
+      decide_kafe_group_reservation: {
+        Args: { p_approved: boolean; p_id: string; p_message?: string }
+        Returns: Json
+      }
+      expire_kafe_no_shows: { Args: never; Returns: number }
       get_current_kafe_admin: {
         Args: never
         Returns: {
@@ -175,6 +208,16 @@ export type Database = {
         Returns: {
           date: string
           reserved_people: number
+          slot: string
+        }[]
+      }
+      get_kafe_slot_occupancy: {
+        Args: { from_date: string; to_date: string }
+        Returns: {
+          date: string
+          people: number
+          reservation_id: string
+          seating_unit_id: string
           slot: string
         }[]
       }
