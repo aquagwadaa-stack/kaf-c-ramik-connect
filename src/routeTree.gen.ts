@@ -13,6 +13,7 @@ import { Route as ReserverRouteImport } from './routes/reserver'
 import { Route as ObjetsRouteImport } from './routes/objets'
 import { Route as GuideRouteImport } from './routes/guide'
 import { Route as CreationsRouteImport } from './routes/creations'
+import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CarteRouteImport } from './routes/carte'
 import { Route as CadeauRouteImport } from './routes/cadeau'
 import { Route as BrunchRouteImport } from './routes/brunch'
@@ -37,6 +38,11 @@ const GuideRoute = GuideRouteImport.update({
 const CreationsRoute = CreationsRouteImport.update({
   id: '/creations',
   path: '/creations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CarteRoute = CarteRouteImport.update({
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/brunch': typeof BrunchRoute
   '/cadeau': typeof CadeauRoute
   '/carte': typeof CarteRoute
+  '/contact': typeof ContactRoute
   '/creations': typeof CreationsRoute
   '/guide': typeof GuideRoute
   '/objets': typeof ObjetsRoute
@@ -82,6 +89,7 @@ export interface FileRoutesByTo {
   '/brunch': typeof BrunchRoute
   '/cadeau': typeof CadeauRoute
   '/carte': typeof CarteRoute
+  '/contact': typeof ContactRoute
   '/creations': typeof CreationsRoute
   '/guide': typeof GuideRoute
   '/objets': typeof ObjetsRoute
@@ -94,6 +102,7 @@ export interface FileRoutesById {
   '/brunch': typeof BrunchRoute
   '/cadeau': typeof CadeauRoute
   '/carte': typeof CarteRoute
+  '/contact': typeof ContactRoute
   '/creations': typeof CreationsRoute
   '/guide': typeof GuideRoute
   '/objets': typeof ObjetsRoute
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/brunch'
     | '/cadeau'
     | '/carte'
+    | '/contact'
     | '/creations'
     | '/guide'
     | '/objets'
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/brunch'
     | '/cadeau'
     | '/carte'
+    | '/contact'
     | '/creations'
     | '/guide'
     | '/objets'
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/brunch'
     | '/cadeau'
     | '/carte'
+    | '/contact'
     | '/creations'
     | '/guide'
     | '/objets'
@@ -141,6 +153,7 @@ export interface RootRouteChildren {
   BrunchRoute: typeof BrunchRoute
   CadeauRoute: typeof CadeauRoute
   CarteRoute: typeof CarteRoute
+  ContactRoute: typeof ContactRoute
   CreationsRoute: typeof CreationsRoute
   GuideRoute: typeof GuideRoute
   ObjetsRoute: typeof ObjetsRoute
@@ -175,6 +188,13 @@ declare module '@tanstack/react-router' {
       path: '/creations'
       fullPath: '/creations'
       preLoaderRoute: typeof CreationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/carte': {
@@ -221,6 +241,7 @@ const rootRouteChildren: RootRouteChildren = {
   BrunchRoute: BrunchRoute,
   CadeauRoute: CadeauRoute,
   CarteRoute: CarteRoute,
+  ContactRoute: ContactRoute,
   CreationsRoute: CreationsRoute,
   GuideRoute: GuideRoute,
   ObjetsRoute: ObjetsRoute,
@@ -229,3 +250,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

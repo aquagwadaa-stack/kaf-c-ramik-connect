@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Facebook, Instagram, Menu, Music2, X, Coffee, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useKafeSettings } from "@/lib/admin-data";
+import { getPublicSchedule } from "@/lib/opening-hours";
 import { useAdminAccess } from "@/lib/supabase-rest";
 
 const links = [
@@ -11,6 +12,7 @@ const links = [
   { to: "/guide", label: "Guide" },
   { to: "/carte", label: "Carte" },
   { to: "/objets", label: "Objets" },
+  { to: "/contact", label: "Contact" },
 ] as const;
 
 export function SiteHeader() {
@@ -151,6 +153,8 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   const [settings] = useKafeSettings();
+  const schedule = getPublicSchedule(settings);
+  const phoneHref = settings.contactPhone.replace(/[^+\d]/g, "");
   const socials = [
     settings.instagramUrl
       ? { label: "Instagram", href: settings.instagramUrl, icon: Instagram }
@@ -170,26 +174,20 @@ export function SiteFooter() {
         </div>
         <div className="text-sm">
           <div className="font-medium">Nous trouver</div>
-          <p className="mt-2 text-muted-foreground">
-            Lieu dit Loyette
-            <br />
-            97118 Saint-François
-            <br />
-            Guadeloupe
-          </p>
+          <p className="mt-2 text-muted-foreground">{settings.contactAddress}</p>
         </div>
         <div className="text-sm">
           <div className="font-medium">Horaires</div>
           <p className="mt-2 text-muted-foreground">
-            Mardi – Dimanche
+            {schedule.days}
             <br />
-            9h30 – 18h
+            {schedule.hours}
           </p>
           <a
-            href="tel:+590690284788"
+            href={`tel:${phoneHref}`}
             className="nav-link mt-3 inline-block px-0 py-1 font-medium text-primary"
           >
-            0690 28 47 88
+            {settings.contactPhone}
           </a>
           {settings.contactEmail && (
             <a

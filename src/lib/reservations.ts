@@ -36,6 +36,8 @@ export interface Reservation {
   eventType?: string;
   budget?: string;
   seatingUnitId?: string;
+  source?: "online" | "walk_in";
+  walkInLabel?: string;
 }
 
 const KEY = "kafe-ceramik-reservations";
@@ -94,7 +96,7 @@ const seed: Reservation[] = [
     guideAccepted: true,
     depositPaid: false,
     depositRequired: true,
-    depositAmount: 80,
+    depositAmount: 100,
     status: "pending",
     isGroupRequest: true,
     eventType: "Groupe",
@@ -113,6 +115,11 @@ function nextWeekday(target: number, offset = 0) {
 }
 
 const listeners = new Set<() => void>();
+const OCCUPANCY_EVENT = "kafe-ceramik-occupancy-change";
+
+export function refreshReservationOccupancies() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(OCCUPANCY_EVENT));
+}
 
 type ReservationRow = {
   id: string;
@@ -279,13 +286,15 @@ export function useReservationOccupancies() {
     }
 
     void loadOccupancies();
-    const refreshInterval = window.setInterval(loadOccupancies, 30_000);
+    const refreshInterval = window.setInterval(loadOccupancies, 5_000);
     window.addEventListener("focus", loadOccupancies);
+    window.addEventListener(OCCUPANCY_EVENT, loadOccupancies);
 
     return () => {
       alive = false;
       window.clearInterval(refreshInterval);
       window.removeEventListener("focus", loadOccupancies);
+      window.removeEventListener(OCCUPANCY_EVENT, loadOccupancies);
     };
   }, []);
 
@@ -332,6 +341,59 @@ export async function addReservation(
 
   const list = read();
   write([full, ...list]);
+  refreshReservationOccupancies();
+  return full;
+}
+
+export async function addWalkInReservation(input: {
+  date: string;
+  slot: string;
+  people: number;
+  seatingUnitId: string;
+  label?: string;
+}): Promise<Reservation> {
+  const label = input.label?.trim() || "Groupe sur place";
+  let full: Reservation = {
+    id: `walk-in-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    experience: "atelier",
+    people: input.people,
+    date: input.date,
+    slot: input.slot,
+    firstName: label,
+    lastName: "",
+    phone: "",
+    email: "",
+    childrenAges: "Non renseigné",
+    guideAccepted: false,
+    message: "Ajouté sur place par l'équipe.",
+    depositPaid: false,
+    depositRequired: false,
+    depositAmount: 0,
+    status: "arrived",
+    seatingUnitId: input.seatingUnitId,
+    source: "walk_in",
+    walkInLabel: label,
+  };
+
+  if (isSupabaseConfigured()) {
+    const rows = await callRpc<{ id: string; seating_unit_id: string }[]>(
+      "create_kafe_walk_in",
+      {
+        p_date: input.date,
+        p_slot: input.slot,
+        p_people: input.people,
+        p_seating_unit_id: input.seatingUnitId,
+        p_label: label,
+      },
+      true,
+    );
+    if (!rows[0]?.id) throw new Error("Le groupe n'a pas pu être ajouté.");
+    full = { ...full, id: rows[0].id, seatingUnitId: rows[0].seating_unit_id };
+  }
+
+  write([full, ...read().filter((reservation) => reservation.id !== full.id)]);
+  refreshReservationOccupancies();
   return full;
 }
 
@@ -340,7 +402,7 @@ export function shouldRequireDeposit(people: number, settings: KafeSettings = se
 }
 
 export function getDepositAmount(people: number, settings: KafeSettings = settingsSeed) {
-  return shouldRequireDeposit(people, settings) ? people * settings.depositPerPerson : 0;
+  return shouldRequireDeposit(people, settings) ? settings.depositFixedAmount : 0;
 }
 
 export function shouldWaitForManualConfirmation(
@@ -435,13 +497,7 @@ export function getSlotPlacement(
   people: number,
   settings: KafeSettings,
 ): SlotPlacement {
-  const availability = getSeatingAvailability(
-    reservations,
-    occupancies,
-    date,
-    slot,
-    settings,
-  );
+  const availability = getSeatingAvailability(reservations, occupancies, date, slot, settings);
   if (availability.hasUnassignedOverflow) {
     return { unitId: null, unitLabel: null, maxGroupSize: 0, totalRemaining: 0 };
   }

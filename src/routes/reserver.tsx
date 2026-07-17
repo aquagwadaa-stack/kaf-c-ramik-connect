@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { PageShell, PageHeader } from "@/components/page-shell";
 import { useKafeSettings, type KafeSettings } from "@/lib/admin-data";
+import { formatPublicTime } from "@/lib/opening-hours";
 import {
   addReservation,
   experienceLabel,
@@ -25,6 +26,7 @@ import {
   getDepositAmount,
   getSlotPlacement,
   getSlotsForDate,
+  refreshReservationOccupancies,
   shouldRequireDeposit,
   shouldWaitForManualConfirmation,
   useReservationOccupancies,
@@ -112,6 +114,8 @@ function ReserverPage() {
   function chooseSlot(nextDate: string, nextSlot: string) {
     setDate(nextDate);
     setSlot(nextSlot);
+    setErrors((current) => ({ ...current, slot: "" }));
+    setSubmitError("");
   }
 
   function next() {
@@ -123,7 +127,7 @@ function ReserverPage() {
     setStep((current) => Math.max(current - 1, 1));
   }
 
-  async function submit(payDeposit: boolean) {
+  async function submit() {
     if (!date || !slot) {
       setStep(2);
       return;
@@ -159,15 +163,7 @@ function ReserverPage() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
-    const status = requiresManualReview
-      ? depositRequired && payDeposit
-        ? "deposit_paid"
-        : "pending"
-      : depositRequired
-        ? payDeposit
-          ? "deposit_paid"
-          : "pending"
-        : "confirmed";
+    const status = requiresManualReview || depositRequired ? "pending" : "confirmed";
 
     setSubmitting(true);
     setSubmitError("");
@@ -181,22 +177,32 @@ function ReserverPage() {
         ...form,
         guideAccepted,
         seatingUnitId: placement.unitId,
-        depositPaid: depositRequired ? payDeposit : false,
+        depositPaid: false,
         depositRequired,
         depositAmount: deposit,
         status,
         isGroupRequest: people >= settings.manualConfirmationThreshold || experience === "groupe",
       });
     } catch (error) {
-      setSubmitError(
-        error instanceof Error && error.message.includes("KAFE_SLOT_FULL")
-          ? "Ce créneau vient d'être rempli. Choisissez un autre horaire."
-          : error instanceof Error &&
-              (error.message.includes("KAFE_INVALID_SLOT") ||
-                error.message.includes("KAFE_INVALID_DATE"))
-            ? "Ce créneau n'est plus réservable. Choisissez une autre date ou un autre horaire."
-            : "La réservation n'a pas pu être enregistrée. Réessayez dans un instant.",
-      );
+      const message = error instanceof Error ? error.message : String(error);
+      const schedulingConflict =
+        message.includes("KAFE_SLOT_FULL") ||
+        message.includes("KAFE_INVALID_SLOT") ||
+        message.includes("KAFE_INVALID_DATE") ||
+        message.includes("KAFE_SEATING_REVIEW_REQUIRED");
+      const friendlyMessage = message.includes("KAFE_SLOT_FULL")
+        ? "Ce créneau vient d'être rempli par une autre réservation. Choisissez un autre horaire."
+        : schedulingConflict
+          ? "Ce créneau n'est plus réservable. Choisissez une autre date ou un autre horaire."
+          : "La réservation n'a pas pu être enregistrée. Réessayez dans un instant.";
+      if (schedulingConflict) {
+        setSlot("");
+        setErrors((current) => ({ ...current, slot: friendlyMessage }));
+        setStep(2);
+        refreshReservationOccupancies();
+      } else {
+        setSubmitError(friendlyMessage);
+      }
       setSubmitting(false);
       return;
     }
@@ -408,7 +414,7 @@ function ReserverPage() {
                     </div>
                     <p className="mt-1 text-muted-foreground">
                       {depositRequired
-                        ? "Pour les groupes concernés, l'acompte permet de bloquer la demande. Les conditions exactes sont indiquées par le Kafé."
+                        ? `Un acompte fixe de ${deposit} EUR sera demandé après validation de l'équipe. Il n'est pas remboursable en cas d'annulation moins de ${settings.groupDepositForfeitHours} h avant.`
                         : "Pour peindre, une consommation sur place reste demandée. Les personnes ayant réservé sont prioritaires sur les places atelier."}
                     </p>
                   </div>
@@ -419,8 +425,17 @@ function ReserverPage() {
                 <div className="font-medium">Conditions pratiques</div>
                 <p className="mt-1 text-muted-foreground">{settings.reservationConditionsText}</p>
                 <p className="mt-2 text-muted-foreground">
-                  La cuisine ferme à {settings.kitchenClosingTime}. Pensez à commander votre
-                  consommation à votre arrivée.
+                  La cuisine ferme à {formatPublicTime(settings.kitchenClosingTime)}. Pensez à
+                  commander votre consommation à votre arrivée.
+                </p>
+                <p className="mt-2 text-muted-foreground">
+                  Votre demande sort du cadre habituel ?{" "}
+                  <Link
+                    to="/contact"
+                    className="font-medium text-primary underline underline-offset-2"
+                  >
+                    Contactez directement l'équipe.
+                  </Link>
                 </p>
               </div>
 
@@ -497,7 +512,7 @@ function ReserverPage() {
                 </button>
               ) : depositRequired ? (
                 <button
-                  onClick={() => submit(false)}
+                  onClick={submit}
                   disabled={submitting}
                   className="inline-flex items-center gap-1 rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground"
                 >
@@ -506,7 +521,7 @@ function ReserverPage() {
                 </button>
               ) : (
                 <button
-                  onClick={() => submit(false)}
+                  onClick={submit}
                   disabled={submitting}
                   className="inline-flex items-center gap-1 rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground"
                 >

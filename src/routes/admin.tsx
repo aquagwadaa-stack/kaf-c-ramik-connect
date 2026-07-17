@@ -25,11 +25,13 @@ import {
   Trash2,
   UploadCloud,
   UserCog,
+  UserPlus,
   Users,
   X,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import {
+  addWalkInReservation,
   useReservations,
   experienceLabel,
   formatReservationDate,
@@ -144,6 +146,7 @@ function downloadCsv(filename: string, rows: unknown[][]) {
 }
 
 function reservationIsSigned(reservation: Reservation, signatures: WaiverSignature[]) {
+  if (reservation.source === "walk_in") return true;
   return signatures.some(
     (signature) =>
       signature.reservationRef === reservation.id ||
@@ -537,6 +540,11 @@ function WalkInAvailability({
   const today = localDateValue(now);
   const [date, setDate] = useState(today);
   const [timeChoice, setTimeChoice] = useState("now");
+  const [walkInPeople, setWalkInPeople] = useState(2);
+  const [walkInLabel, setWalkInLabel] = useState("");
+  const [addingTo, setAddingTo] = useState<string | null>(null);
+  const [walkInNotice, setWalkInNotice] = useState("");
+  const [walkInError, setWalkInError] = useState("");
   const slots = useMemo(() => getSlotsForDate(date, settings), [date, settings]);
   const observedTime = timeChoice === "now" ? localTimeValue(now) : timeChoice;
   const availability = useMemo(
@@ -556,6 +564,34 @@ function WalkInAvailability({
     setDate(nextDate);
     const nextSlots = getSlotsForDate(nextDate, settings);
     setTimeChoice(nextDate === today ? "now" : (nextSlots[0] ?? ""));
+  }
+
+  async function addWalkIn(unitId: string) {
+    setAddingTo(unitId);
+    setWalkInNotice("");
+    setWalkInError("");
+    try {
+      const reservation = await addWalkInReservation({
+        date,
+        slot: observedTime,
+        people: walkInPeople,
+        seatingUnitId: unitId,
+        label: walkInLabel,
+      });
+      setWalkInLabel("");
+      setWalkInNotice(
+        `${reservation.people} personne${reservation.people > 1 ? "s" : ""} ajoutée${reservation.people > 1 ? "s" : ""} dans ${seatingUnitLabel(reservation.seatingUnitId, settings) ?? "l'espace choisi"}.`,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setWalkInError(
+        message.includes("KAFE_SLOT_FULL")
+          ? "Cet espace vient d'être occupé. Les disponibilités ont été actualisées."
+          : "Le groupe n'a pas pu être ajouté. Réessayez dans un instant.",
+      );
+    } finally {
+      setAddingTo(null);
+    }
   }
 
   return (
@@ -609,19 +645,65 @@ function WalkInAvailability({
             </span>
           </div>
 
+          <div className="mt-4 grid gap-3 rounded-xl border border-border bg-secondary/35 p-4 sm:grid-cols-[120px_minmax(0,1fr)]">
+            <label>
+              <span className="mb-1.5 block text-sm font-medium">Personnes</span>
+              <input
+                type="number"
+                min={1}
+                max={15}
+                value={walkInPeople}
+                onChange={(event) =>
+                  setWalkInPeople(Math.min(15, Math.max(1, Number(event.target.value) || 1)))
+                }
+                className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </label>
+            <label>
+              <span className="mb-1.5 block text-sm font-medium">Nom ou repère</span>
+              <input
+                value={walkInLabel}
+                onChange={(event) => setWalkInLabel(event.target.value)}
+                placeholder="Facultatif · ex. Famille Laurent"
+                className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </label>
+            <p className="text-xs text-muted-foreground sm:col-span-2">
+              Choisissez ensuite un espace compatible. L'ajout réserve immédiatement ces places pour
+              tous les autres clients.
+            </p>
+          </div>
+
+          {walkInNotice && (
+            <div className="mt-3 flex items-start gap-2 rounded-lg border border-sage/35 bg-sage/10 p-3 text-sm">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-sage" /> {walkInNotice}
+            </div>
+          )}
+          {walkInError && (
+            <div className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> {walkInError}
+            </div>
+          )}
+
           {availability.hasUnassignedOverflow && (
             <div className="mt-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              Une réservation sans emplacement compatible doit être réattribuée avant d'accueillir d'autres personnes.
+              Une réservation sans emplacement compatible doit être réattribuée avant d'accueillir
+              d'autres personnes.
             </div>
           )}
 
           <div className="mt-4 grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
             {availability.units.map((unit) => {
               const full = unit.remaining === 0;
+              const canInstall =
+                !availability.hasUnassignedOverflow && unit.remaining >= walkInPeople;
               const used = Math.max(0, unit.capacity - unit.remaining);
               return (
-                <div key={unit.id} className={`bg-background p-3 ${full ? "text-muted-foreground" : ""}`}>
+                <div
+                  key={unit.id}
+                  className={`bg-background p-3 ${full ? "text-muted-foreground" : ""}`}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <span className="text-sm font-medium">{unit.label}</span>
                     <span className={`text-xs ${full ? "text-muted-foreground" : "text-sage"}`}>
@@ -634,6 +716,15 @@ function WalkInAvailability({
                       style={{ width: `${unit.capacity ? (used / unit.capacity) * 100 : 100}%` }}
                     />
                   </div>
+                  <button
+                    type="button"
+                    disabled={!canInstall || addingTo !== null}
+                    onClick={() => addWalkIn(unit.id)}
+                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    {addingTo === unit.id ? "Ajout…" : canInstall ? "Installer ici" : "Trop petit"}
+                  </button>
                 </div>
               );
             })}
@@ -1049,7 +1140,9 @@ function ReservationCard({
             {reservation.firstName} {reservation.lastName}
           </div>
           <div className="text-xs text-muted-foreground">
-            {reservation.phone} · {reservation.email}
+            {reservation.source === "walk_in"
+              ? "Groupe ajouté depuis l'accueil"
+              : `${reservation.phone} · ${reservation.email}`}
           </div>
         </div>
         <div className="min-w-0 text-sm">
@@ -1073,14 +1166,18 @@ function ReservationCard({
           <InfoPill tone={reservation.depositPaid ? "success" : "warning"}>
             {reservation.depositPaid
               ? "Acompte reçu"
-              : `Acompte à suivre · ${reservation.depositAmount ?? reservation.people * 10} €`}
+              : `Acompte à suivre · ${reservation.depositAmount ?? settings.depositFixedAmount} €`}
           </InfoPill>
         ) : (
           <InfoPill>Pas d'acompte requis</InfoPill>
         )}
-        <InfoPill tone={signed ? "success" : "warning"}>
-          {signed ? "Décharge signée" : "Décharge à signer sur tablette"}
-        </InfoPill>
+        {reservation.source === "walk_in" ? (
+          <InfoPill>Ajouté sur place</InfoPill>
+        ) : (
+          <InfoPill tone={signed ? "success" : "warning"}>
+            {signed ? "Décharge signée" : "Décharge à signer sur tablette"}
+          </InfoPill>
+        )}
       </div>
 
       {reservation.message && (
@@ -2080,10 +2177,10 @@ function SettingsPanel({
           onChange={(value) => update({ depositThreshold: value })}
         />
         <NumberField
-          label="Acompte par personne"
-          value={settings.depositPerPerson}
+          label="Acompte fixe par groupe"
+          value={settings.depositFixedAmount}
           suffix="EUR"
-          onChange={(value) => update({ depositPerPerson: value })}
+          onChange={(value) => update({ depositFixedAmount: value })}
         />
         <NumberField
           label="Durée d'un créneau"
@@ -2157,6 +2254,21 @@ function SettingsPanel({
               label="Email de contact"
               value={settings.contactEmail}
               onChange={(value) => update({ contactEmail: value })}
+            />
+            <Field
+              label="Téléphone"
+              value={settings.contactPhone}
+              onChange={(value) => update({ contactPhone: value })}
+            />
+            <Field
+              label="Adresse"
+              value={settings.contactAddress}
+              onChange={(value) => update({ contactAddress: value })}
+            />
+            <Field
+              label="Lien Google Maps"
+              value={settings.contactMapUrl}
+              onChange={(value) => update({ contactMapUrl: value })}
             />
           </div>
         </div>

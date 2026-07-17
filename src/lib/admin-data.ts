@@ -368,7 +368,7 @@ export interface ReservationFieldRequirements {
 export interface KafeSettings {
   configurationVersion: number;
   depositThreshold: number;
-  depositPerPerson: number;
+  depositFixedAmount: number;
   defaultCapacity: number;
   slotDurationMinutes: number;
   slotIntervalMinutes: number;
@@ -392,13 +392,16 @@ export interface KafeSettings {
   facebookUrl: string;
   tiktokUrl: string;
   contactEmail: string;
+  contactPhone: string;
+  contactAddress: string;
+  contactMapUrl: string;
   creationInspirations: CreationInspiration[];
 }
 
 export const settingsSeed: KafeSettings = {
-  configurationVersion: 2,
+  configurationVersion: 3,
   depositThreshold: 8,
-  depositPerPerson: 10,
+  depositFixedAmount: 100,
   defaultCapacity: 63,
   slotDurationMinutes: 120,
   slotIntervalMinutes: 60,
@@ -445,6 +448,9 @@ export const settingsSeed: KafeSettings = {
   facebookUrl: "",
   tiktokUrl: "",
   contactEmail: "",
+  contactPhone: "0690 28 47 88",
+  contactAddress: "Lieu dit Loyette, 97118 Saint-François, Guadeloupe",
+  contactMapUrl: "https://www.google.com/maps?q=16.286364%2C-61.288357",
   creationInspirations: creationInspirationsSeed,
 };
 
@@ -487,6 +493,17 @@ function normalizeKafeSettings(value?: Partial<KafeSettings> | null): KafeSettin
     return merged;
   }
 
+  if ((value?.configurationVersion ?? 0) >= 2) {
+    return {
+      ...merged,
+      configurationVersion: settingsSeed.configurationVersion,
+      depositFixedAmount: settingsSeed.depositFixedAmount,
+      contactPhone: value?.contactPhone ?? settingsSeed.contactPhone,
+      contactAddress: value?.contactAddress ?? settingsSeed.contactAddress,
+      contactMapUrl: value?.contactMapUrl ?? settingsSeed.contactMapUrl,
+    };
+  }
+
   // Apply the first validated operating rules once to settings saved before the client cadrage.
   return {
     ...merged,
@@ -504,6 +521,8 @@ function normalizeKafeSettings(value?: Partial<KafeSettings> | null): KafeSettin
     groupDepositForfeitHours: settingsSeed.groupDepositForfeitHours,
     reservationFieldRequirements: settingsSeed.reservationFieldRequirements,
     manualConfirmationThreshold: settingsSeed.manualConfirmationThreshold,
+    depositThreshold: settingsSeed.depositThreshold,
+    depositFixedAmount: settingsSeed.depositFixedAmount,
     signatureRequiredOnArrival: settingsSeed.signatureRequiredOnArrival,
     reservationConditionsText: settingsSeed.reservationConditionsText,
   };

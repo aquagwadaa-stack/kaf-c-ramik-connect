@@ -15,6 +15,7 @@ import { PageShell } from "@/components/page-shell";
 import { OrganicShapes } from "@/components/organic-shapes";
 import { CeramicPiece, type CeramicKind } from "@/components/ceramic-piece";
 import { creationInspirationsSeed, useKafeSettings } from "@/lib/admin-data";
+import { getPublicSchedule } from "@/lib/opening-hours";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -94,6 +95,7 @@ const moodCards = [
 
 function HomePage() {
   const [settings] = useKafeSettings();
+  const schedule = getPublicSchedule(settings);
   const featuredCreations = (
     settings.creationInspirations?.length ? settings.creationInspirations : creationInspirationsSeed
   )
@@ -107,8 +109,8 @@ function HomePage() {
         <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pt-12 pb-14 sm:pt-20 sm:pb-20 lg:grid-cols-[1fr_420px]">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-cream/85 px-3 py-1.5 text-xs font-medium text-ink/70 backdrop-blur">
-              <span className="h-1.5 w-1.5 rounded-full bg-sage" /> Ouvert mardi → dimanche · 9h30 –
-              18h
+              <span className="h-1.5 w-1.5 rounded-full bg-sage" /> Créneaux atelier ·{" "}
+              {schedule.inline}
             </div>
             <h1 className="mt-6 max-w-3xl text-5xl leading-[0.95] text-ink sm:text-7xl">
               Kafé Céramik.
@@ -322,9 +324,9 @@ function HomePage() {
 
       <section className="mx-auto mt-4 max-w-6xl px-4">
         <div className="grid gap-3 sm:grid-cols-3">
-          <InfoTile icon={MapPin} title="Adresse" body="Lieu dit Loyette, 97118 Saint-François" />
-          <InfoTile icon={Clock} title="Horaires" body="Mardi – Dimanche · 9h30 → 18h" />
-          <InfoTile icon={Phone} title="Téléphone" body="0690 28 47 88" />
+          <InfoTile icon={MapPin} title="Adresse" body={settings.contactAddress} />
+          <InfoTile icon={Clock} title="Horaires atelier" body={schedule.inline} />
+          <InfoTile icon={Phone} title="Téléphone" body={settings.contactPhone} />
         </div>
       </section>
     </PageShell>
