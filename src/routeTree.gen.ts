@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ReserverRouteImport } from './routes/reserver'
 import { Route as ObjetsRouteImport } from './routes/objets'
 import { Route as GuideRouteImport } from './routes/guide'
+import { Route as DechargeSignatureRouteImport } from './routes/decharge-signature'
 import { Route as CreationsRouteImport } from './routes/creations'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CarteRouteImport } from './routes/carte'
@@ -33,6 +34,11 @@ const ObjetsRoute = ObjetsRouteImport.update({
 const GuideRoute = GuideRouteImport.update({
   id: '/guide',
   path: '/guide',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DechargeSignatureRoute = DechargeSignatureRouteImport.update({
+  id: '/decharge-signature',
+  path: '/decharge-signature',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CreationsRoute = CreationsRouteImport.update({
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/carte': typeof CarteRoute
   '/contact': typeof ContactRoute
   '/creations': typeof CreationsRoute
+  '/decharge-signature': typeof DechargeSignatureRoute
   '/guide': typeof GuideRoute
   '/objets': typeof ObjetsRoute
   '/reserver': typeof ReserverRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/carte': typeof CarteRoute
   '/contact': typeof ContactRoute
   '/creations': typeof CreationsRoute
+  '/decharge-signature': typeof DechargeSignatureRoute
   '/guide': typeof GuideRoute
   '/objets': typeof ObjetsRoute
   '/reserver': typeof ReserverRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/carte': typeof CarteRoute
   '/contact': typeof ContactRoute
   '/creations': typeof CreationsRoute
+  '/decharge-signature': typeof DechargeSignatureRoute
   '/guide': typeof GuideRoute
   '/objets': typeof ObjetsRoute
   '/reserver': typeof ReserverRoute
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/carte'
     | '/contact'
     | '/creations'
+    | '/decharge-signature'
     | '/guide'
     | '/objets'
     | '/reserver'
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/carte'
     | '/contact'
     | '/creations'
+    | '/decharge-signature'
     | '/guide'
     | '/objets'
     | '/reserver'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/carte'
     | '/contact'
     | '/creations'
+    | '/decharge-signature'
     | '/guide'
     | '/objets'
     | '/reserver'
@@ -155,6 +167,7 @@ export interface RootRouteChildren {
   CarteRoute: typeof CarteRoute
   ContactRoute: typeof ContactRoute
   CreationsRoute: typeof CreationsRoute
+  DechargeSignatureRoute: typeof DechargeSignatureRoute
   GuideRoute: typeof GuideRoute
   ObjetsRoute: typeof ObjetsRoute
   ReserverRoute: typeof ReserverRoute
@@ -181,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/guide'
       fullPath: '/guide'
       preLoaderRoute: typeof GuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/decharge-signature': {
+      id: '/decharge-signature'
+      path: '/decharge-signature'
+      fullPath: '/decharge-signature'
+      preLoaderRoute: typeof DechargeSignatureRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/creations': {
@@ -243,6 +263,7 @@ const rootRouteChildren: RootRouteChildren = {
   CarteRoute: CarteRoute,
   ContactRoute: ContactRoute,
   CreationsRoute: CreationsRoute,
+  DechargeSignatureRoute: DechargeSignatureRoute,
   GuideRoute: GuideRoute,
   ObjetsRoute: ObjetsRoute,
   ReserverRoute: ReserverRoute,

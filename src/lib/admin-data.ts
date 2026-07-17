@@ -355,14 +355,11 @@ export const guideResourcesSeed: ContentResource[] = [
     previewImageUrls: ["/documents/gaspillage-peinture.webp"],
     visible: true,
   },
-];
-
-export const waiverResourcesSeed: ContentResource[] = [
   {
     id: "casse-ceramique",
     title: "Prévention casse céramique",
     description: "Une céramique brute cassée peut être facturée à hauteur de 50 % de son prix.",
-    category: "waiver",
+    category: "prevention",
     attachmentUrl: "/documents/casse-ceramique.pdf",
     attachmentName: "Casse céramique pdf.pdf",
     attachmentType: "application/pdf",
@@ -371,6 +368,8 @@ export const waiverResourcesSeed: ContentResource[] = [
   },
 ];
 
+export const waiverResourcesSeed: ContentResource[] = [];
+
 export const contentDocumentsSeed: ContentDocument[] = [
   {
     id: "guide",
@@ -378,8 +377,8 @@ export const contentDocumentsSeed: ContentDocument[] = [
     version: "2026-07-officiel",
     updatedAt: new Date().toISOString(),
     intro:
-      "Prenez quelques minutes pour lire les consignes avant de peindre. Elles permettent d'obtenir le meilleur résultat possible après cuisson et de retrouver facilement votre création.",
-    body: "La consommation sur place est obligatoire pour participer à l'atelier. Les enfants restent sous la surveillance permanente de l'adulte qui les accompagne.",
+      "Prenez le temps de consulter chaque support avant de commencer. Toutes les étapes du guide et du nuancier choisi sont importantes pour la cuisson, l'identification et la récupération de votre création.",
+    body: "Les documents officiels sont également disponibles sur place. L'équipe reste disponible si une consigne n'est pas claire avant de commencer.",
     sections: guideSectionsSeed,
     resources: guideResourcesSeed,
   },
@@ -388,7 +387,7 @@ export const contentDocumentsSeed: ContentDocument[] = [
     title: "Décharge de responsabilité",
     version: "2026-07-officielle",
     updatedAt: new Date().toISOString(),
-    body: "Je reconnais avoir pris connaissance du guide complet de peinture et des consignes d'utilisation du matériel. En cas de non-respect de ces règles, l'établissement ne pourra être tenu responsable du résultat et aucun remboursement ne pourra être demandé.",
+    body: "Je reconnais avoir pris connaissance du guide complet de l'atelier. En cas de non-respect de celui-ci, l'établissement ne pourra pas être tenu responsable et aucun remboursement ne pourra être exigé.",
     attachmentUrl: "/documents/decharge-officielle.pdf",
     attachmentName: "Décharge PDF.pdf",
     attachmentType: "application/pdf",
@@ -399,11 +398,22 @@ export const contentDocumentsSeed: ContentDocument[] = [
 
 export function getGuideDocument(documents: ContentDocument[]) {
   const guide = documents.find((document) => document.id === "guide") ?? contentDocumentsSeed[0];
+  const storedResources = guide.resources ?? [];
+  const resources = [
+    ...guideResourcesSeed.map((seedResource) => ({
+      ...seedResource,
+      ...(storedResources.find((resource) => resource.id === seedResource.id) ?? {}),
+      category: seedResource.category,
+    })),
+    ...storedResources.filter(
+      (resource) => !guideResourcesSeed.some((seedResource) => seedResource.id === resource.id),
+    ),
+  ];
   return {
     ...guide,
     intro: guide.intro ?? contentDocumentsSeed[0].intro,
     sections: guide.sections?.length ? guide.sections : guideSectionsSeed,
-    resources: guide.resources?.length ? guide.resources : guideResourcesSeed,
+    resources,
   };
 }
 
@@ -413,7 +423,7 @@ export function getWaiverDocument(documents: ContentDocument[]) {
   return {
     ...seed,
     ...waiver,
-    resources: waiver.resources?.length ? waiver.resources : waiverResourcesSeed,
+    resources: waiverResourcesSeed,
   };
 }
 

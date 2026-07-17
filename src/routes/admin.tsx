@@ -1,8 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { FormEvent, PointerEvent, ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { jsPDF } from "jspdf";
 import {
   AlertCircle,
   BookOpenText,
@@ -22,7 +21,6 @@ import {
   LogOut,
   PackageOpen,
   Plus,
-  Save,
   Search,
   Settings,
   ShieldCheck,
@@ -59,7 +57,6 @@ import {
   useKafeSettings,
   useWaiverSignatures,
   type CreationInspiration,
-  type GuideSection,
   type CeramicObject,
   type ContentDocument,
   type ContentResource,
@@ -79,6 +76,7 @@ import {
   signOutAdmin,
   useAdminAccess,
 } from "@/lib/supabase-rest";
+import { downloadSignedWaiver } from "@/lib/waiver-pdf";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -337,7 +335,6 @@ function AdminWorkspace({
             signatures={signatures}
             saveSignatures={saveSignatures}
             reservations={reservations}
-            validatedBy={adminEmail ?? undefined}
           />
         )}
         {tab === "objects" && <ObjectsPanel objects={objects} saveObjects={saveObjects} />}
@@ -1238,26 +1235,14 @@ function WaiversPanel({
   signatures,
   saveSignatures,
   reservations,
-  validatedBy,
 }: {
   documents: ContentDocument[];
   saveDocuments: (next: ContentDocument[]) => void;
   signatures: WaiverSignature[];
   saveSignatures: (next: WaiverSignature[]) => void;
   reservations: Reservation[];
-  validatedBy?: string;
 }) {
   const waiver = getWaiverDocument(documents);
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    reservationRef: "",
-    isMinor: false,
-    guardianFirstName: "",
-    guardianLastName: "",
-  });
-  const [waiverAccepted, setWaiverAccepted] = useState(false);
-  const [signatureDataUrl, setSignatureDataUrl] = useState<string | undefined>();
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -1316,69 +1301,6 @@ function WaiversPanel({
     }
   }
 
-  async function updateWaiverResource(resource: ContentResource, file?: File) {
-    let nextResource = resource;
-    if (file) {
-      setUploading(true);
-      try {
-        nextResource = {
-          ...resource,
-          ...(await storeDocumentFile(`decharge/${resource.id}`, file)),
-        };
-      } finally {
-        setUploading(false);
-      }
-    }
-    saveWaiver({
-      resources: (waiver.resources ?? []).map((item) =>
-        item.id === resource.id ? nextResource : item,
-      ),
-    });
-  }
-
-  function saveSignature() {
-    if (!form.firstName.trim() || !form.lastName.trim() || !waiverAccepted || !signatureDataUrl) {
-      setError("Nom, prénom, acceptation de la décharge et signature sont obligatoires.");
-      return;
-    }
-    if (form.isMinor && (!form.guardianFirstName.trim() || !form.guardianLastName.trim())) {
-      setError("Le nom et le prénom du responsable légal sont obligatoires pour un mineur.");
-      return;
-    }
-    const next: WaiverSignature = {
-      id: `sig-${Date.now()}`,
-      firstName: form.firstName.trim(),
-      lastName: form.lastName.trim(),
-      reservationRef: form.reservationRef || undefined,
-      documentVersion: waiver.version,
-      signedAt: new Date().toISOString(),
-      signatureDataUrl,
-      guideAccepted: true,
-      waiverAccepted: true,
-      isMinor: form.isMinor,
-      guardianFirstName: form.isMinor ? form.guardianFirstName.trim() : undefined,
-      guardianLastName: form.isMinor ? form.guardianLastName.trim() : undefined,
-      documentTitle: waiver.title,
-      documentUrl: waiver.attachmentUrl || waiver.attachmentDataUrl,
-      documentPreviewUrl: waiver.previewImageDataUrls?.[0] || waiver.previewImageUrls?.[0],
-      acceptanceText: waiver.body,
-      validatedBy,
-    };
-    saveSignatures([next, ...signatures]);
-    if (form.reservationRef) updateStatus(form.reservationRef, "arrived");
-    setForm({
-      firstName: "",
-      lastName: "",
-      reservationRef: "",
-      isMinor: false,
-      guardianFirstName: "",
-      guardianLastName: "",
-    });
-    setSignatureDataUrl(undefined);
-    setWaiverAccepted(false);
-    setError("");
-  }
-
   function removeSignature(id: string) {
     saveSignatures(signatures.filter((signature) => signature.id !== id));
     if (isSupabaseConfigured()) {
@@ -1388,72 +1310,19 @@ function WaiversPanel({
     }
   }
 
-  async function exportSignature(signature: WaiverSignature) {
-    const pdf = new jsPDF({ unit: "mm", format: "a4" });
-    const preview = signature.documentPreviewUrl;
-    if (preview) {
-      try {
-        const image = await imageToPngDataUrl(preview);
-        const props = pdf.getImageProperties(image);
-        const maxWidth = 180;
-        const maxHeight = 265;
-        const ratio = Math.min(maxWidth / props.width, maxHeight / props.height);
-        const width = props.width * ratio;
-        const height = props.height * ratio;
-        pdf.addImage(image, "PNG", (210 - width) / 2, 15, width, height);
-        pdf.addPage();
-      } catch {
-        // The proof page remains valid even if a legacy preview cannot be embedded.
-      }
-    }
-
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(18);
-    pdf.text("Preuve de signature - Kafé Céramik", 15, 20);
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(10);
-    const signedAt = new Date(signature.signedAt).toLocaleString("fr-FR");
-    const lines = [
-      `Participant : ${signature.firstName} ${signature.lastName}`,
-      signature.isMinor
-        ? `Responsable légal : ${signature.guardianFirstName ?? ""} ${signature.guardianLastName ?? ""}`
-        : "Participant majeur",
-      `Date et heure de signature : ${signedAt}`,
-      `Version du document : ${signature.documentVersion}`,
-      `Réservation liée : ${signature.reservationRef ?? "Aucune"}`,
-      `Validation équipe : ${signature.validatedBy ?? "Compte équipe connecté"}`,
-    ];
-    lines.forEach((line, index) => pdf.text(line, 15, 34 + index * 7));
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Texte accepté", 15, 82);
-    pdf.setFont("helvetica", "normal");
-    const accepted = pdf.splitTextToSize(signature.acceptanceText ?? waiver.body, 180);
-    pdf.text(accepted, 15, 90);
-    if (signature.signatureDataUrl) {
-      pdf.setFont("helvetica", "bold");
-      pdf.text("Signature", 15, 142);
-      pdf.addImage(signature.signatureDataUrl, "PNG", 15, 148, 90, 36);
-    }
-    pdf.save(
-      `decharge-${signature.lastName.toLowerCase()}-${signature.firstName.toLowerCase()}-${signature.signedAt.slice(0, 10)}.pdf`,
-    );
-  }
-
   return (
-    <Panel
-      title="Décharges"
-      desc="Signature individuelle sur la tablette et archives consultables."
-    >
-      <div className="grid gap-4 border-b border-border pb-5 lg:grid-cols-[1fr_0.8fr]">
+    <Panel title="Décharges" desc="Document officiel, signature sur tablette et archives.">
+      <div className="grid gap-5 lg:grid-cols-[1fr_0.72fr] lg:items-start">
         <div className="border border-border bg-background p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="font-display text-xl">Document officiel</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Version présentée à chaque personne avant sa signature.
+              <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                Ce fichier est la base affichée à la personne puis utilisée pour générer sa décharge
+                signée.
               </p>
             </div>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-secondary">
               <UploadCloud className="h-4 w-4" /> {uploading ? "Import…" : "Remplacer"}
               <input
                 type="file"
@@ -1468,17 +1337,22 @@ function WaiversPanel({
             </label>
           </div>
           <DocumentPreview document={waiver} className="mt-4" compact />
+          {error && <div className="mt-3 text-sm text-destructive">{error}</div>}
         </div>
-        <div className="border border-border bg-background p-4">
-          <h3 className="font-display text-xl">Prévention liée</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            La prévention casse reste associée à la décharge.
+
+        <div className="border border-primary/35 bg-secondary/50 p-5">
+          <ClipboardSignature className="h-8 w-8 text-primary" />
+          <h3 className="mt-4 font-display text-2xl">Faire signer la décharge</h3>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Ouvrez l'écran simplifié sur la tablette, liez éventuellement la réservation, puis
+            laissez chaque personne lire, renseigner ses informations et signer.
           </p>
-          <ResourceAdminList
-            resources={waiver.resources ?? []}
-            onChange={updateWaiverResource}
-            compact
-          />
+          <Link
+            to="/decharge-signature"
+            className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground"
+          >
+            <ClipboardSignature className="h-4 w-4" /> Ouvrir l'écran tablette
+          </Link>
         </div>
       </div>
 
@@ -1508,92 +1382,14 @@ function WaiversPanel({
         </div>
       )}
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1.1fr]">
-        <div className="border border-border bg-background p-4">
-          <h3 className="font-display text-xl">Faire signer une personne</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Chaque personne qui peint signe. Pour un mineur, le responsable légal signe en son nom.
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field
-              label="Prénom"
-              value={form.firstName}
-              onChange={(value) => setForm({ ...form, firstName: value })}
-            />
-            <Field
-              label="Nom"
-              value={form.lastName}
-              onChange={(value) => setForm({ ...form, lastName: value })}
-            />
-            <label className="sm:col-span-2">
-              <span className="mb-1.5 block text-sm font-medium">Réservation liée</span>
-              <select
-                value={form.reservationRef}
-                onChange={(event) => setForm({ ...form, reservationRef: event.target.value })}
-                className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">Sans réservation liée</option>
-                {reservations.map((reservation) => (
-                  <option key={reservation.id} value={reservation.id}>
-                    {reservation.firstName} {reservation.lastName} ·{" "}
-                    {formatReservationDate(reservation.date)} · {reservation.slot}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <label className="mt-4 flex cursor-pointer items-center gap-3 text-sm">
-            <input
-              type="checkbox"
-              checked={form.isMinor}
-              onChange={(event) => setForm({ ...form, isMinor: event.target.checked })}
-              className="h-4 w-4 accent-primary"
-            />
-            <span>La personne qui peint est mineure</span>
-          </label>
-
-          {form.isMinor && (
-            <div className="mt-3 grid gap-3 border-l-4 border-primary bg-secondary/35 p-3 sm:grid-cols-2">
-              <Field
-                label="Prénom du responsable légal"
-                value={form.guardianFirstName}
-                onChange={(value) => setForm({ ...form, guardianFirstName: value })}
-              />
-              <Field
-                label="Nom du responsable légal"
-                value={form.guardianLastName}
-                onChange={(value) => setForm({ ...form, guardianLastName: value })}
-              />
-            </div>
-          )}
-
-          <DocumentPreview document={waiver} title="Document officiel à signer" className="mt-4" />
-
-          <label className="mt-4 flex cursor-pointer items-start gap-3 border border-border bg-secondary/30 p-3 text-sm">
-            <input
-              type="checkbox"
-              checked={waiverAccepted}
-              onChange={(event) => setWaiverAccepted(event.target.checked)}
-              className="mt-1 h-4 w-4 accent-primary"
-            />
-            <span>{waiver.body}</span>
-          </label>
-
-          <SignaturePad onChange={setSignatureDataUrl} value={signatureDataUrl} />
-
-          {error && <div className="mt-3 text-sm text-destructive">{error}</div>}
-          <button
-            onClick={saveSignature}
-            className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground"
-          >
-            <Save className="h-4 w-4" /> Enregistrer la signature
-          </button>
-        </div>
-
-        <div className="border border-border bg-background p-4">
+      <div className="mt-5 border border-border bg-background p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="font-display text-xl">Signatures enregistrées</h3>
+            <div>
+              <h3 className="font-display text-xl">Décharges signées</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Retrouvez, recherchez et exportez chaque document signé.
+              </p>
+            </div>
             <div className="relative min-w-[230px] flex-1 sm:max-w-xs">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -1629,7 +1425,11 @@ function WaiversPanel({
                     <div className="flex shrink-0 items-center gap-2">
                       <InfoPill tone="success">Signé</InfoPill>
                       <button
-                        onClick={() => exportSignature(signature)}
+                        onClick={() =>
+                          downloadSignedWaiver(signature, waiver.body).catch(() =>
+                            setError("Impossible de générer cette décharge pour le moment."),
+                          )
+                        }
                         className="grid h-8 w-8 place-items-center border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
                         aria-label="Exporter la décharge signée"
                         title="Exporter la décharge signée"
@@ -1656,102 +1456,8 @@ function WaiversPanel({
               ))
             )}
           </div>
-        </div>
       </div>
     </Panel>
-  );
-}
-
-async function imageToPngDataUrl(source: string) {
-  const image = new Image();
-  image.crossOrigin = "anonymous";
-  await new Promise<void>((resolve, reject) => {
-    image.onload = () => resolve();
-    image.onerror = () => reject(new Error("Aperçu inaccessible"));
-    image.src = source;
-  });
-  const canvas = document.createElement("canvas");
-  canvas.width = image.naturalWidth;
-  canvas.height = image.naturalHeight;
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Aperçu inaccessible");
-  context.drawImage(image, 0, 0);
-  return canvas.toDataURL("image/png");
-}
-
-function SignaturePad({ value, onChange }: { value?: string; onChange: (value?: string) => void }) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const isDrawing = useRef(false);
-
-  function point(event: PointerEvent<HTMLCanvasElement>) {
-    const canvas = event.currentTarget;
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: ((event.clientX - rect.left) / rect.width) * canvas.width,
-      y: ((event.clientY - rect.top) / rect.height) * canvas.height,
-    };
-  }
-
-  function start(event: PointerEvent<HTMLCanvasElement>) {
-    const canvas = event.currentTarget;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    isDrawing.current = true;
-    canvas.setPointerCapture(event.pointerId);
-    const p = point(event);
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
-  }
-
-  function move(event: PointerEvent<HTMLCanvasElement>) {
-    if (!isDrawing.current) return;
-    const ctx = event.currentTarget.getContext("2d");
-    if (!ctx) return;
-    const p = point(event);
-    ctx.lineWidth = 4;
-    ctx.lineCap = "round";
-    ctx.strokeStyle = "#2D2421";
-    ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-  }
-
-  function stop(event: PointerEvent<HTMLCanvasElement>) {
-    if (!isDrawing.current) return;
-    isDrawing.current = false;
-    onChange(event.currentTarget.toDataURL("image/png"));
-  }
-
-  function clear() {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    onChange(undefined);
-  }
-
-  return (
-    <div className="mt-4">
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span className="text-sm font-medium">Signature tablette</span>
-        <button
-          onClick={clear}
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-        >
-          <Trash2 className="h-3.5 w-3.5" /> Effacer
-        </button>
-      </div>
-      <canvas
-        ref={canvasRef}
-        width={760}
-        height={260}
-        onPointerDown={start}
-        onPointerMove={move}
-        onPointerUp={stop}
-        onPointerLeave={stop}
-        className="h-44 w-full touch-none rounded-2xl border border-border bg-white"
-      />
-      {value && <div className="mt-1 text-xs text-muted-foreground">Signature capturée.</div>}
-    </div>
   );
 }
 
@@ -2113,41 +1819,6 @@ function DocumentsPanel({
     saveDocument({ ...guide, ...patch, updatedAt: new Date().toISOString() });
   }
 
-  function updateGuideSection(id: string, patch: Partial<GuideSection>) {
-    updateDocument({
-      sections: (guide.sections ?? []).map((section) =>
-        section.id === id ? { ...section, ...patch } : section,
-      ),
-    });
-  }
-
-  async function uploadGuideImage(id: string, file?: File) {
-    if (!file) return;
-    const imageDataUrl = await readFileAsDataUrl(file);
-    updateGuideSection(id, { imageDataUrl, imageName: file.name });
-  }
-
-  function addGuideSection() {
-    const nextIndex = (guide.sections?.length ?? 0) + 1;
-    updateDocument({
-      sections: [
-        ...(guide.sections ?? []),
-        {
-          id: `guide-${Date.now()}`,
-          number: String(nextIndex).padStart(2, "0"),
-          title: "Nouvelle étape",
-          body: "Texte à compléter depuis l'administration.",
-        },
-      ],
-    });
-  }
-
-  function removeGuideSection(id: string) {
-    updateDocument({
-      sections: (guide.sections ?? []).filter((section) => section.id !== id),
-    });
-  }
-
   async function updateResource(resource: ContentResource, file?: File) {
     const nextResource = file
       ? { ...resource, ...(await storeDocumentFile(`guide/${resource.id}`, file)) }
@@ -2159,10 +1830,32 @@ function DocumentsPanel({
     });
   }
 
+  const groups: {
+    category: ContentResource["category"];
+    title: string;
+    description: string;
+  }[] = [
+    {
+      category: "guide",
+      title: "1. Guide complet",
+      description: "Le document principal, présenté fidèlement sur la page publique.",
+    },
+    {
+      category: "nuancier",
+      title: "2. Nuanciers",
+      description: "Les deux supports de couleurs et leurs gestes propres.",
+    },
+    {
+      category: "prevention",
+      title: "3. Préventions",
+      description: "Le dosage de la peinture et la casse de la céramique brute.",
+    },
+  ];
+
   return (
     <Panel
       title="Guide"
-      desc="Modifiez la page publique et remplacez les documents officiels sans toucher à sa mise en page."
+      desc="Les trois chapitres ci-dessous correspondent exactement aux trois onglets de la page publique."
     >
       <div className="border border-border bg-background p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -2195,117 +1888,28 @@ function DocumentsPanel({
           value={guide.intro ?? ""}
           onChange={(value) => updateDocument({ intro: value })}
         />
-        <TextareaField
-          label="Texte important avant les étapes"
-          value={guide.body}
-          onChange={(value) => updateDocument({ body: value })}
-        />
 
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-          <h4 className="font-display text-xl">Étapes du guide</h4>
-          <button
-            onClick={addGuideSection}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-          >
-            <Plus className="h-4 w-4" /> Ajouter une étape
-          </button>
-        </div>
-
-        <div className="mt-3 grid gap-3">
-          {(guide.sections ?? []).map((section) => (
-            <div key={section.id} className="rounded-2xl border border-border bg-card p-4">
-              <div className="grid gap-3 md:grid-cols-[90px_1fr]">
-                <Field
-                  label="Numéro"
-                  value={section.number}
-                  onChange={(value) => updateGuideSection(section.id, { number: value })}
-                />
-                <Field
-                  label="Titre"
-                  value={section.title}
-                  onChange={(value) => updateGuideSection(section.id, { title: value })}
-                />
-              </div>
-
-              <div className="mt-3 grid gap-3 lg:grid-cols-[150px_1fr]">
-                <div>
-                  <div className="flex h-32 w-full items-center justify-center overflow-hidden rounded-2xl border border-border bg-secondary/40">
-                    {section.imageDataUrl || section.imageUrl ? (
-                      <img
-                        src={section.imageDataUrl || section.imageUrl}
-                        alt={section.title}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs hover:bg-secondary">
-                      <UploadCloud className="h-3.5 w-3.5" /> Photo
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="sr-only"
-                        onChange={async (event) => {
-                          await uploadGuideImage(section.id, event.currentTarget.files?.[0]);
-                          event.currentTarget.value = "";
-                        }}
-                      />
-                    </label>
-                    {(section.imageDataUrl || section.imageUrl) && (
-                      <button
-                        onClick={() =>
-                          updateGuideSection(section.id, {
-                            imageDataUrl: undefined,
-                            imageUrl: undefined,
-                            imageName: undefined,
-                          })
-                        }
-                        className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary"
-                      >
-                        Retirer
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <TextareaField
-                  label="Texte de l'étape"
-                  value={section.body}
-                  onChange={(value) => updateGuideSection(section.id, { body: value })}
-                />
-              </div>
-
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                <ToggleRow
-                  label="Visible sur le guide"
-                  checked={section.visible !== false}
-                  onChange={(visible) => updateGuideSection(section.id, { visible })}
-                />
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground">{section.imageName}</span>
-                  <button
-                    onClick={() => removeGuideSection(section.id)}
-                    className="inline-flex items-center gap-2 rounded-full border border-destructive/30 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" /> Supprimer
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-7 border-t border-border pt-5">
-          <h4 className="font-display text-xl">Documents officiels du guide</h4>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Leur ordre et leur visibilité sont repris exactement sur la page publique.
+        <div className="mt-5 flex items-start gap-3 border-l-4 border-primary bg-secondary/45 p-4 text-sm leading-6">
+          <FileText className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+          <p>
+            Lorsqu'un PDF est remplacé, son aperçu fidèle est généré automatiquement. Le nouveau
+            document apparaît aussitôt dans le bon onglet public sans modifier la mise en page du site.
           </p>
-          <ResourceAdminList
-            resources={guide.resources ?? []}
-            onChange={updateResource}
-            onReorder={(resources) => updateDocument({ resources })}
-          />
+        </div>
+
+        <div className="mt-7">
+          {groups.map((group) => (
+            <section key={group.category} className="border-t border-border py-6 first:border-t-0 first:pt-0">
+              <h4 className="font-display text-xl">{group.title}</h4>
+              <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>
+              <ResourceAdminList
+                resources={(guide.resources ?? []).filter(
+                  (resource) => resource.category === group.category,
+                )}
+                onChange={updateResource}
+              />
+            </section>
+          ))}
         </div>
 
         <div className="mt-3 text-xs text-muted-foreground">
