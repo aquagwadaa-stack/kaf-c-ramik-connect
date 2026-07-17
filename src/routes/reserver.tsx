@@ -59,24 +59,17 @@ const experiences: {
 }[] = [
   {
     id: "cafe_atelier",
-    title: "Kafé + atelier",
-    desc: "Peinture sur céramique avec une consommation sur place.",
-    icon: Coffee,
+    title: "Atelier céramique",
+    desc: "Peinture sur céramique avec consommation obligatoire sur place (café, boisson, bagel ou douceur).",
+    icon: Palette,
     price: "pièce + conso",
   },
   {
     id: "brunch_atelier",
-    title: "Brunch + atelier",
-    desc: "Déjeunette gourmande puis moment créatif.",
+    title: "Brunch",
+    desc: "Brunch gourmand seul, sans atelier céramique.",
     icon: CroissantIcon,
-    price: "pièce + brunch",
-  },
-  {
-    id: "groupe",
-    title: "Groupe",
-    desc: "Pour une grande table ou une demande à organiser.",
-    icon: Users,
-    price: "validation équipe",
+    price: "brunch seul",
   },
 ];
 
