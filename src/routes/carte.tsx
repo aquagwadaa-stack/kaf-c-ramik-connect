@@ -181,7 +181,7 @@ function CartePage() {
       <PageHeader
         eyebrow="Carte"
         title="Kafé ou déjeunette"
-        description={`Le Kafé vous accueille ${schedule.inline.toLowerCase()}. Café, bagels et déjeunette se font sans réservation.`}
+        description={`Le Kafé t'accueille ${schedule.inline.toLowerCase()}. Café, bagels et déjeunette se font sans réservation.`}
       />
       <section className="mx-auto max-w-6xl px-4 py-10">
         <div className="checker-pink rounded-[1.75rem] border border-border p-3 sm:p-5">
@@ -217,14 +217,14 @@ function CartePage() {
             </div>
 
             <p className="relative mt-6 text-center text-sm italic text-foreground/70">
-              Merci d'accompagner votre atelier d'une petite consommation ♥
+              Merci d'accompagner ton atelier d'une petite consommation ♥
             </p>
 
             <div className="relative mt-8 grid gap-3 border-t border-dashed border-ink/20 pt-6 sm:grid-cols-3">
               <MiniNote
                 icon={CroissantIcon}
                 title="Sans réservation"
-                body="Passez librement pour le Kafé, selon les tables disponibles."
+                body="Passe librement pour le Kafé, selon les tables disponibles."
               />
               <MiniNote
                 icon={CupSoda}

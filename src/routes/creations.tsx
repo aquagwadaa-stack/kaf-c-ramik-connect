@@ -31,7 +31,7 @@ const ideas = [
   {
     icon: Camera,
     title: "Inspiration",
-    body: "Vous pouvez venir avec une idée, ou choisir au feeling une fois sur place.",
+    body: "Tu peux venir avec une idée, ou choisir au feeling une fois sur place.",
   },
 ] as const;
 
@@ -108,11 +108,9 @@ function CreationsPage() {
         <div className="flex flex-col gap-4 rounded-3xl border border-border bg-ink p-6 text-cream sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-cream/12 px-3 py-1 text-xs font-medium">
-              <Sparkles className="h-3.5 w-3.5" /> À vous de jouer
+              <Sparkles className="h-3.5 w-3.5" /> À toi de jouer
             </div>
-            <h2 className="mt-4 text-3xl leading-tight">
-              Choisissez une pièce, puis créez la vôtre.
-            </h2>
+            <h2 className="mt-4 text-3xl leading-tight">Choisis une pièce, puis crée la tienne.</h2>
           </div>
           <Link
             to="/reserver"

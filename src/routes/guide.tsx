@@ -83,7 +83,7 @@ function GuidePage() {
           <p className="mt-5 max-w-3xl text-base leading-7 text-muted-foreground sm:text-lg">
             {guide.intro}
           </p>
-          <div className="mt-7 flex max-w-3xl items-start gap-3 border-l-4 border-primary bg-card/75 p-4 text-sm leading-6">
+          <div className="mt-7 flex max-w-3xl items-start gap-3 rounded-2xl border border-primary/20 bg-card/75 p-4 text-sm leading-6">
             <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
             <p>
               Chaque étape a son importance. Pour que votre création puisse être identifiée, cuite
@@ -107,7 +107,7 @@ function GuidePage() {
               role="tab"
               aria-selected={activeChapter === id}
               onClick={() => setActiveChapter(id)}
-              className={`flex min-h-12 min-w-0 items-center justify-center gap-2 border px-2 py-2 text-sm font-medium sm:px-4 ${
+              className={`flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-full border px-2 py-2 text-sm font-medium sm:px-4 ${
                 activeChapter === id
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-card text-foreground hover:bg-secondary"
@@ -181,7 +181,7 @@ function OfficialBoard({
             href={href}
             target="_blank"
             rel="noreferrer"
-            className="grid h-10 w-10 shrink-0 place-items-center border border-border bg-card hover:bg-secondary"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-border bg-card hover:bg-secondary"
             aria-label={`Ouvrir ${resource.title}`}
             title="Ouvrir le document en grand"
           >
@@ -197,7 +197,7 @@ function OfficialBoard({
             href={preview}
             target="_blank"
             rel="noreferrer"
-            className="block border border-border bg-white shadow-sm"
+            className="block overflow-hidden rounded-3xl border border-border bg-white shadow-sm"
             title="Agrandir cette page"
           >
             <img

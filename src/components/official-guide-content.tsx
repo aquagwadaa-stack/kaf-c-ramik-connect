@@ -23,7 +23,7 @@ export function OfficialGuideContent({ resource }: { resource: ContentResource }
   const href = resource.attachmentDataUrl || resource.attachmentUrl;
 
   return (
-    <article className="overflow-hidden border border-primary/20 bg-[#fffaf7] shadow-[0_20px_50px_rgba(97,49,39,0.08)]">
+    <article className="overflow-hidden rounded-[2rem] border border-primary/20 bg-[#fffaf7] shadow-[0_20px_50px_rgba(97,49,39,0.08)]">
       {resource.id === "guide-complet" && <CompleteGuide />}
       {resource.id === "nuancier-1" && <ColorChartOne />}
       {resource.id === "nuancier-2" && <ColorChartTwo />}
@@ -90,9 +90,9 @@ function CompleteGuide() {
         </div>
       </PosterHeader>
 
-      <div className="grid grid-cols-2 border-y border-[#e90061]/15 bg-white sm:grid-cols-3 lg:grid-cols-6">
+      <div className="mx-3 grid grid-cols-2 gap-2 rounded-[1.75rem] border border-[#e90061]/15 bg-[#fff4f5] p-3 sm:mx-5 sm:grid-cols-3 sm:p-4 lg:grid-cols-6">
         {process.map(([Icon, title, detail], index) => (
-          <div key={title} className="px-3 py-5 text-center">
+          <div key={title} className="rounded-2xl bg-white/90 px-3 py-5 text-center">
             <span className="mx-auto grid h-9 w-9 place-items-center rounded-full bg-[#e90061] text-sm font-bold text-white">
               {index + 1}
             </span>
@@ -103,7 +103,7 @@ function CompleteGuide() {
         ))}
       </div>
 
-      <div className="space-y-0">
+      <div className="space-y-4 bg-[#fff4f5] p-3 sm:p-5">
         <GuideSection
           number="1"
           tone="blue"
@@ -169,7 +169,7 @@ function CompleteGuide() {
         </GuideSection>
       </div>
 
-      <div className="grid gap-px bg-[#e7cfa9] sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 bg-[#fff4f5] px-3 pb-4 sm:grid-cols-2 sm:px-5 lg:grid-cols-4">
         <Fact icon={<CalendarDays />} title="Délai de cuisson">
           7 à 10 jours pour récupérer votre création.
         </Fact>
@@ -183,7 +183,7 @@ function CompleteGuide() {
           Une céramique brute cassée est facturée à la moitié de son prix.
         </Fact>
       </div>
-      <div className="bg-[#e90061] px-5 py-4 text-center text-sm font-bold leading-6 text-white">
+      <div className="mx-3 mb-4 rounded-2xl bg-[#e90061] px-5 py-4 text-center text-sm font-bold leading-6 text-white sm:mx-5">
         Un excès de peinture ou de vernis peut coller la céramique aux plaques de cuisson et
         l’endommager. Les ateliers se déroulent en autonomie.
       </div>
@@ -210,7 +210,9 @@ function GuideSection({
     green: "bg-[#f2f8dd] border-[#84ad29] text-[#587315]",
   }[tone];
   return (
-    <section className={`grid border-b sm:grid-cols-[15rem_1fr] ${colors}`}>
+    <section
+      className={`grid overflow-hidden rounded-[1.75rem] border sm:grid-cols-[15rem_1fr] ${colors}`}
+    >
       <div className="flex items-center gap-4 border-b border-current/20 p-5 sm:block sm:border-b-0 sm:border-r sm:p-7">
         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-current text-xl font-bold text-white">
           <span className="text-white">{number}</span>
@@ -235,7 +237,7 @@ function GuideBullet({ children }: { children: ReactNode }) {
 function Important({ children, tone = "pink" }: { children: ReactNode; tone?: "pink" | "green" }) {
   return (
     <div
-      className={`flex items-start gap-3 border p-4 text-sm font-semibold leading-6 ${
+      className={`flex items-start gap-3 rounded-2xl border p-4 text-sm font-semibold leading-6 ${
         tone === "green" ? "border-[#84ad29] bg-[#f2f8dd]" : "border-[#ec2872] bg-[#fff0f6]"
       }`}
     >
@@ -246,7 +248,7 @@ function Important({ children, tone = "pink" }: { children: ReactNode; tone?: "p
 
 function Fact({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
   return (
-    <div className="bg-[#fff9eb] p-5 text-center">
+    <div className="rounded-2xl bg-[#fff9eb] p-5 text-center">
       <div className="mx-auto flex h-8 w-8 items-center justify-center text-[#e90061]">{icon}</div>
       <div className="mt-2 text-sm font-bold">{title}</div>
       <p className="mt-1 text-xs leading-5 text-muted-foreground">{children}</p>
@@ -302,10 +304,10 @@ function ColorChartOne() {
 function ColorChartTwo() {
   return (
     <ColorChart number="2" steps={chartTwoSteps}>
-      <div className="bg-[#ffe25e] px-5 py-5 text-center text-xl font-bold uppercase text-[#b60d51] sm:text-2xl">
+      <div className="rounded-2xl bg-[#ffe25e] px-5 py-5 text-center text-xl font-bold uppercase text-[#b60d51] sm:text-2xl">
         Les peintures de ce nuancier ne nécessitent pas de vernis.
       </div>
-      <div className="grid gap-4 bg-[#fff4f5] p-5 text-sm leading-6 sm:grid-cols-2 sm:p-7">
+      <div className="grid gap-4 rounded-2xl bg-[#fff4f5] p-5 text-sm leading-6 sm:grid-cols-2 sm:p-7">
         <p>Pour vous servir dans les palettes, aidez-vous du dos de votre pinceau.</p>
         <p>
           Des billes se trouvent dans la peinture. Elles explosent en cuisson et forment les effets
@@ -337,7 +339,7 @@ function ColorChart({
         {steps.map(([Icon, title, detail], index) => (
           <div
             key={`${number}-${index}`}
-            className="grid grid-cols-[3rem_2.5rem_1fr] items-center gap-3 bg-white px-4 py-4 sm:grid-cols-[4rem_4rem_1fr]"
+            className="grid grid-cols-[3rem_2.5rem_1fr] items-center gap-3 rounded-2xl bg-white px-4 py-4 sm:grid-cols-[4rem_4rem_1fr]"
           >
             <span className="grid h-10 w-10 place-items-center rounded-full bg-[#e90061] text-lg font-bold text-white sm:h-12 sm:w-12">
               {index + 1}
@@ -361,7 +363,7 @@ function ColorChart({
 
 function WarningLine() {
   return (
-    <div className="flex items-start gap-3 border border-[#e90061]/30 bg-white p-4 text-sm font-semibold leading-6">
+    <div className="flex items-start gap-3 rounded-2xl border border-[#e90061]/30 bg-white p-4 text-sm font-semibold leading-6">
       <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#e90061]" />
       Un excès de peinture ou de vernis collera la céramique à nos plaques de cuisson et risquera de
       l’endommager.
@@ -381,7 +383,7 @@ function PaintWaste() {
         </PreventionLine>
         <PreventionLine>La peinture sèche très vite avec la chaleur.</PreventionLine>
         <PreventionLine>Il est conseillé de se servir plusieurs fois si besoin.</PreventionLine>
-        <div className="border-2 border-[#ef8cac] bg-white px-5 py-6 text-lg font-bold leading-8 text-[#14365a]">
+        <div className="rounded-3xl border-2 border-[#ef8cac] bg-white px-5 py-6 text-lg font-bold leading-8 text-[#14365a]">
           Un abus ou gaspillage de peinture peut être facturé 2 € par compartiment de palette jeté.
         </div>
         <div className="inline-flex items-center justify-center gap-2 text-sm font-bold text-[#e90061]">

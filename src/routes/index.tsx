@@ -1,18 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+  ArrowRight,
+  Brush,
   CalendarHeart,
-  CroissantIcon,
+  Clock,
   Coffee,
-  Gift,
   MapPin,
   Phone,
-  Clock,
-  ArrowRight,
   Sparkles,
-  Brush,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { OrganicShapes } from "@/components/organic-shapes";
 import { CeramicPiece, type CeramicKind } from "@/components/ceramic-piece";
 import { creationInspirationsSeed, useKafeSettings } from "@/lib/admin-data";
 import { getPublicSchedule } from "@/lib/opening-hours";
@@ -24,74 +21,40 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Réservez votre moment créatif chez Kafé Céramik : peinture sur céramique, café, brunch et douceurs maison à Saint-François.",
+          "Réserve ton moment créatif chez Kafé Céramik : peinture sur céramique, café, brunch et douceurs maison à Saint-François.",
       },
     ],
   }),
   component: HomePage,
 });
 
-const experiences = [
-  {
-    to: "/reserver",
-    title: "Kafé + atelier",
-    eyebrow: "Peinture & conso sur place",
-    body: "Réservez votre créneau peinture, choisissez votre pièce, puis prévoyez une consommation sur place : café, bagel ou déjeunette.",
-    icon: Coffee,
-    visual: "plate",
-    cta: "Réserver un créneau",
-    tone: "bg-sage/20",
-  },
-  {
-    to: "/brunch",
-    title: "Déroulement atelier",
-    eyebrow: "Avant, pendant, après",
-    body: "Comprenez comment se passe l'atelier : réservation prioritaire, consommation sur place, peinture, cuisson et récupération.",
-    icon: CroissantIcon,
-    visual: "mug",
-    cta: "Voir le déroulement",
-    tone: "bg-rose/30",
-  },
-] as const;
-
 const quickLinks = [
   {
-    to: "/carte",
-    label: "Carte café",
-    desc: "Café, bagels, brunch sans réservation",
-    icon: Coffee,
+    to: "/brunch",
+    label: "Déroulement de l’atelier",
+    desc: "De la réservation à la récupération",
+    icon: Brush,
   },
-  { to: "/objets", label: "Objets à peindre", desc: "Tasses, bols, vases", icon: Sparkles },
-  { to: "/guide", label: "Guide atelier", desc: "Consignes et récupération", icon: Brush },
+  {
+    to: "/objets",
+    label: "Objets à peindre",
+    desc: "Formes, catégories et tarifs",
+    icon: Sparkles,
+  },
+  {
+    to: "/guide",
+    label: "Guide de peinture",
+    desc: "Les consignes avant de te lancer",
+    icon: CalendarHeart,
+  },
 ] as const;
 
 const pieces: { name: string; detail: string; kind: CeramicKind; tone: string }[] = [
-  { name: "Tasses", detail: "dès 18 €", kind: "mug", tone: "bg-cream" },
-  { name: "Assiettes", detail: "dès 20 €", kind: "plate", tone: "bg-rose/35" },
-  { name: "Vases", detail: "dès 28 €", kind: "vase", tone: "bg-sage/25" },
-  { name: "Bols", detail: "dès 15 €", kind: "bowl", tone: "bg-mustard/25" },
+  { name: "Tasses", detail: "à personnaliser", kind: "mug", tone: "bg-[#fff6e7]" },
+  { name: "Assiettes", detail: "à personnaliser", kind: "plate", tone: "bg-[#f7cbd6]" },
+  { name: "Vases", detail: "à personnaliser", kind: "vase", tone: "bg-[#dce6ca]" },
+  { name: "Bols", detail: "à personnaliser", kind: "bowl", tone: "bg-[#f5d46f]" },
 ];
-
-const moodCards = [
-  {
-    icon: Coffee,
-    title: "Pause café & pinceaux",
-    body: "Un café glacé, une table tranquille, une pièce qui prend forme sans pression.",
-    tone: "bg-cream",
-  },
-  {
-    icon: Sparkles,
-    title: "Moment entre proches",
-    body: "Copines, couple, famille ou petit groupe : chacun choisit sa pièce et son univers.",
-    tone: "bg-rose/30",
-  },
-  {
-    icon: Gift,
-    title: "Idée cadeau simple",
-    body: "Une carte cadeau ou un atelier à offrir pour partager autre chose qu'un objet déjà tout fait.",
-    tone: "bg-sage/20",
-  },
-] as const;
 
 function HomePage() {
   const [settings] = useKafeSettings();
@@ -104,143 +67,224 @@ function HomePage() {
 
   return (
     <PageShell>
-      <section className="relative overflow-hidden">
-        <OrganicShapes />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pt-12 pb-14 sm:pt-20 sm:pb-20 lg:grid-cols-[1fr_420px]">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-cream/85 px-3 py-1.5 text-xs font-medium text-ink/70 backdrop-blur">
-              <span className="h-1.5 w-1.5 rounded-full bg-sage" /> Créneaux atelier ·{" "}
+      <section className="relative min-h-[72svh] overflow-hidden bg-ink text-cream">
+        <img
+          src="/photos/atelier-mains.webp"
+          alt="Peinture sur céramique au Kafé Céramik"
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-ink/60" />
+        <div className="absolute inset-y-0 left-0 w-3 bg-[#e90061] sm:w-5" />
+        <div className="relative mx-auto flex min-h-[72svh] max-w-6xl items-end px-4 py-12 sm:items-center sm:py-16">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cream/40 bg-ink/40 px-4 py-2 text-xs font-semibold backdrop-blur-sm">
+              <span className="h-2 w-2 rounded-full bg-[#f4d44d]" /> Saint-François ·{" "}
               {schedule.inline}
             </div>
-            <h1 className="mt-6 max-w-3xl text-5xl leading-[0.95] text-ink sm:text-7xl">
+            <h1 className="mt-6 text-5xl leading-[0.98] text-cream sm:text-7xl lg:text-8xl">
               Kafé Céramik.
               <br />
-              <span className="text-brick">Déjeunette</span> &amp;{" "}
-              <span className="text-sage">Création</span>.
+              <span className="text-[#f5bdc9]">Déjeunette</span> &amp; création.
             </h1>
-            <p className="mt-6 max-w-xl text-base text-ink/75 sm:text-lg">
-              {settings.walkInNoticeText}
+            <p className="mt-6 max-w-2xl text-base leading-7 text-cream/90 sm:text-lg">
+              Viens boire un café, manger un morceau ou peindre ta propre pièce. Pour l’atelier,
+              réserve ton créneau pour être prioritaire sur les places disponibles.
             </p>
-
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 to="/reserver"
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3.5 text-sm font-medium text-primary-foreground shadow-lg shadow-ink/10 transition hover:bg-sage/90"
+                className="inline-flex items-center gap-2 rounded-full bg-[#e90061] px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-ink/20 transition hover:-translate-y-0.5 hover:bg-[#cf0057]"
               >
                 <CalendarHeart className="h-4 w-4" /> Réserver un atelier
               </Link>
               <Link
                 to="/carte"
-                className="inline-flex items-center gap-2 rounded-full border border-ink/20 bg-cream/85 px-6 py-3.5 text-sm font-medium backdrop-blur hover:bg-cream"
+                className="inline-flex items-center gap-2 rounded-full border border-cream/50 bg-cream/95 px-6 py-3.5 text-sm font-semibold text-ink transition hover:-translate-y-0.5 hover:bg-white"
               >
-                <Coffee className="h-4 w-4" /> Voir la carte café
+                <Coffee className="h-4 w-4" /> Voir la carte
               </Link>
             </div>
           </div>
-
-          <CeramicHero />
         </div>
+        <div className="checker-pink absolute inset-x-0 bottom-0 h-4" />
       </section>
 
-      <section className="mx-auto -mt-4 max-w-6xl px-4 pb-6">
-        <div className="grid gap-3 rounded-3xl border border-border bg-card/85 p-4 shadow-sm shadow-ink/5 sm:grid-cols-3 sm:p-5">
+      <section className="border-b border-border bg-cream">
+        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:grid-cols-3 sm:py-10">
           <VisitNote
             icon={Coffee}
-            title="Kafé sans réservation"
-            body="Passez pour un café, un jus, un bagel ou une déjeunette selon les places du moment."
+            title="Café et déjeunette, sans réservation"
+            body="Passe quand tu veux pour boire ou manger, selon les places du moment."
           />
           <VisitNote
             icon={CalendarHeart}
             title="Atelier prioritaire sur réservation"
-            body="Pour peindre, réservez votre table et prévoyez une consommation sur place."
+            body="Pour peindre, réserve ta table et prévois une consommation sur place."
           />
           <VisitNote
             icon={Sparkles}
-            title="Places du jour possibles"
-            body="Sans réservation, l'atelier reste possible s'il reste de la place à votre arrivée."
+            title="Un atelier reste parfois possible le jour même"
+            body="Sans réservation, l’équipe t’accueille seulement s’il reste une place adaptée."
           />
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
-        <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
-          <div className="grid gap-5 sm:grid-cols-2">
-            {experiences.map((item) => (
-              <ExperienceCard key={item.to} item={item} />
-            ))}
+      <section className="bg-[#f5cdd7] py-14 sm:py-20">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-cream px-3 py-1.5 text-xs font-semibold text-ink">
+                <Sparkles className="h-3.5 w-3.5 text-[#e90061]" /> Sur place
+              </div>
+              <h2 className="mt-5 max-w-xl text-4xl leading-[1.03] text-ink sm:text-5xl">
+                Un vrai lieu de vie, pas seulement une table et des pinceaux.
+              </h2>
+              <p className="mt-5 max-w-xl leading-7 text-ink/75">
+                Tu peux venir pour la pause gourmande, pour créer, ou pour les deux. Les photos de
+                Manika racontent le Kafé tel qu’il est : vivant, coloré et plein de petits détails.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <figure className="overflow-hidden rounded-[2rem] border-4 border-cream bg-cream shadow-lg shadow-ink/10">
+                <img
+                  src="/photos/atelier-portrait.webp"
+                  alt="Une participante peint sa céramique"
+                  loading="lazy"
+                  className="aspect-[4/5] h-full w-full object-cover"
+                />
+              </figure>
+              <div className="grid gap-3 sm:gap-4">
+                <figure className="overflow-hidden rounded-[2rem] border-4 border-cream bg-cream shadow-lg shadow-ink/10">
+                  <img
+                    src="/photos/brunch-bowl.webp"
+                    alt="Une assiette gourmande servie au Kafé"
+                    loading="lazy"
+                    className="aspect-[4/3] h-full w-full object-cover"
+                  />
+                </figure>
+                <figure className="overflow-hidden rounded-[2rem] border-4 border-cream bg-cream shadow-lg shadow-ink/10">
+                  <img
+                    src="/photos/comptoir-gourmand.webp"
+                    alt="Le comptoir et les pâtisseries maison"
+                    loading="lazy"
+                    className="aspect-[4/3] h-full w-full object-cover"
+                  />
+                </figure>
+              </div>
+            </div>
           </div>
+        </div>
+      </section>
 
-          <div className="grid gap-3">
+      <section className="mx-auto max-w-6xl px-4 py-14 sm:py-20">
+        <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+          <Link
+            to="/brunch"
+            className="group relative min-h-[430px] overflow-hidden rounded-[2rem] bg-ink text-cream"
+          >
+            <img
+              src="/photos/atelier-mains.webp"
+              alt="Une pièce en train d’être peinte"
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+            />
+            <div className="absolute inset-0 bg-ink/55" />
+            <div className="relative flex h-full min-h-[430px] flex-col justify-end p-6 sm:p-8">
+              <span className="w-fit rounded-full bg-[#f4d44d] px-3 py-1.5 text-xs font-bold text-ink">
+                Avant · pendant · après
+              </span>
+              <h2 className="mt-4 max-w-xl text-4xl leading-none sm:text-5xl">
+                Comment se passe un atelier ?
+              </h2>
+              <p className="mt-4 max-w-xl leading-7 text-cream/85">
+                Découvre le parcours complet, de la réservation jusqu’à la récupération de ta
+                création après cuisson.
+              </p>
+              <span className="mt-6 inline-flex w-fit items-center gap-2 rounded-full bg-cream px-5 py-3 text-sm font-semibold text-ink">
+                Voir le déroulement <ArrowRight className="h-4 w-4" />
+              </span>
+            </div>
+          </Link>
+
+          <div className="grid content-start gap-3">
+            <div className="mb-2">
+              <div className="text-sm font-semibold text-[#e90061]">Tout retrouver facilement</div>
+              <h2 className="mt-2 text-3xl leading-tight">Prépare ton passage au Kafé.</h2>
+            </div>
             {quickLinks.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
                   key={item.to}
                   to={item.to}
-                  className="group flex items-center justify-between gap-3 rounded-2xl border border-border bg-card/90 p-4 transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-cream"
+                  className="group flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 transition hover:-translate-y-0.5 hover:border-[#e90061]/40"
                 >
                   <span className="flex min-w-0 items-center gap-3">
-                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-secondary text-secondary-foreground">
+                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#f5cdd7] text-[#8b2f24]">
                       <Icon className="h-5 w-5" />
                     </span>
                     <span className="min-w-0">
-                      <span className="block font-medium">{item.label}</span>
+                      <span className="block font-semibold">{item.label}</span>
                       <span className="block text-sm text-muted-foreground">{item.desc}</span>
                     </span>
                   </span>
-                  <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-primary" />
+                  <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-[#e90061]" />
                 </Link>
               );
             })}
-
             <a
               href="https://www.google.com/maps?q=16.286364%2C-61.288357"
               target="_blank"
               rel="noreferrer"
-              className="group flex items-center justify-between gap-3 rounded-2xl border border-border bg-ink p-4 text-cream transition hover:-translate-y-0.5"
+              className="group flex items-center justify-between gap-3 rounded-2xl bg-[#376b49] p-4 text-cream transition hover:-translate-y-0.5"
             >
-              <span className="flex min-w-0 items-center gap-3">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-cream/12">
+              <span className="flex items-center gap-3">
+                <span className="grid h-11 w-11 place-items-center rounded-xl bg-cream/15">
                   <MapPin className="h-5 w-5" />
                 </span>
-                <span className="min-w-0">
-                  <span className="block font-medium">Itinéraire</span>
-                  <span className="block text-sm text-cream/70">Lieu dit Loyette</span>
+                <span>
+                  <span className="block font-semibold">Trouver le Kafé</span>
+                  <span className="block text-sm text-cream/75">Lieu dit Loyette</span>
                 </span>
               </span>
-              <ArrowRight className="h-5 w-5 shrink-0 text-cream/70 transition group-hover:translate-x-1" />
+              <ArrowRight className="h-5 w-5 transition group-hover:translate-x-1" />
             </a>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-8">
-        <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+      <section className="border-y border-border bg-[#fff7e7] py-14 sm:py-20">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-rose/35 px-3 py-1 text-xs font-medium text-ink/70">
-              <Brush className="h-3.5 w-3.5" /> Atelier céramique
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#dce6ca] px-3 py-1.5 text-xs font-semibold text-ink">
+              <Brush className="h-3.5 w-3.5" /> Le catalogue
             </div>
-            <h2 className="mt-4 max-w-xl text-3xl leading-tight text-ink sm:text-4xl">
-              Des pièces à choisir sur place, puis à personnaliser autour d'une table.
+            <h2 className="mt-5 text-4xl leading-[1.03] sm:text-5xl">
+              Choisis d’abord la forme qui te donne envie.
             </h2>
-            <p className="mt-4 max-w-lg text-sm leading-6 text-foreground/70 sm:text-base">
-              Choisissez une formule, trouvez un créneau disponible, confirmez votre venue, puis
-              venez profiter d'un moment créatif sans aller-retour interminable.
+            <p className="mt-5 max-w-xl leading-7 text-muted-foreground">
+              Tasse, bol, assiette, vase ou petite décoration : le catalogue te donne une idée des
+              formes et des tarifs. Le choix final se fait sur place.
             </p>
+            <Link
+              to="/objets"
+              className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
+            >
+              Découvrir les objets <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
-
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {pieces.map((piece) => (
               <Link
                 key={piece.name}
                 to="/objets"
-                className={`group rounded-2xl border border-border p-3 transition hover:-translate-y-0.5 hover:border-primary/40 ${piece.tone}`}
+                className={`group rounded-[1.75rem] border border-border p-3 transition hover:-translate-y-1 ${piece.tone}`}
               >
                 <div className="mx-auto h-24 w-24 transition group-hover:rotate-[-3deg]">
                   <CeramicPiece kind={piece.kind} label={piece.name} />
                 </div>
                 <div className="mt-2 text-center">
-                  <div className="font-medium">{piece.name}</div>
+                  <div className="font-semibold">{piece.name}</div>
                   <div className="text-xs text-muted-foreground">{piece.detail}</div>
                 </div>
               </Link>
@@ -249,80 +293,53 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <section className="mx-auto max-w-6xl px-4 py-14 sm:py-20">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-cream/80 px-3 py-1 text-xs font-medium text-ink/70">
-              <Sparkles className="h-3.5 w-3.5" /> Créations
-            </div>
-            <h2 className="mt-4 max-w-2xl text-3xl leading-tight text-ink sm:text-4xl">
-              Quelques idées avant de choisir sa pièce.
+            <div className="text-sm font-semibold text-[#e90061]">Créations</div>
+            <h2 className="mt-2 max-w-2xl text-4xl leading-tight sm:text-5xl">
+              Des inspirations, jamais des modèles imposés.
             </h2>
-            <p className="mt-4 max-w-xl text-sm leading-6 text-foreground/70 sm:text-base">
-              Un aperçu de pièces déjà peintes au Kafé : motifs tropicaux, dessins fins, aplats
-              colorés et idées simples à reprendre pendant l'atelier.
+            <p className="mt-4 max-w-xl leading-7 text-muted-foreground">
+              Motifs tropicaux, aplats colorés ou dessins fins : regarde ce qui a déjà été créé,
+              puis invente ta propre pièce.
             </p>
           </div>
           <Link
             to="/creations"
-            className="inline-flex w-fit items-center gap-2 rounded-full border border-ink/20 bg-cream/85 px-5 py-3 text-sm font-medium transition hover:bg-cream"
+            className="inline-flex w-fit items-center gap-2 rounded-full border border-ink/20 bg-cream px-5 py-3 text-sm font-semibold"
           >
-            Voir les créations <ArrowRight className="h-4 w-4" />
+            Toutes les créations <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {featuredCreations.map((photo) => (
-            <Link
-              key={photo.id}
-              to="/creations"
-              className="group overflow-hidden rounded-2xl border border-border bg-card/90 shadow-sm shadow-ink/5 transition hover:-translate-y-0.5 hover:border-primary/40"
-            >
-              <div className="aspect-[4/5] overflow-hidden bg-cream">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {featuredCreations.map((photo, index) => (
+            <Link key={photo.id} to="/creations" className="group block">
+              <div
+                className={`overflow-hidden border-4 border-cream bg-cream shadow-md shadow-ink/10 ${
+                  index % 2 === 0
+                    ? "rotate-[-1deg] rounded-[2rem]"
+                    : "rotate-[1deg] rounded-[2.5rem]"
+                }`}
+              >
                 <img
                   src={photo.imageDataUrl || photo.imageSrc || "/creations/assiette-tortue.webp"}
                   alt={photo.title}
                   loading="lazy"
-                  className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                  className="aspect-[4/5] h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
                 />
               </div>
-              <div className="p-4">
-                <div className="font-medium">{photo.title}</div>
-                <p className="mt-2 text-sm leading-5 text-muted-foreground">{photo.body}</p>
+              <div className="mt-4 px-2">
+                <div className="font-semibold">{photo.title}</div>
+                <p className="mt-1 text-sm leading-5 text-muted-foreground">{photo.body}</p>
               </div>
             </Link>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-8">
-        <div className="rounded-3xl border border-border bg-card/80 p-5 shadow-sm shadow-ink/5 sm:p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-rose/35 px-3 py-1 text-xs font-medium text-ink/70">
-                <Sparkles className="h-3.5 w-3.5" /> À vivre au Kafé
-              </div>
-              <h2 className="mt-4 max-w-2xl text-3xl leading-tight text-ink sm:text-4xl">
-                Des moments qui ressemblent à l'endroit : simples, gourmands, créatifs.
-              </h2>
-            </div>
-            <Link
-              to="/reserver"
-              className="inline-flex w-fit items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
-            >
-              Voir les créneaux <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            {moodCards.map((item) => (
-              <MoodTile key={item.title} item={item} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto mt-4 max-w-6xl px-4">
+      <section className="mx-auto max-w-6xl px-4 pb-6">
         <div className="grid gap-3 sm:grid-cols-3">
           <InfoTile icon={MapPin} title="Adresse" body={settings.contactAddress} />
           <InfoTile icon={Clock} title="Horaires atelier" body={schedule.inline} />
@@ -330,64 +347,6 @@ function HomePage() {
         </div>
       </section>
     </PageShell>
-  );
-}
-
-function CeramicHero() {
-  return (
-    <div className="relative mx-auto hidden min-h-[360px] w-full max-w-sm lg:block">
-      <div className="absolute left-8 top-8 h-60 w-60 rotate-[-7deg] rounded-[2rem] border border-border bg-cream/80 p-4 shadow-xl shadow-ink/10">
-        <CeramicPiece kind="plate" label="Assiette peinte" />
-      </div>
-      <div className="absolute right-0 top-2 h-36 w-36 rotate-[10deg] rounded-3xl border border-border bg-rose/35 p-3 shadow-lg shadow-ink/10">
-        <CeramicPiece kind="mug" label="Tasse peinte" />
-      </div>
-      <div className="absolute bottom-3 right-12 h-40 w-40 rotate-[-5deg] rounded-3xl border border-border bg-sage/25 p-3 shadow-lg shadow-ink/10">
-        <CeramicPiece kind="vase" label="Vase à peindre" />
-      </div>
-    </div>
-  );
-}
-
-function ExperienceCard({ item }: { item: (typeof experiences)[number] }) {
-  const Icon = item.icon;
-  return (
-    <Link
-      to={item.to}
-      className={`group relative min-h-[320px] overflow-hidden rounded-2xl border border-border p-5 transition hover:-translate-y-0.5 hover:border-primary/40 ${item.tone}`}
-    >
-      <div className="relative z-10 flex h-full flex-col">
-        <div className="flex items-center justify-between gap-3">
-          <span className="inline-flex items-center gap-2 rounded-full bg-cream/80 px-3 py-1 text-xs font-medium text-ink/70">
-            <Icon className="h-3.5 w-3.5" /> {item.eyebrow}
-          </span>
-          <ArrowRight className="h-5 w-5 text-foreground/45 transition group-hover:translate-x-1 group-hover:text-primary" />
-        </div>
-        <div className="mt-6 h-36 w-36 transition group-hover:rotate-[-3deg]">
-          <CeramicPiece kind={item.visual} label={item.title} />
-        </div>
-        <div className="mt-auto pt-6">
-          <h2 className="text-3xl leading-none">{item.title}</h2>
-          <p className="mt-3 text-sm leading-6 text-foreground/70">{item.body}</p>
-          <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
-            {item.cta}
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function MoodTile({ item }: { item: (typeof moodCards)[number] }) {
-  const Icon = item.icon;
-  return (
-    <div className={`rounded-2xl border border-border p-5 ${item.tone}`}>
-      <div className="grid h-11 w-11 place-items-center rounded-xl bg-card/80 text-ink">
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="mt-5 font-medium">{item.title}</div>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
-    </div>
   );
 }
 
@@ -402,12 +361,12 @@ function VisitNote({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary text-secondary-foreground">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#f5cdd7] text-[#8b2f24]">
         <Icon className="h-5 w-5" />
       </span>
       <span className="min-w-0">
-        <span className="block font-medium">{title}</span>
-        <span className="mt-1 block text-sm leading-5 text-muted-foreground">{body}</span>
+        <span className="block font-semibold">{title}</span>
+        <span className="mt-1 block text-sm leading-6 text-muted-foreground">{body}</span>
       </span>
     </div>
   );
@@ -429,7 +388,7 @@ function InfoTile({
       </span>
       <div className="min-w-0">
         <div className="text-xs uppercase text-muted-foreground">{title}</div>
-        <div className="text-sm font-medium">{body}</div>
+        <div className="text-sm font-semibold">{body}</div>
       </div>
     </div>
   );

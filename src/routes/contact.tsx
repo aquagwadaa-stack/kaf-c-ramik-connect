@@ -24,7 +24,7 @@ function ContactPage() {
 
   return (
     <PageShell>
-      <section className="border-b border-border bg-secondary/65">
+      <section className="relative overflow-hidden border-b border-border bg-[#f5cdd7]">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 lg:grid-cols-[1fr_0.85fr] lg:items-end lg:py-16">
           <div>
             <div className="inline-flex items-center gap-2 text-sm font-medium text-primary">
@@ -35,7 +35,7 @@ function ContactPage() {
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
               Pour une demande particulière, un grand groupe ou une organisation hors du parcours
-              habituel, l'équipe vous répond directement.
+              habituel, l'équipe te répond directement.
             </p>
           </div>
           <div className="flex flex-wrap gap-3 lg:justify-end">
@@ -55,10 +55,11 @@ function ContactPage() {
             </a>
           </div>
         </div>
+        <div className="checker-pink h-4" />
       </section>
 
-      <section className="mx-auto grid max-w-6xl gap-0 px-4 py-10 lg:grid-cols-[0.9fr_1.1fr] lg:py-14">
-        <div className="border border-border bg-card p-5 sm:p-7 lg:border-r-0">
+      <section className="mx-auto grid max-w-6xl gap-4 px-4 py-10 lg:grid-cols-[0.9fr_1.1fr] lg:py-14">
+        <div className="rounded-[2rem] border border-border bg-card p-5 sm:p-7">
           <h2 className="font-display text-2xl">Nous contacter</h2>
           <div className="mt-6 divide-y divide-border">
             <ContactRow
@@ -107,7 +108,7 @@ function ContactPage() {
           </div>
         </div>
 
-        <div className="relative min-h-[360px] overflow-hidden border border-border bg-[#c8d3bd]">
+        <div className="relative min-h-[360px] overflow-hidden rounded-[2rem] border border-border bg-[#c8d3bd]">
           <iframe
             title="Localisation du Kafé Céramik"
             src="https://www.google.com/maps?q=16.286364,-61.288357&z=15&output=embed"
@@ -148,7 +149,7 @@ function ContactRow({
       rel={external ? "noreferrer" : undefined}
       className="group grid grid-cols-[2.5rem_1fr_auto] items-start gap-3 py-4 first:pt-0 last:pb-0"
     >
-      <span className="grid h-10 w-10 place-items-center bg-secondary text-primary">
+      <span className="grid h-10 w-10 place-items-center rounded-xl bg-secondary text-primary">
         <Icon className="h-4 w-4" />
       </span>
       <span className="min-w-0">

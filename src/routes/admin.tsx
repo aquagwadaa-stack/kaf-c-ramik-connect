@@ -410,7 +410,7 @@ function OverviewPanel({
     },
     {
       label: "Gérer les objets",
-      detail: "Mettre à jour les prix, photos et disponibilités",
+      detail: "Mettre à jour les noms, catégories, prix et photos",
       icon: PackageOpen,
       tab: "objects",
     },
@@ -1465,7 +1465,7 @@ function ObjectsPanel({
   return (
     <Panel
       title="Objets à peindre"
-      desc="Gestion simple des pièces, prix, disponibilités et photos visibles côté client."
+      desc="Catalogue informatif visible côté client : noms, catégories, prix, précisions et photos."
     >
       <div className="grid gap-3 rounded-2xl border border-border bg-background p-4 sm:grid-cols-[1fr_180px_110px_auto]">
         <Field
@@ -1510,19 +1510,6 @@ function ObjectsPanel({
                   {object.category} · {object.price} €
                 </div>
               </div>
-              <select
-                value={object.availability}
-                onChange={(event) =>
-                  updateObject(object.id, {
-                    availability: event.target.value as CeramicObject["availability"],
-                  })
-                }
-                className="rounded-full border border-input bg-background px-3 py-1.5 text-xs"
-              >
-                <option value="available">Disponible</option>
-                <option value="limited">Stock limité</option>
-                <option value="unavailable">Indisponible</option>
-              </select>
               <button
                 onClick={() => removeObject(object.id)}
                 className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
@@ -1600,13 +1587,13 @@ function ObjectsPanel({
               </div>
             </div>
             <label className="mt-3 block">
-              <span className="mb-1.5 block text-sm font-medium">Note visible / precision</span>
+              <span className="mb-1.5 block text-sm font-medium">Précision visible</span>
               <textarea
                 value={object.note ?? ""}
                 onChange={(event) => updateObject(object.id, { note: event.target.value })}
                 rows={2}
                 className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-                placeholder="Stock limite, modele populaire, grande piece..."
+                placeholder="Dimensions, type de pièce, détail utile…"
               />
             </label>
           </div>
@@ -1811,7 +1798,7 @@ function DocumentsPanel({
       title="Guide"
       desc="Les trois chapitres ci-dessous correspondent exactement aux trois onglets de la page publique."
     >
-      <div className="border border-border bg-background p-4">
+      <div className="rounded-[1.75rem] border border-border bg-background p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-2">
             <BookOpenText className="h-5 w-5 text-primary" />
@@ -1843,12 +1830,13 @@ function DocumentsPanel({
           onChange={(value) => updateDocument({ intro: value })}
         />
 
-        <div className="mt-5 flex items-start gap-3 border-l-4 border-primary bg-secondary/45 p-4 text-sm leading-6">
+        <div className="mt-5 flex items-start gap-3 rounded-2xl border border-primary/20 bg-secondary/45 p-4 text-sm leading-6">
           <FileText className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
           <p>
-            Lorsqu'un PDF est remplacé, son aperçu fidèle est généré automatiquement. Le nouveau
-            document apparaît aussitôt dans le bon onglet public sans modifier la mise en page du
-            site.
+            Lorsqu'un PDF est remplacé, son aperçu fidèle apparaît aussitôt dans le bon onglet
+            public. La présentation web reconstruite est conservée pour les documents officiels déjà
+            validés ; si leur contenu change, la nouvelle version reste lisible immédiatement puis
+            sa mise en page intégrée peut être adaptée après vérification.
           </p>
         </div>
 
@@ -1904,18 +1892,18 @@ function ResourceAdminList({
           ? resource.previewImageDataUrls
           : (resource.previewImageUrls ?? []);
         return (
-          <div key={resource.id} className="border border-border bg-card p-3">
+          <div key={resource.id} className="rounded-2xl border border-border bg-card p-3">
             <div className={`grid gap-3 ${compact ? "" : "md:grid-cols-[140px_1fr]"}`}>
               {previews[0] ? (
                 <img
                   src={previews[0]}
                   alt={resource.title}
-                  className={`w-full border border-border bg-white object-contain ${
+                  className={`w-full rounded-xl border border-border bg-white object-contain ${
                     compact ? "max-h-40" : "h-36"
                   }`}
                 />
               ) : (
-                <div className="grid h-28 place-items-center border border-border bg-secondary/40">
+                <div className="grid h-28 place-items-center rounded-xl border border-border bg-secondary/40">
                   <FileText className="h-7 w-7 text-muted-foreground" />
                 </div>
               )}

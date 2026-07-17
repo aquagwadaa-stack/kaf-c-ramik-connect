@@ -42,7 +42,7 @@ export const Route = createFileRoute("/reserver")({
       { title: "Réserver un atelier — Kafé Céramik" },
       {
         name: "description",
-        content: "Choisissez votre formule et votre créneau dans le planning de la semaine.",
+        content: "Choisis ton créneau dans le planning de la semaine.",
       },
     ],
   }),
@@ -138,7 +138,7 @@ function ReserverPage() {
       setErrors({
         slot:
           placement.maxGroupSize > 0
-            ? `Il reste des places, mais aucun espace ne peut accueillir votre groupe de ${people} personnes ensemble.`
+            ? `Il reste des places, mais aucun espace ne peut accueillir ton groupe de ${people} personnes ensemble.`
             : "Ce créneau est complet.",
       });
       setStep(2);
@@ -157,7 +157,7 @@ function ReserverPage() {
     if (settings.reservationFieldRequirements.childrenAgesRequired && !form.childrenAges.trim())
       nextErrors.childrenAges = "Merci d'indiquer les enfants et leurs âges, ou “Aucun”.";
     if (settings.reservationFieldRequirements.messageRequired && !form.message.trim())
-      nextErrors.message = "Merci d'indiquer votre demande, ou “RAS”.";
+      nextErrors.message = "Merci d'indiquer ta demande, ou “RAS”.";
     if (!guideAccepted)
       nextErrors.guideAccepted = "Merci de confirmer les consignes avant de continuer";
     setErrors(nextErrors);
@@ -191,9 +191,9 @@ function ReserverPage() {
         message.includes("KAFE_INVALID_DATE") ||
         message.includes("KAFE_SEATING_REVIEW_REQUIRED");
       const friendlyMessage = message.includes("KAFE_SLOT_FULL")
-        ? "Ce créneau vient d'être rempli par une autre réservation. Choisissez un autre horaire."
+        ? "Ce créneau vient d'être rempli par une autre réservation. Choisis un autre horaire."
         : schedulingConflict
-          ? "Ce créneau n'est plus réservable. Choisissez une autre date ou un autre horaire."
+          ? "Ce créneau n'est plus réservable. Choisis une autre date ou un autre horaire."
           : "La réservation n'a pas pu être enregistrée. Réessayez dans un instant.";
       if (schedulingConflict) {
         setSlot("");
@@ -211,7 +211,7 @@ function ReserverPage() {
     setDone(reservation.id);
     setDoneNotice(
       requiresManualReview
-        ? "Votre demande est enregistrée. L'équipe du Kafé confirmera le créneau dès validation."
+        ? "Ta demande est enregistrée. L'équipe du Kafé confirmera le créneau dès validation."
         : settings.confirmationEmailText,
     );
     setStep(4);
@@ -221,8 +221,8 @@ function ReserverPage() {
     <PageShell>
       <PageHeader
         eyebrow="Réservation"
-        title="Réservez votre atelier"
-        description="La réservation concerne l'atelier céramique avec consommation sur place. Pour un café, un bagel ou une déjeunette sans peindre, vous pouvez passer librement."
+        title="Réserve ton atelier"
+        description="La réservation concerne l'atelier céramique avec consommation sur place. Pour un café, un bagel ou une déjeunette sans peindre, tu peux passer librement."
       />
       <section className="mx-auto max-w-5xl px-4 py-10">
         {settings.walkInCafeEnabled && (
@@ -243,7 +243,7 @@ function ReserverPage() {
 
         <div className="mt-6 rounded-2xl border border-border bg-card p-5 sm:p-8">
           {step === 1 && (
-            <Step title="Quelle expérience vous tente ?">
+            <Step title="Quelle expérience te tente ?">
               <div className="grid gap-3 sm:grid-cols-2">
                 {experiences.map((item) => {
                   const Icon = item.icon;
@@ -332,7 +332,7 @@ function ReserverPage() {
           )}
 
           {step === 2 && (
-            <Step title="Choisissez un créneau">
+            <Step title="Choisis un créneau">
               <WeekPlanner
                 people={people}
                 reservations={reservations}
@@ -347,7 +347,7 @@ function ReserverPage() {
           )}
 
           {step === 3 && (
-            <Step title="Vos coordonnées">
+            <Step title="Tes coordonnées">
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field
                   label="Prénom"
@@ -395,7 +395,7 @@ function ReserverPage() {
                     onChange={(event) => setForm({ ...form, message: event.target.value })}
                     rows={3}
                     className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="Allergies, organisation du groupe… Indiquez RAS si vous n'avez rien à signaler."
+                    placeholder="Allergies, organisation du groupe… Indique RAS si tu n'as rien à signaler."
                   />
                   {errors.message && (
                     <span className="mt-1 block text-xs text-destructive">{errors.message}</span>
@@ -426,10 +426,10 @@ function ReserverPage() {
                 <p className="mt-1 text-muted-foreground">{settings.reservationConditionsText}</p>
                 <p className="mt-2 text-muted-foreground">
                   La cuisine ferme à {formatPublicTime(settings.kitchenClosingTime)}. Pensez à
-                  commander votre consommation à votre arrivée.
+                  commander ta consommation à ton arrivée.
                 </p>
                 <p className="mt-2 text-muted-foreground">
-                  Votre demande sort du cadre habituel ?{" "}
+                  Ta demande sort du cadre habituel ?{" "}
                   <Link
                     to="/contact"
                     className="font-medium text-primary underline underline-offset-2"
@@ -443,7 +443,7 @@ function ReserverPage() {
                 <div className="font-medium">À savoir avant de confirmer</div>
                 <ul className="mt-2 grid gap-1.5 text-muted-foreground sm:grid-cols-2">
                   <li>• Consommation sur place obligatoire pour peindre</li>
-                  <li>• Cuisson et finition réalisées après votre départ</li>
+                  <li>• Cuisson et finition réalisées après ton départ</li>
                   <li>• Création prête habituellement sous 7 à 10 jours</li>
                   <li>• Photo et initiales indispensables pour la récupérer</li>
                   <li>• Pièces conservées au maximum deux mois</li>

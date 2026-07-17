@@ -164,9 +164,9 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
       <main className="min-h-screen bg-background text-foreground">
         <SigningHeader />
         <section className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
-          <div className="border border-border bg-card p-5 sm:p-8">
+          <div className="rounded-[2rem] border border-border bg-card p-5 sm:p-8">
             <div className="flex items-start gap-4">
-              <span className="grid h-12 w-12 shrink-0 place-items-center bg-secondary text-primary">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
                 <UserRoundCheck className="h-6 w-6" />
               </span>
               <div>
@@ -184,7 +184,7 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
               <select
                 value={reservationRef}
                 onChange={(event) => setReservationRef(event.target.value)}
-                className="h-12 w-full border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                className="h-12 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">Personne sans réservation</option>
                 {availableReservations.map((reservation) => (
@@ -194,7 +194,7 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
             </label>
 
             {selectedReservation && (
-              <div className="mt-4 border-l-4 border-primary bg-secondary/45 p-4 text-sm">
+              <div className="mt-4 rounded-2xl border border-primary/20 bg-secondary/45 p-4 text-sm">
                 <div className="font-medium">
                   {selectedReservation.firstName} {selectedReservation.lastName} ·{" "}
                   {selectedReservation.people} personne{selectedReservation.people > 1 ? "s" : ""}
@@ -223,7 +223,7 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
   if (savedSignature) {
     return (
       <main className="grid min-h-screen place-items-center bg-secondary/45 px-4 py-10 text-foreground">
-        <div className="w-full max-w-xl border border-border bg-card p-6 text-center sm:p-9">
+        <div className="w-full max-w-xl rounded-[2rem] border border-border bg-card p-6 text-center sm:p-9">
           <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-primary text-primary-foreground">
             <CheckCircle2 className="h-8 w-8" />
           </span>
@@ -279,13 +279,13 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
       />
       <section className="mx-auto max-w-5xl px-4 py-6 lg:py-10">
         {selectedReservation && (
-          <div className="mb-4 border-l-4 border-primary bg-background px-4 py-3 text-sm">
+          <div className="mb-4 rounded-2xl border border-primary/20 bg-background px-4 py-3 text-sm">
             Réservation de {selectedReservation.firstName} {selectedReservation.lastName} ·{" "}
             {formatReservationDate(selectedReservation.date)} à {selectedReservation.slot}
           </div>
         )}
 
-        <div className="relative overflow-hidden border border-[#e90061]/25 bg-[#fff4f5] shadow-[0_24px_60px_rgba(97,49,39,0.12)]">
+        <div className="relative overflow-hidden rounded-[2rem] border border-[#e90061]/25 bg-[#fff4f5] shadow-[0_24px_60px_rgba(97,49,39,0.12)]">
           <Sparkles className="absolute left-5 top-6 h-7 w-7 text-[#f0ad19]" />
           <Heart className="absolute right-6 top-8 h-8 w-8 text-[#e90061]" />
 
@@ -303,7 +303,7 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
             </div>
           </header>
 
-          <div className="mx-4 border-2 border-dashed border-white bg-[#cfe6a5] px-5 py-7 text-center sm:mx-10 sm:px-10 sm:py-9">
+          <div className="mx-4 rounded-[1.75rem] border-2 border-dashed border-white bg-[#cfe6a5] px-5 py-7 text-center sm:mx-10 sm:px-10 sm:py-9">
             <ShieldCheck className="mx-auto h-9 w-9 text-[#315d39]" />
             <p className="mx-auto mt-4 max-w-3xl text-base font-medium leading-7 sm:text-xl sm:leading-9">
               {waiver.body}
@@ -333,7 +333,7 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
                 onChange={(firstName) => setForm({ ...form, firstName })}
                 tone="purple"
               />
-              <div className="border-2 border-dashed border-[#22a9d6] bg-white p-4">
+              <div className="rounded-2xl border-2 border-dashed border-[#22a9d6] bg-white p-4">
                 <div className="inline-flex bg-[#22a9d6] px-4 py-1.5 text-xs font-bold uppercase text-white">
                   Date
                 </div>
@@ -341,7 +341,7 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
                   {new Date().toLocaleDateString("fr-FR")}
                 </div>
               </div>
-              <div className="border-2 border-dashed border-[#f2a429] bg-white p-4">
+              <div className="rounded-2xl border-2 border-dashed border-[#f2a429] bg-white p-4">
                 <SignaturePad
                   value={signatureDataUrl}
                   onChange={setSignatureDataUrl}
@@ -361,7 +361,7 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
             </label>
 
             {form.isMinor && (
-              <div className="mt-4 grid gap-3 border-l-4 border-[#315d39] bg-[#cfe6a5]/45 p-4 sm:grid-cols-2">
+              <div className="mt-4 grid gap-3 rounded-2xl border border-[#315d39]/20 bg-[#cfe6a5]/45 p-4 sm:grid-cols-2">
                 <DigitalField
                   label="Prénom du responsable légal"
                   value={form.guardianFirstName}
@@ -444,7 +444,7 @@ function DigitalField({
   const labelTone =
     tone === "purple" ? "bg-[#8d59b6]" : tone === "rose" ? "bg-[#e90061]" : "bg-primary";
   return (
-    <label className={`border-2 border-dashed bg-white p-4 ${border}`}>
+    <label className={`rounded-2xl border-2 border-dashed bg-white p-4 ${border}`}>
       <span
         className={`inline-flex px-4 py-1.5 text-xs font-bold uppercase text-white ${labelTone}`}
       >

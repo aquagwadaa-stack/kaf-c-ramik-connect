@@ -26,11 +26,11 @@ export function PageHeader({
   description?: string;
 }) {
   return (
-    <section className="relative overflow-hidden border-b border-border/60">
+    <section className="relative overflow-hidden border-b border-border/60 bg-[#f5cdd7]">
       <OrganicShapes />
       <div className="relative mx-auto max-w-6xl px-4 py-14 sm:py-20">
         {eyebrow && (
-          <div className="mb-3 inline-flex items-center rounded-full border border-ink/15 bg-cream/80 px-3 py-1 text-xs font-medium text-ink/70">
+          <div className="mb-4 inline-flex items-center rounded-full border border-ink/15 bg-[#fff7e7] px-3 py-1.5 text-xs font-semibold text-ink/75">
             {eyebrow}
           </div>
         )}
@@ -39,6 +39,7 @@ export function PageHeader({
           <p className="mt-5 max-w-2xl text-base text-ink/75 sm:text-lg">{description}</p>
         )}
       </div>
+      <div className="checker-pink relative h-4" />
     </section>
   );
 }
