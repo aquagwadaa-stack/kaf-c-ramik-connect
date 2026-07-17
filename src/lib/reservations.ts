@@ -744,8 +744,8 @@ export function removeReservation(id: string) {
 export function experienceLabel(experience: ExperienceType): string {
   return {
     atelier: "Atelier céramique",
-    cafe_atelier: "Kafé + atelier",
-    brunch_atelier: "Brunch + atelier",
+    cafe_atelier: "Atelier céramique",
+    brunch_atelier: "Brunch",
     groupe: "Groupe",
   }[experience];
 }
