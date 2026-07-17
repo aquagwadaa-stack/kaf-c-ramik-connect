@@ -297,6 +297,30 @@ export async function callRpc<T>(name: string, args: Record<string, unknown>, au
   });
 }
 
+export async function invokeEdgeFunction<T>(
+  name: string,
+  body: Record<string, unknown>,
+  auth = false,
+) {
+  if (!isSupabaseConfigured()) throw new Error("Supabase is not configured");
+  const session = readAdminSession();
+  if (auth && !session?.access_token) throw new Error("Admin session required");
+
+  const headers: Record<string, string> = {
+    apikey: anonKey(),
+    "Content-Type": "application/json",
+  };
+  if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+
+  const response = await fetch(`${baseUrl()}/functions/v1/${encodeURIComponent(name)}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error(await errorMessage(response));
+  return (await response.json()) as T;
+}
+
 export async function uploadAdminFile(bucket: string, path: string, file: Blob) {
   if (!isSupabaseConfigured()) throw new Error("Supabase is not configured");
   const session = readAdminSession();

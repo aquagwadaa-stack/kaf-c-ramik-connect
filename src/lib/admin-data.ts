@@ -547,7 +547,7 @@ export interface KafeSettings {
 }
 
 export const settingsSeed: KafeSettings = {
-  configurationVersion: 4,
+  configurationVersion: 5,
   depositThreshold: 8,
   depositFixedAmount: 100,
   defaultCapacity: 63,
@@ -577,9 +577,9 @@ export const settingsSeed: KafeSettings = {
   cancellationNoticeHours: 48,
   groupDepositForfeitHours: 24,
   reservationFieldRequirements: {
-    emailRequired: false,
-    childrenAgesRequired: true,
-    messageRequired: true,
+    emailRequired: true,
+    childrenAgesRequired: false,
+    messageRequired: false,
   },
   manualConfirmationThreshold: 8,
   signatureRequiredOnArrival: true,
@@ -649,6 +649,8 @@ function normalizeKafeSettings(value?: Partial<KafeSettings> | null): KafeSettin
       ...merged,
       configurationVersion: settingsSeed.configurationVersion,
       depositFixedAmount: settingsSeed.depositFixedAmount,
+      reservationFieldRequirements: settingsSeed.reservationFieldRequirements,
+      reservationConditionsText: settingsSeed.reservationConditionsText,
       contactPhone: value?.contactPhone ?? settingsSeed.contactPhone,
       contactAddress: value?.contactAddress ?? settingsSeed.contactAddress,
       contactMapUrl: value?.contactMapUrl ?? settingsSeed.contactMapUrl,

@@ -9,7 +9,6 @@ VITE_SUPABASE_URL=https://xxxx.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx
 ```
 
-
 Sans ces variables, le site reste en mode demo local avec `localStorage`.
 
 ## Mise en place
@@ -62,4 +61,13 @@ Pour l'instant, creer un seul compte `owner` suffit. Les niveaux plus fins pourr
 - Creer les comptes reels de l'equipe.
 - Remplacer les contenus demo par le guide et la decharge valides par Mala Madre.
 - Verifier les durees de conservation des donnees client avec le client.
-- Tester les emails de confirmation quand le fournisseur mail sera choisi.
+- Configurer les secrets de la fonction `kafe-emails` :
+  - `RESEND_API_KEY` : cle API du compte email du client.
+  - `KAFE_EMAIL_FROM` : expediteur verifie, par exemple `Kafe Ceramik <reservations@domaine.fr>`.
+  - `KAFE_REPLY_TO` : adresse a laquelle l'equipe souhaite recevoir les reponses.
+  - `KAFE_CRON_SECRET` : secret long utilise uniquement par la tache de rappel.
+- Programmer l'appel horaire de l'action `process-reminders` sur la fonction `kafe-emails`
+  avec l'en-tete `x-cron-secret`. La fonction envoie uniquement les rappels situes entre 23 et
+  25 heures avant le creneau et marque chaque reservation pour eviter les doublons.
+- Tester en conditions reelles les quatre emails : confirmation simple, demande de groupe,
+  decision de l'equipe et rappel 24 heures avant.

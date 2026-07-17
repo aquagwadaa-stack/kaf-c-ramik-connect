@@ -34,6 +34,7 @@ import {
 import { PageShell } from "@/components/page-shell";
 import {
   addWalkInReservation,
+  decideGroupReservation,
   useReservations,
   experienceLabel,
   formatReservationDate,
@@ -1091,6 +1092,9 @@ function ReservationCard({
   settings: KafeSettings;
 }) {
   const location = seatingUnitLabel(reservation.seatingUnitId, settings);
+  const groupRequest =
+    reservation.isGroupRequest || reservation.people >= settings.manualConfirmationThreshold;
+  const pendingGroup = reservation.status === "pending" && groupRequest;
   return (
     <div className="rounded-2xl border border-border bg-background p-4">
       <div className="grid gap-3 sm:grid-cols-[1fr_1.4fr_auto] sm:items-center">
@@ -1146,32 +1150,34 @@ function ReservationCard({
         </div>
       )}
 
+      {groupRequest && <GroupDecisionControls reservation={reservation} />}
+
       <div className="mt-3 flex flex-wrap gap-2">
-        <StatusButton
-          id={reservation.id}
-          target="confirmed"
-          current={reservation.status}
-          label="Confirmer"
-        />
-        <StatusButton
-          id={reservation.id}
-          target="deposit_paid"
-          current={reservation.status}
-          label="Acompte reçu"
-        />
-        <StatusButton
-          id={reservation.id}
-          target="pending"
-          current={reservation.status}
-          label="En attente"
-        />
-        <StatusButton
-          id={reservation.id}
-          target="cancelled"
-          current={reservation.status}
-          label="Annuler"
-          danger
-        />
+        {!pendingGroup && (
+          <>
+            <StatusButton
+              id={reservation.id}
+              target="confirmed"
+              current={reservation.status}
+              label="Confirmer"
+            />
+            {reservation.depositRequired && (
+              <StatusButton
+                id={reservation.id}
+                target="deposit_paid"
+                current={reservation.status}
+                label="Acompte reçu"
+              />
+            )}
+            <StatusButton
+              id={reservation.id}
+              target="cancelled"
+              current={reservation.status}
+              label="Annuler"
+              danger
+            />
+          </>
+        )}
         <button
           onClick={() => removeReservation(reservation.id)}
           className="rounded-full border border-destructive/30 px-3 py-1 text-xs text-destructive hover:bg-destructive/10"
@@ -1179,6 +1185,80 @@ function ReservationCard({
           Supprimer
         </button>
       </div>
+    </div>
+  );
+}
+
+function GroupDecisionControls({ reservation }: { reservation: Reservation }) {
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState<"approve" | "reject" | null>(null);
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+
+  async function decide(approved: boolean) {
+    setSaving(approved ? "approve" : "reject");
+    setNotice("");
+    setError("");
+    try {
+      const result = await decideGroupReservation(reservation.id, approved, message);
+      setNotice(
+        result.delivered
+          ? `Demande ${approved ? "validée" : "refusée"} et email envoyé au client.`
+          : `Demande ${approved ? "validée" : "refusée"}. L'email n'a pas pu être envoyé automatiquement.`,
+      );
+    } catch (decisionError) {
+      setError(
+        decisionError instanceof Error
+          ? decisionError.message
+          : "La décision n'a pas pu être enregistrée.",
+      );
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  if (reservation.status !== "pending") {
+    if (!notice && !reservation.decisionMessage) return null;
+    return (
+      <div className="mt-3 rounded-xl bg-secondary/45 px-3 py-2 text-xs text-muted-foreground">
+        {notice || `Motif transmis au client : ${reservation.decisionMessage}`}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+      <div className="font-medium">Décision de l'équipe</div>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Le client recevra automatiquement la réponse par email.
+      </p>
+      <textarea
+        value={message}
+        onChange={(event) => setMessage(event.target.value)}
+        rows={2}
+        placeholder="Motif du refus ou précision pour le client (facultatif)"
+        className="mt-3 w-full resize-y rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+      />
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={saving !== null}
+          onClick={() => void decide(true)}
+          className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+        >
+          {saving === "approve" ? "Validation…" : "Valider la demande"}
+        </button>
+        <button
+          type="button"
+          disabled={saving !== null}
+          onClick={() => void decide(false)}
+          className="rounded-full border border-destructive/35 px-4 py-2 text-sm text-destructive hover:bg-destructive/10 disabled:opacity-50"
+        >
+          {saving === "reject" ? "Refus…" : "Refuser la demande"}
+        </button>
+      </div>
+      {notice && <p className="mt-3 text-xs text-sage">{notice}</p>}
+      {error && <p className="mt-3 text-xs text-destructive">{error}</p>}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import {
   callRpc,
   deleteRow,
   insertRow,
+  invokeEdgeFunction,
   isSupabaseConfigured,
   patchRow,
   readAdminSession,
@@ -38,7 +39,17 @@ export interface Reservation {
   seatingUnitId?: string;
   source?: "online" | "walk_in";
   walkInLabel?: string;
+  decisionMessage?: string;
+  decisionAt?: string;
+  reservationCreatedEmailSentAt?: string;
+  reminderEmailSentAt?: string;
 }
+
+export type EmailDispatchResult = {
+  ok: boolean;
+  delivered: boolean;
+  reason?: string;
+};
 
 const KEY = "kafe-ceramik-reservations";
 
@@ -343,6 +354,68 @@ export async function addReservation(
   write([full, ...list]);
   refreshReservationOccupancies();
   return full;
+}
+
+export async function sendReservationCreatedEmails(reservationId: string) {
+  if (!isSupabaseConfigured()) {
+    return { ok: false, delivered: false, reason: "Supabase non configuré" };
+  }
+  return invokeEdgeFunction<EmailDispatchResult>("kafe-emails", {
+    action: "reservation-created",
+    reservationId,
+    siteUrl: window.location.origin,
+  });
+}
+
+export async function decideGroupReservation(
+  id: string,
+  approved: boolean,
+  message = "",
+): Promise<EmailDispatchResult> {
+  const decision = await callRpc<Reservation>(
+    "decide_kafe_group_reservation",
+    {
+      p_id: id,
+      p_approved: approved,
+      p_message: message,
+    },
+    true,
+  );
+  const nextStatus: ReservationStatus = approved ? "confirmed" : "cancelled";
+  let dispatch: EmailDispatchResult;
+  try {
+    dispatch = await invokeEdgeFunction<EmailDispatchResult>(
+      "kafe-emails",
+      {
+        action: approved ? "group-approved" : "group-rejected",
+        reservationId: id,
+        message: approved ? "" : message.trim(),
+        siteUrl: window.location.origin,
+      },
+      true,
+    );
+  } catch (error) {
+    dispatch = {
+      ok: false,
+      delivered: false,
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  const list = read().map((reservation) =>
+    reservation.id === id
+      ? {
+          ...reservation,
+          ...decision,
+          status: nextStatus,
+          decisionMessage: approved ? "" : message.trim(),
+          decisionAt: new Date().toISOString(),
+        }
+      : reservation,
+  );
+  write(list);
+  refreshReservationOccupancies();
+  return dispatch;
 }
 
 export async function addWalkInReservation(input: {

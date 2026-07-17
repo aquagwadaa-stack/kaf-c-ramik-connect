@@ -27,6 +27,7 @@ import {
   getSlotPlacement,
   getSlotsForDate,
   refreshReservationOccupancies,
+  sendReservationCreatedEmails,
   shouldRequireDeposit,
   shouldWaitForManualConfirmation,
   useReservationOccupancies,
@@ -149,15 +150,7 @@ function ReserverPage() {
     if (!form.firstName) nextErrors.firstName = "Requis";
     if (!form.lastName) nextErrors.lastName = "Requis";
     if (!form.phone || form.phone.length < 8) nextErrors.phone = "Téléphone invalide";
-    if (
-      (settings.reservationFieldRequirements.emailRequired && !form.email) ||
-      (form.email && !/.+@.+\..+/.test(form.email))
-    )
-      nextErrors.email = "Email invalide";
-    if (settings.reservationFieldRequirements.childrenAgesRequired && !form.childrenAges.trim())
-      nextErrors.childrenAges = "Merci d'indiquer les enfants et leurs âges, ou “Aucun”.";
-    if (settings.reservationFieldRequirements.messageRequired && !form.message.trim())
-      nextErrors.message = "Merci d'indiquer ta demande, ou “RAS”.";
+    if (!form.email || !/.+@.+\..+/.test(form.email)) nextErrors.email = "Email invalide";
     if (!guideAccepted)
       nextErrors.guideAccepted = "Merci de confirmer les consignes avant de continuer";
     setErrors(nextErrors);
@@ -206,13 +199,21 @@ function ReserverPage() {
       setSubmitting(false);
       return;
     }
+    const emailDispatch = await sendReservationCreatedEmails(reservation.id).catch(() => ({
+      ok: false,
+      delivered: false,
+    }));
     setSubmitting(false);
 
     setDone(reservation.id);
     setDoneNotice(
-      requiresManualReview
-        ? "Ta demande est enregistrée. L'équipe du Kafé confirmera le créneau dès validation."
-        : settings.confirmationEmailText,
+      emailDispatch.delivered
+        ? requiresManualReview
+          ? "Ta demande est enregistrée. Tu as reçu un email récapitulatif et l'équipe te recontactera après validation."
+          : "Ta réservation est confirmée. Un email récapitulatif vient de t'être envoyé."
+        : requiresManualReview
+          ? "Ta demande est enregistrée. L'équipe du Kafé confirmera le créneau dès validation."
+          : settings.confirmationEmailText,
     );
     setStep(4);
   }
@@ -373,9 +374,6 @@ function ReserverPage() {
                   value={form.email}
                   onChange={(v) => setForm({ ...form, email: v })}
                   error={errors.email}
-                  hint={
-                    settings.reservationFieldRequirements.emailRequired ? undefined : "Facultatif"
-                  }
                 />
                 <div className="sm:col-span-2">
                   <Field
@@ -383,19 +381,23 @@ function ReserverPage() {
                     value={form.childrenAges}
                     onChange={(v) => setForm({ ...form, childrenAges: v })}
                     error={errors.childrenAges}
-                    placeholder="Ex. Aucun enfant, ou 2 enfants de 6 et 9 ans"
+                    placeholder="Ex. 2 enfants de 6 et 9 ans"
+                    hint="Facultatif"
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="mb-1.5 block text-sm font-medium">
-                    Message ou demande particulière
-                  </label>
+                  <div className="mb-1.5 flex items-center justify-between gap-3">
+                    <label className="block text-sm font-medium">
+                      Message ou demande particulière
+                    </label>
+                    <span className="text-xs text-muted-foreground">Facultatif</span>
+                  </div>
                   <textarea
                     value={form.message}
                     onChange={(event) => setForm({ ...form, message: event.target.value })}
                     rows={3}
                     className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="Allergies, organisation du groupe… Indique RAS si tu n'as rien à signaler."
+                    placeholder="Allergies, besoin particulier, précision sur le groupe…"
                   />
                   {errors.message && (
                     <span className="mt-1 block text-xs text-destructive">{errors.message}</span>
@@ -403,30 +405,29 @@ function ReserverPage() {
                 </div>
               </div>
 
-              <div className="mt-6 rounded-2xl border border-dashed border-primary/40 bg-primary/10 p-4">
-                <div className="flex items-start gap-3">
-                  <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                  <div className="text-sm">
-                    <div className="font-medium">
-                      {depositRequired
-                        ? `Acompte groupe de ${deposit} EUR`
-                        : "Pas d'acompte en ligne pour ce créneau"}
+              {depositRequired && (
+                <div className="mt-6 rounded-2xl border border-dashed border-primary/40 bg-primary/10 p-4">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                    <div className="text-sm">
+                      <div className="font-medium">Acompte nécessaire : {deposit} €</div>
+                      <p className="mt-1 text-muted-foreground">
+                        Il sera demandé après validation de ta demande par l'équipe.
+                      </p>
                     </div>
-                    <p className="mt-1 text-muted-foreground">
-                      {depositRequired
-                        ? `Un acompte fixe de ${deposit} EUR sera demandé après validation de l'équipe. Il n'est pas remboursable en cas d'annulation moins de ${settings.groupDepositForfeitHours} h avant.`
-                        : "Pour peindre, une consommation sur place reste demandée. Les personnes ayant réservé sont prioritaires sur les places atelier."}
-                    </p>
                   </div>
                 </div>
-              </div>
+              )}
 
               <div className="mt-4 rounded-2xl border border-border bg-background p-4 text-sm">
                 <div className="font-medium">Conditions pratiques</div>
-                <p className="mt-1 text-muted-foreground">{settings.reservationConditionsText}</p>
+                <p className="mt-1 text-muted-foreground">
+                  {depositRequired
+                    ? `Annulation possible jusqu'à ${settings.groupDepositForfeitHours} h avant pour obtenir le remboursement de l'acompte. Passé ce délai, l'acompte est conservé.`
+                    : `Annulation possible jusqu'à ${settings.cancellationNoticeHours} h avant. Au-delà, merci d'appeler le Kafé.`}
+                </p>
                 <p className="mt-2 text-muted-foreground">
-                  La cuisine ferme à {formatPublicTime(settings.kitchenClosingTime)}. Pensez à
-                  commander ta consommation à ton arrivée.
+                  La cuisine ferme à {formatPublicTime(settings.kitchenClosingTime)}.
                 </p>
                 <p className="mt-2 text-muted-foreground">
                   Ta demande sort du cadre habituel ?{" "}
@@ -434,7 +435,7 @@ function ReserverPage() {
                     to="/contact"
                     className="font-medium text-primary underline underline-offset-2"
                   >
-                    Contactez directement l'équipe.
+                    Contacte directement l'équipe.
                   </Link>
                 </p>
               </div>
@@ -500,7 +501,7 @@ function ReserverPage() {
                 <Row k="Personnes" v={`${people}`} />
                 <Row k="Date" v={formatReservationDate(date)} />
                 <Row k="Créneau" v={slot} />
-                <Row k="Acompte" v={deposit > 0 ? `${deposit} EUR` : "Non requis"} />
+                {deposit > 0 && <Row k="Acompte" v={`${deposit} €`} />}
                 <Row k="Référence" v={done} />
               </div>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
@@ -889,12 +890,12 @@ function Summary({
             </div>
           )}
         </div>
-        <div className="text-right">
-          <div className="text-xs text-muted-foreground">Acompte</div>
-          <div className="font-display text-xl">
-            {deposit > 0 ? `${deposit} EUR` : "Non requis"}
+        {deposit > 0 && (
+          <div className="text-right">
+            <div className="text-xs text-muted-foreground">Acompte</div>
+            <div className="font-display text-xl">{deposit} €</div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
