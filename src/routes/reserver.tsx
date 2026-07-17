@@ -167,7 +167,7 @@ function ReserverPage() {
         depositRequired,
         depositAmount: deposit,
         status,
-        isGroupRequest: people >= settings.manualConfirmationThreshold || experience === "groupe",
+        isGroupRequest: people >= settings.manualConfirmationThreshold,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
