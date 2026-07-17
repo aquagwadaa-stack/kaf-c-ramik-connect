@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarCheck2,
   CalendarDays,
-  CalendarHeart,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -13,7 +12,6 @@ import {
   Palette,
   Plus,
   Sparkles,
-  Users,
 } from "lucide-react";
 import { PageShell, PageHeader } from "@/components/page-shell";
 import { useKafeSettings, type KafeSettings } from "@/lib/admin-data";
