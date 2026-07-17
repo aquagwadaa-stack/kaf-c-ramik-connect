@@ -97,8 +97,8 @@ function ReserverPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const depositRequired = shouldRequireDeposit(people, settings);
-  const deposit = getDepositAmount(people, settings);
+  const depositRequired = shouldRequireDeposit(people, settings, experience);
+  const deposit = getDepositAmount(people, settings, experience);
   const requiresManualReview = shouldWaitForManualConfirmation(people, experience, settings);
 
   useEffect(() => {
