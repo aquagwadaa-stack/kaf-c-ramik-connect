@@ -70,7 +70,6 @@ import {
   deleteRow,
   deleteRowsByColumn,
   isSupabaseConfigured,
-  patchRowsByColumn,
   selectRows,
   signInAdmin,
   signOutAdmin,
@@ -394,7 +393,8 @@ function OverviewPanel({
     label: string;
     detail: string;
     icon: LucideIcon;
-    tab: AdminTab;
+    tab?: AdminTab;
+    href?: "/decharge-signature";
   }[] = [
     {
       label: "Réservations du jour",
@@ -406,7 +406,7 @@ function OverviewPanel({
       label: "Faire signer une décharge",
       detail: "Retrouver une réservation et enregistrer la signature",
       icon: ClipboardSignature,
-      tab: "waivers",
+      href: "/decharge-signature",
     },
     {
       label: "Gérer les objets",
@@ -452,25 +452,41 @@ function OverviewPanel({
           desc="Les tâches les plus utiles sont accessibles directement."
         >
           <div className="divide-y divide-border border-y border-border">
-            {actions.map(({ label, detail, icon: Icon, tab }) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => onNavigate(tab)}
-                className="flex w-full items-center gap-3 py-4 text-left hover:text-primary"
-              >
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary">
-                  <Icon className="h-4 w-4" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium">{label}</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">{detail}</span>
-                </span>
-                <span aria-hidden="true" className="text-lg text-muted-foreground">
-                  →
-                </span>
-              </button>
-            ))}
+            {actions.map(({ label, detail, icon: Icon, tab, href }) => {
+              const content = (
+                <>
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary">
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium">{label}</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">{detail}</span>
+                  </span>
+                  <span aria-hidden="true" className="text-lg text-muted-foreground">
+                    →
+                  </span>
+                </>
+              );
+
+              return href ? (
+                <Link
+                  key={href}
+                  to={href}
+                  className="flex w-full items-center gap-3 py-4 text-left hover:text-primary"
+                >
+                  {content}
+                </Link>
+              ) : (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => tab && onNavigate(tab)}
+                  className="flex w-full items-center gap-3 py-4 text-left hover:text-primary"
+                >
+                  {content}
+                </button>
+              );
+            })}
           </div>
         </Panel>
 
@@ -899,25 +915,6 @@ function TeamPanel({
   const [savingId, setSavingId] = useState("");
   const canManageTeam = adminRole === "owner";
 
-  async function updateMemberRole(member: AdminTeamRow, role: AdminTeamRow["role"]) {
-    if (!canManageTeam || member.user_id === adminUserId) return;
-    setSavingId(member.user_id);
-    try {
-      await patchRowsByColumn(
-        "kafe_admin_profiles",
-        "user_id",
-        member.user_id,
-        { role, updated_at: new Date().toISOString() },
-        true,
-      );
-      setMembers((current) =>
-        current.map((item) => (item.user_id === member.user_id ? { ...item, role } : item)),
-      );
-    } finally {
-      setSavingId("");
-    }
-  }
-
   async function removeMember(member: AdminTeamRow) {
     if (!canManageTeam || member.user_id === adminUserId) return;
     const confirmed = window.confirm(`Retirer l'accès admin de ${member.email ?? "ce compte"} ?`);
@@ -934,7 +931,7 @@ function TeamPanel({
   return (
     <Panel
       title="Équipe"
-      desc="Comptes autorisés à entrer dans l'espace admin. La route admin reste protégée par connexion et droits en base."
+      desc="Un seul niveau d'accès complet pour les personnes autorisées, avec un identifiant personnel pour chacune."
     >
       <div className="grid gap-4 lg:grid-cols-[1fr_0.85fr]">
         <div className="rounded-2xl border border-border bg-background p-4">
@@ -966,21 +963,9 @@ function TeamPanel({
                         : "-"}
                     </div>
                   </div>
-                  {canManageTeam && member.user_id !== adminUserId ? (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <select
-                        value={member.role}
-                        disabled={savingId === member.user_id}
-                        onChange={(event) =>
-                          updateMemberRole(member, event.target.value as AdminTeamRow["role"])
-                        }
-                        className="rounded-full border border-input bg-background px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-ring"
-                      >
-                        <option value="owner">owner</option>
-                        <option value="manager">manager</option>
-                        <option value="team">team</option>
-                        <option value="readonly">readonly</option>
-                      </select>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <RoleBadge role={member.role} />
+                    {canManageTeam && member.user_id !== adminUserId && (
                       <button
                         onClick={() => removeMember(member)}
                         disabled={savingId === member.user_id}
@@ -988,17 +973,8 @@ function TeamPanel({
                       >
                         Retirer
                       </button>
-                    </div>
-                  ) : (
-                    <div className="text-right">
-                      <RoleBadge role={member.role} />
-                      {member.user_id === adminUserId && (
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          Votre propre rôle est verrouillé ici.
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               ))
             )}
@@ -1008,31 +984,18 @@ function TeamPanel({
         <div className="rounded-2xl border border-border bg-background p-4">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-primary" />
-            <h3 className="font-display text-xl">Rôles prévus</h3>
+            <h3 className="font-display text-xl">Accès unique</h3>
           </div>
-          <div className="mt-4 space-y-3 text-sm">
-            <RoleLine
-              title="owner"
-              body="Accès complet : réglages, contenus, objets, réservations et futurs comptes."
-            />
-            <RoleLine
-              title="manager"
-              body="Gestion quotidienne : réservations, objets, guide, documents et signatures."
-            />
-            <RoleLine
-              title="team"
-              body="Usage terrain : consultation du jour et signature de décharge sur tablette."
-            />
-            <RoleLine title="readonly" body="Lecture seule pour contrôler sans modifier." />
+          <div className="mt-4 border-l-4 border-primary bg-secondary/60 p-4 text-sm leading-6">
+            Toutes les personnes autorisées peuvent gérer les réservations, les arrivées, les
+            objets, les documents, le guide, les décharges, les contenus et les paramètres du Kafé.
           </div>
           <div className="mt-5 rounded-2xl bg-secondary/60 p-4 text-sm text-muted-foreground">
             Compte connecté :{" "}
-            <span className="font-medium text-foreground">{adminEmail ?? "-"}</span>
-            {adminRole && <> · rôle {adminRole}</>}. Pour ajouter Anouk ou une autre personne, il
-            faudra créer son compte puis lui attribuer un rôle ici ou via Supabase.
-            {canManageTeam
-              ? " Les rôles des autres comptes peuvent ensuite être modifiés depuis cette page."
-              : " La modification des rôles est réservée au compte owner."}
+            <span className="font-medium text-foreground">{adminEmail ?? "-"}</span>. Chaque
+            personne utilise sa propre adresse e-mail et son propre mot de passe, sans partager les
+            identifiants. Le compte propriétaire technique sert uniquement à autoriser ou retirer
+            ces accès.
           </div>
         </div>
       </div>
@@ -1043,17 +1006,8 @@ function TeamPanel({
 function RoleBadge({ role }: { role: AdminTeamRow["role"] }) {
   return (
     <span className="inline-flex rounded-full border border-border bg-secondary px-3 py-1 text-xs font-medium">
-      {role}
+      {role === "owner" ? "Propriétaire technique" : "Accès complet"}
     </span>
-  );
-}
-
-function RoleLine({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-3">
-      <div className="font-medium">{title}</div>
-      <div className="mt-1 text-muted-foreground">{body}</div>
-    </div>
   );
 }
 
@@ -1383,79 +1337,79 @@ function WaiversPanel({
       )}
 
       <div className="mt-5 border border-border bg-background p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="font-display text-xl">Décharges signées</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Retrouvez, recherchez et exportez chaque document signé.
-              </p>
-            </div>
-            <div className="relative min-w-[230px] flex-1 sm:max-w-xs">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Nom, date, heure, réservation…"
-                className="h-10 w-full border border-input bg-card pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-xl">Décharges signées</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Retrouvez, recherchez et exportez chaque document signé.
+            </p>
           </div>
-          <div className="mt-4 grid gap-2">
-            {filteredSignatures.length === 0 ? (
-              <EmptyState text="Aucune signature enregistrée." />
-            ) : (
-              filteredSignatures.map((signature) => (
-                <div key={signature.id} className="border border-border p-3 text-sm">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="font-medium">
-                        {signature.firstName} {signature.lastName}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(signature.signedAt).toLocaleString("fr-FR")} ·{" "}
-                        {signature.documentVersion}
-                      </div>
-                      {signature.isMinor && (
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          Signé par {signature.guardianFirstName} {signature.guardianLastName},
-                          responsable légal
-                        </div>
-                      )}
+          <div className="relative min-w-[230px] flex-1 sm:max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Nom, date, heure, réservation…"
+              className="h-10 w-full border border-input bg-card pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+        </div>
+        <div className="mt-4 grid gap-2">
+          {filteredSignatures.length === 0 ? (
+            <EmptyState text="Aucune signature enregistrée." />
+          ) : (
+            filteredSignatures.map((signature) => (
+              <div key={signature.id} className="border border-border p-3 text-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="font-medium">
+                      {signature.firstName} {signature.lastName}
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <InfoPill tone="success">Signé</InfoPill>
-                      <button
-                        onClick={() =>
-                          downloadSignedWaiver(signature, waiver.body).catch(() =>
-                            setError("Impossible de générer cette décharge pour le moment."),
-                          )
-                        }
-                        className="grid h-8 w-8 place-items-center border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
-                        aria-label="Exporter la décharge signée"
-                        title="Exporter la décharge signée"
-                      >
-                        <Download className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => removeSignature(signature.id)}
-                        className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        aria-label="Supprimer la signature"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(signature.signedAt).toLocaleString("fr-FR")} ·{" "}
+                      {signature.documentVersion}
                     </div>
+                    {signature.isMinor && (
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        Signé par {signature.guardianFirstName} {signature.guardianLastName},
+                        responsable légal
+                      </div>
+                    )}
                   </div>
-                  {signature.signatureDataUrl && (
-                    <img
-                      src={signature.signatureDataUrl}
-                      alt="Signature"
-                      className="mt-3 h-16 rounded-lg border border-border bg-white object-contain"
-                    />
-                  )}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <InfoPill tone="success">Signé</InfoPill>
+                    <button
+                      onClick={() =>
+                        downloadSignedWaiver(signature, waiver.body).catch(() =>
+                          setError("Impossible de générer cette décharge pour le moment."),
+                        )
+                      }
+                      className="grid h-8 w-8 place-items-center border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      aria-label="Exporter la décharge signée"
+                      title="Exporter la décharge signée"
+                    >
+                      <Download className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => removeSignature(signature.id)}
+                      className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      aria-label="Supprimer la signature"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-              ))
-            )}
-          </div>
+                {signature.signatureDataUrl && (
+                  <img
+                    src={signature.signatureDataUrl}
+                    alt="Signature"
+                    className="mt-3 h-16 rounded-lg border border-border bg-white object-contain"
+                  />
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </Panel>
   );
@@ -1893,13 +1847,17 @@ function DocumentsPanel({
           <FileText className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
           <p>
             Lorsqu'un PDF est remplacé, son aperçu fidèle est généré automatiquement. Le nouveau
-            document apparaît aussitôt dans le bon onglet public sans modifier la mise en page du site.
+            document apparaît aussitôt dans le bon onglet public sans modifier la mise en page du
+            site.
           </p>
         </div>
 
         <div className="mt-7">
           {groups.map((group) => (
-            <section key={group.category} className="border-t border-border py-6 first:border-t-0 first:pt-0">
+            <section
+              key={group.category}
+              className="border-t border-border py-6 first:border-t-0 first:pt-0"
+            >
               <h4 className="font-display text-xl">{group.title}</h4>
               <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>
               <ResourceAdminList

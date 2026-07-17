@@ -4,8 +4,12 @@ import {
   ArrowLeft,
   CheckCircle2,
   ClipboardSignature,
+  Coffee,
   Download,
+  Heart,
+  Paintbrush,
   ShieldCheck,
+  Sparkles,
   UserRoundCheck,
 } from "lucide-react";
 import { SignaturePad } from "@/components/signature-pad";
@@ -273,117 +277,115 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
           </button>
         }
       />
-      <section className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-start lg:py-9">
-        <div className="border border-border bg-white p-3 shadow-sm">
-          <div className="mb-3 flex items-center justify-between gap-3 px-1">
-            <div>
-              <div className="text-xs font-medium uppercase text-primary">Document officiel</div>
-              <div className="mt-0.5 text-sm text-muted-foreground">Version {waiver.version}</div>
+      <section className="mx-auto max-w-5xl px-4 py-6 lg:py-10">
+        {selectedReservation && (
+          <div className="mb-4 border-l-4 border-primary bg-background px-4 py-3 text-sm">
+            Réservation de {selectedReservation.firstName} {selectedReservation.lastName} ·{" "}
+            {formatReservationDate(selectedReservation.date)} à {selectedReservation.slot}
+          </div>
+        )}
+
+        <div className="relative overflow-hidden border border-[#e90061]/25 bg-[#fff4f5] shadow-[0_24px_60px_rgba(97,49,39,0.12)]">
+          <Sparkles className="absolute left-5 top-6 h-7 w-7 text-[#f0ad19]" />
+          <Heart className="absolute right-6 top-8 h-8 w-8 text-[#e90061]" />
+
+          <header className="px-5 pb-7 pt-12 text-center sm:px-10 sm:pb-9 sm:pt-14">
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#cfe6a5] px-4 py-2 text-xs font-bold sm:text-sm">
+              <Coffee className="h-4 w-4 text-[#e90061]" /> Une petite consommation accompagne
+              l’atelier
             </div>
-            {(waiver.attachmentDataUrl || waiver.attachmentUrl) && (
-              <a
-                href={waiver.attachmentDataUrl || waiver.attachmentUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs font-medium text-primary underline underline-offset-4"
-              >
-                Agrandir
-              </a>
+            <h1 className="mt-6 font-display text-4xl leading-none text-[#e90061] sm:text-6xl">
+              Décharge officielle
+            </h1>
+            <div className="mt-5 flex items-center justify-center gap-3 text-center text-lg font-bold uppercase leading-7 text-[#d10b50] sm:text-2xl">
+              <Paintbrush className="hidden h-8 w-8 shrink-0 sm:block" /> À lire et à remplir avant
+              chaque début d’atelier
+            </div>
+          </header>
+
+          <div className="mx-4 border-2 border-dashed border-white bg-[#cfe6a5] px-5 py-7 text-center sm:mx-10 sm:px-10 sm:py-9">
+            <ShieldCheck className="mx-auto h-9 w-9 text-[#315d39]" />
+            <p className="mx-auto mt-4 max-w-3xl text-base font-medium leading-7 sm:text-xl sm:leading-9">
+              {waiver.body}
+            </p>
+            <label className="mx-auto mt-6 flex max-w-xl cursor-pointer items-start justify-center gap-3 text-left text-sm font-semibold leading-6">
+              <input
+                type="checkbox"
+                checked={accepted}
+                onChange={(event) => setAccepted(event.target.checked)}
+                className="mt-0.5 h-5 w-5 shrink-0 accent-[#e90061]"
+              />
+              <span>Je confirme avoir lu et compris cette décharge.</span>
+            </label>
+          </div>
+
+          <div className="px-4 py-6 sm:px-10 sm:py-9">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <DigitalField
+                label="Nom"
+                value={form.lastName}
+                onChange={(lastName) => setForm({ ...form, lastName })}
+                tone="rose"
+              />
+              <DigitalField
+                label="Prénom"
+                value={form.firstName}
+                onChange={(firstName) => setForm({ ...form, firstName })}
+                tone="purple"
+              />
+              <div className="border-2 border-dashed border-[#22a9d6] bg-white p-4">
+                <div className="inline-flex bg-[#22a9d6] px-4 py-1.5 text-xs font-bold uppercase text-white">
+                  Date
+                </div>
+                <div className="mt-5 border-b-2 border-[#22a9d6]/40 pb-2 text-lg font-medium">
+                  {new Date().toLocaleDateString("fr-FR")}
+                </div>
+              </div>
+              <div className="border-2 border-dashed border-[#f2a429] bg-white p-4">
+                <SignaturePad
+                  value={signatureDataUrl}
+                  onChange={setSignatureDataUrl}
+                  label="Signature"
+                />
+              </div>
+            </div>
+
+            <label className="mt-5 flex cursor-pointer items-center gap-3 text-sm">
+              <input
+                type="checkbox"
+                checked={form.isMinor}
+                onChange={(event) => setForm({ ...form, isMinor: event.target.checked })}
+                className="h-5 w-5 accent-[#e90061]"
+              />
+              La personne qui peint est mineure
+            </label>
+
+            {form.isMinor && (
+              <div className="mt-4 grid gap-3 border-l-4 border-[#315d39] bg-[#cfe6a5]/45 p-4 sm:grid-cols-2">
+                <DigitalField
+                  label="Prénom du responsable légal"
+                  value={form.guardianFirstName}
+                  onChange={(guardianFirstName) => setForm({ ...form, guardianFirstName })}
+                />
+                <DigitalField
+                  label="Nom du responsable légal"
+                  value={form.guardianLastName}
+                  onChange={(guardianLastName) => setForm({ ...form, guardianLastName })}
+                />
+              </div>
             )}
-          </div>
-          {preview ? (
-            <img src={preview} alt={waiver.title} className="h-auto w-full border border-border" />
-          ) : (
-            <div className="p-6 text-sm leading-7">{waiver.body}</div>
-          )}
-        </div>
 
-        <div className="border border-border bg-card p-5 sm:p-7">
-          <div className="flex items-start justify-between gap-4 border-b border-border pb-5">
-            <div>
-              <div className="text-sm font-medium text-primary">
-                À remplir par la personne qui peint
-              </div>
-              <h1 className="mt-1 font-display text-3xl">Décharge de responsabilité</h1>
-            </div>
-            <ShieldCheck className="h-7 w-7 shrink-0 text-primary" />
+            {error && <div className="mt-4 text-sm font-medium text-destructive">{error}</div>}
+            <button
+              type="button"
+              onClick={saveSignature}
+              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#e90061] px-6 py-3.5 font-medium text-white shadow-sm"
+            >
+              <ClipboardSignature className="h-5 w-5" /> Signer et enregistrer la décharge
+            </button>
           </div>
 
-          {selectedReservation && (
-            <div className="mt-5 bg-secondary/45 px-4 py-3 text-sm">
-              Réservation de {selectedReservation.firstName} {selectedReservation.lastName} ·{" "}
-              {formatReservationDate(selectedReservation.date)} à {selectedReservation.slot}
-            </div>
-          )}
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <DigitalField
-              label="Nom"
-              value={form.lastName}
-              onChange={(lastName) => setForm({ ...form, lastName })}
-              tone="rose"
-            />
-            <DigitalField
-              label="Prénom"
-              value={form.firstName}
-              onChange={(firstName) => setForm({ ...form, firstName })}
-              tone="green"
-            />
-            <div className="border border-border bg-[#e8e5a9] p-3">
-              <div className="text-xs font-semibold uppercase">Date</div>
-              <div className="mt-3 text-base font-medium">
-                {new Date().toLocaleDateString("fr-FR")}
-              </div>
-            </div>
-          </div>
-
-          <label className="mt-4 flex cursor-pointer items-center gap-3 text-sm">
-            <input
-              type="checkbox"
-              checked={form.isMinor}
-              onChange={(event) => setForm({ ...form, isMinor: event.target.checked })}
-              className="h-5 w-5 accent-primary"
-            />
-            La personne qui peint est mineure
-          </label>
-
-          {form.isMinor && (
-            <div className="mt-4 grid gap-3 border-l-4 border-primary bg-secondary/40 p-4 sm:grid-cols-2">
-              <DigitalField
-                label="Prénom du responsable légal"
-                value={form.guardianFirstName}
-                onChange={(guardianFirstName) => setForm({ ...form, guardianFirstName })}
-              />
-              <DigitalField
-                label="Nom du responsable légal"
-                value={form.guardianLastName}
-                onChange={(guardianLastName) => setForm({ ...form, guardianLastName })}
-              />
-            </div>
-          )}
-
-          <label className="mt-5 flex cursor-pointer items-start gap-3 border border-primary/25 bg-secondary/40 p-4 text-sm leading-6">
-            <input
-              type="checkbox"
-              checked={accepted}
-              onChange={(event) => setAccepted(event.target.checked)}
-              className="mt-1 h-5 w-5 shrink-0 accent-primary"
-            />
-            <span>{waiver.body}</span>
-          </label>
-
-          <div className="mt-5 border border-border bg-[#d9cbec] p-4">
-            <SignaturePad value={signatureDataUrl} onChange={setSignatureDataUrl} />
-          </div>
-
-          {error && <div className="mt-4 text-sm font-medium text-destructive">{error}</div>}
-          <button
-            type="button"
-            onClick={saveSignature}
-            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-medium text-primary-foreground"
-          >
-            <ClipboardSignature className="h-5 w-5" /> Signer et enregistrer la décharge
-          </button>
+          <div className="h-5 bg-[repeating-linear-gradient(135deg,#f4b6cd_0,#f4b6cd_18px,#fff4f5_18px,#fff4f5_36px)]" />
         </div>
       </section>
     </main>
@@ -431,18 +433,28 @@ function DigitalField({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  tone?: "rose" | "green";
+  tone?: "rose" | "purple";
 }) {
-  const background =
-    tone === "green" ? "bg-[#cfdfb7]" : tone === "rose" ? "bg-[#efc8d9]" : "bg-background";
+  const border =
+    tone === "purple"
+      ? "border-[#8d59b6]"
+      : tone === "rose"
+        ? "border-[#e90061]"
+        : "border-primary/35";
+  const labelTone =
+    tone === "purple" ? "bg-[#8d59b6]" : tone === "rose" ? "bg-[#e90061]" : "bg-primary";
   return (
-    <label className={`border border-border p-3 ${background}`}>
-      <span className="text-xs font-semibold uppercase">{label}</span>
+    <label className={`border-2 border-dashed bg-white p-4 ${border}`}>
+      <span
+        className={`inline-flex px-4 py-1.5 text-xs font-bold uppercase text-white ${labelTone}`}
+      >
+        {label}
+      </span>
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
         autoComplete="off"
-        className="mt-2 h-10 w-full border-b-2 border-foreground/35 bg-transparent px-1 text-base outline-none focus:border-primary"
+        className="mt-4 h-11 w-full border-b-2 border-foreground/25 bg-transparent px-1 text-lg outline-none focus:border-primary"
       />
     </label>
   );

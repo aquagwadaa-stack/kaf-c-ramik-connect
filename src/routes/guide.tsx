@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { BookOpenText, ExternalLink, Palette, ShieldCheck, type LucideIcon } from "lucide-react";
+import { OfficialGuideContent } from "@/components/official-guide-content";
 import { PageShell } from "@/components/page-shell";
 import { getGuideDocument, useContentDocuments, type ContentResource } from "@/lib/admin-data";
 
@@ -45,6 +46,19 @@ const chapters: {
     icon: ShieldCheck,
   },
 ];
+
+const officialPreviews: Record<string, string> = {
+  "guide-complet": "/documents/guide-complet.webp",
+  "nuancier-1": "/documents/nuancier-1.webp",
+  "nuancier-2": "/documents/nuancier-2.webp",
+  "gaspillage-peinture": "/documents/gaspillage-peinture.webp",
+  "casse-ceramique": "/documents/casse-ceramique.webp",
+};
+
+function hasNativeOfficialLayout(resource: ContentResource) {
+  const preview = resource.previewImageDataUrls?.[0] || resource.previewImageUrls?.[0];
+  return preview === officialPreviews[resource.id];
+}
 
 function GuidePage() {
   const [documents] = useContentDocuments();
@@ -118,14 +132,23 @@ function GuidePage() {
             activeChapter === "guide" ? "" : "lg:grid-cols-2"
           }`}
         >
-          {resources.map((resource, index) => (
-            <OfficialBoard
-              key={resource.id}
-              resource={resource}
-              priority={activeChapter === "guide" && index === 0}
-              wide={activeChapter === "guide"}
-            />
-          ))}
+          {resources.map((resource, index) =>
+            hasNativeOfficialLayout(resource) ? (
+              <div
+                key={resource.id}
+                className={activeChapter === "guide" ? "mx-auto w-full max-w-5xl" : "w-full"}
+              >
+                <OfficialGuideContent resource={resource} />
+              </div>
+            ) : (
+              <OfficialBoard
+                key={resource.id}
+                resource={resource}
+                priority={activeChapter === "guide" && index === 0}
+                wide={activeChapter === "guide"}
+              />
+            ),
+          )}
         </div>
       </section>
     </PageShell>
