@@ -439,6 +439,25 @@ function ReserverPage() {
                 </p>
               </div>
 
+              <div className="mt-4 border-l-4 border-primary bg-secondary/45 px-4 py-4 text-sm">
+                <div className="font-medium">À savoir avant de confirmer</div>
+                <ul className="mt-2 grid gap-1.5 text-muted-foreground sm:grid-cols-2">
+                  <li>• Consommation sur place obligatoire pour peindre</li>
+                  <li>• Cuisson et finition réalisées après votre départ</li>
+                  <li>• Création prête habituellement sous 7 à 10 jours</li>
+                  <li>• Photo et initiales indispensables pour la récupérer</li>
+                  <li>• Pièces conservées au maximum deux mois</li>
+                  <li>• Enfants sous la surveillance de leur accompagnateur</li>
+                </ul>
+                <Link
+                  to="/guide"
+                  target="_blank"
+                  className="mt-3 inline-flex font-medium text-primary underline underline-offset-4"
+                >
+                  Consulter le guide complet
+                </Link>
+              </div>
+
               <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-background p-4 text-sm">
                 <input
                   type="checkbox"

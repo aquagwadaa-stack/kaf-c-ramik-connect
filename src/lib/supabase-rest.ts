@@ -296,3 +296,32 @@ export async function callRpc<T>(name: string, args: Record<string, unknown>, au
     auth,
   });
 }
+
+export async function uploadAdminFile(bucket: string, path: string, file: Blob) {
+  if (!isSupabaseConfigured()) throw new Error("Supabase is not configured");
+  const session = readAdminSession();
+  if (!session?.access_token) throw new Error("Admin session required");
+
+  const response = await fetch(
+    `${baseUrl()}/storage/v1/object/${encodeURIComponent(bucket)}/${path
+      .split("/")
+      .map(encodeURIComponent)
+      .join("/")}`,
+    {
+      method: "POST",
+      headers: {
+        apikey: anonKey(),
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": file.type || "application/octet-stream",
+        "x-upsert": "true",
+      },
+      body: file,
+    },
+  );
+  if (!response.ok) throw new Error(await errorMessage(response));
+
+  return `${baseUrl()}/storage/v1/object/public/${encodeURIComponent(bucket)}/${path
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/")}`;
+}

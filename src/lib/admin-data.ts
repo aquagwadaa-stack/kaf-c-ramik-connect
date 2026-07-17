@@ -54,6 +54,9 @@ type RemoteJsonRow<T> = {
   value: T;
   sort_order?: number;
   updated_at?: string;
+  reservation_ref?: string | null;
+  document_version?: string;
+  signed_at?: string;
 };
 
 type RemoteListOptions<T> = {
@@ -215,8 +218,26 @@ export interface GuideSection {
   number: string;
   title: string;
   body: string;
+  imageUrl?: string;
   imageDataUrl?: string;
   imageName?: string;
+  visible?: boolean;
+}
+
+export type ContentResourceCategory = "guide" | "nuancier" | "prevention" | "waiver";
+
+export interface ContentResource {
+  id: string;
+  title: string;
+  description: string;
+  category: ContentResourceCategory;
+  attachmentUrl?: string;
+  attachmentDataUrl?: string;
+  attachmentName?: string;
+  attachmentType?: string;
+  previewImageUrls?: string[];
+  previewImageDataUrls?: string[];
+  visible: boolean;
 }
 
 export interface ContentDocument {
@@ -227,55 +248,152 @@ export interface ContentDocument {
   body: string;
   intro?: string;
   sections?: GuideSection[];
+  resources?: ContentResource[];
+  attachmentUrl?: string;
   attachmentDataUrl?: string;
   attachmentName?: string;
   attachmentType?: string;
+  previewImageUrls?: string[];
+  previewImageDataUrls?: string[];
 }
 
 export const guideSectionsSeed: GuideSection[] = [
   {
     id: "guide-choose",
     number: "01",
-    title: "Choisir sa piece",
-    body: "Chaque personne choisit une ceramique disponible sur place. Les prix, formes et disponibilites peuvent varier selon les arrivages.",
+    title: "Choisissez votre pièce et vos couleurs",
+    body: "Le prix comprend la céramique, le matériel de peinture et la cuisson. Fiez-vous aux nuanciers : la couleur avant cuisson est différente du résultat final.",
+    imageUrl: "/objets/tasse-design.webp",
+    visible: true,
   },
   {
     id: "guide-paint",
     number: "02",
-    title: "Peindre en suivant les consignes",
-    body: "Les couleurs, les couches et certaines zones demandent de respecter les indications du Kafe pour obtenir un rendu propre apres cuisson.",
+    title: "Peignez en deux couches",
+    body: "Servez-vous en petites quantités, laissez sécher 5 à 10 minutes entre les couches et gardez les zones en contact avec la bouche sans peinture.",
+    imageUrl: "/creations/tasse-feuillage.webp",
+    visible: true,
   },
   {
-    id: "guide-leave",
+    id: "guide-identify",
     number: "03",
-    title: "Laisser la piece a l'atelier",
-    body: "Une fois terminee, la piece reste au Kafe pour sechage, emaillage et cuisson. Elle n'est pas recuperable immediatement.",
+    title: "Identifiez votre création",
+    body: "Inscrivez vos initiales sous la pièce avec de la peinture, puis prenez une photo. Sans photo et sans initiales, l'équipe ne pourra pas garantir sa récupération.",
+    imageUrl: "/creations/assiette-tortue.webp",
+    visible: true,
+  },
+  {
+    id: "guide-varnish",
+    number: "04",
+    title: "Vernissez selon la peinture choisie",
+    body: "Appliquez deux couches de vernis après séchage, sauf avec les peintures à effets indiquées dans le second nuancier. Lavez et rangez le matériel utilisé.",
+    imageUrl: "/objets/assiettes-empilees.webp",
+    visible: true,
+  },
+  {
+    id: "guide-firing",
+    number: "05",
+    title: "Laissez l'équipe cuire votre pièce",
+    body: "La création reste au Kafé pour la finition et la cuisson. Le délai habituel annoncé par l'équipe est de 7 à 10 jours.",
+    imageUrl: "/creations/assiette-bateau.webp",
+    visible: true,
   },
   {
     id: "guide-collect",
-    number: "04",
-    title: "Revenir la recuperer",
-    body: "L'equipe indique le delai de recuperation. Les pieces sont a reprendre au Kafe avec le nom donne lors de la reservation ou de la signature.",
+    number: "06",
+    title: "Revenez la récupérer",
+    body: "Conservez votre photo et revenez chercher la création au Kafé. Les pièces sont gardées au maximum deux mois avant d'être données.",
+    imageUrl: "/objets/tasses-texturees.webp",
+    visible: true,
+  },
+];
+
+export const guideResourcesSeed: ContentResource[] = [
+  {
+    id: "guide-complet",
+    title: "Guide complet de l'atelier",
+    description: "Toutes les étapes, les délais et les règles à respecter avant de commencer.",
+    category: "guide",
+    attachmentUrl: "/documents/guide-complet.pdf",
+    attachmentName: "Guide complet pdf final.pdf",
+    attachmentType: "application/pdf",
+    previewImageUrls: ["/documents/guide-complet.webp"],
+    visible: true,
+  },
+  {
+    id: "nuancier-1",
+    title: "Nuancier - peintures classiques",
+    description: "Deux couches de peinture, puis deux couches de vernis après séchage.",
+    category: "nuancier",
+    attachmentUrl: "/documents/nuancier-1.pdf",
+    attachmentName: "Nuancier 1 pdf.pdf",
+    attachmentType: "application/pdf",
+    previewImageUrls: ["/documents/nuancier-1.webp"],
+    visible: true,
+  },
+  {
+    id: "nuancier-2",
+    title: "Nuancier - peintures à effets",
+    description:
+      "Les peintures à effets ne se vernissent pas. Suivez les consignes propres à ces couleurs.",
+    category: "nuancier",
+    attachmentUrl: "/documents/nuancier-2.pdf",
+    attachmentName: "Nuancier 2 pdf.pdf",
+    attachmentType: "application/pdf",
+    previewImageUrls: ["/documents/nuancier-2.webp"],
+    visible: true,
+  },
+  {
+    id: "gaspillage-peinture",
+    title: "Bien doser la peinture",
+    description:
+      "Servez-vous en petites quantités et rechargez la palette seulement si nécessaire.",
+    category: "prevention",
+    attachmentUrl: "/documents/gaspillage-peinture.pdf",
+    attachmentName: "Gaspillage peinture pdf.pdf",
+    attachmentType: "application/pdf",
+    previewImageUrls: ["/documents/gaspillage-peinture.webp"],
+    visible: true,
+  },
+];
+
+export const waiverResourcesSeed: ContentResource[] = [
+  {
+    id: "casse-ceramique",
+    title: "Prévention casse céramique",
+    description: "Une céramique brute cassée peut être facturée à hauteur de 50 % de son prix.",
+    category: "waiver",
+    attachmentUrl: "/documents/casse-ceramique.pdf",
+    attachmentName: "Casse céramique pdf.pdf",
+    attachmentType: "application/pdf",
+    previewImageUrls: ["/documents/casse-ceramique.webp"],
+    visible: true,
   },
 ];
 
 export const contentDocumentsSeed: ContentDocument[] = [
   {
     id: "guide",
-    title: "Guide de peinture",
-    version: "v1-demo",
+    title: "Le guide de votre atelier",
+    version: "2026-07-officiel",
     updatedAt: new Date().toISOString(),
     intro:
-      "Avant de commencer, prenez le temps de lire les consignes principales. Elles permettent d'eviter les mauvaises surprises apres cuisson et de profiter pleinement de l'atelier.",
-    body: "Guide provisoire. Le texte officiel sera fourni par Mala Madre : préparation de la pièce, consignes de peinture, délais de cuisson et récupération.",
+      "Prenez quelques minutes pour lire les consignes avant de peindre. Elles permettent d'obtenir le meilleur résultat possible après cuisson et de retrouver facilement votre création.",
+    body: "La consommation sur place est obligatoire pour participer à l'atelier. Les enfants restent sous la surveillance permanente de l'adulte qui les accompagne.",
     sections: guideSectionsSeed,
+    resources: guideResourcesSeed,
   },
   {
     id: "waiver",
-    title: "Décharge atelier",
-    version: "v1-demo",
+    title: "Décharge de responsabilité",
+    version: "2026-07-officielle",
     updatedAt: new Date().toISOString(),
-    body: "Décharge provisoire. Le texte officiel sera fourni par Mala Madre et validé par le client avant publication.",
+    body: "Je reconnais avoir pris connaissance du guide complet de peinture et des consignes d'utilisation du matériel. En cas de non-respect de ces règles, l'établissement ne pourra être tenu responsable du résultat et aucun remboursement ne pourra être demandé.",
+    attachmentUrl: "/documents/decharge-officielle.pdf",
+    attachmentName: "Décharge PDF.pdf",
+    attachmentType: "application/pdf",
+    previewImageUrls: ["/documents/decharge-officielle.webp"],
+    resources: waiverResourcesSeed,
   },
 ];
 
@@ -285,6 +403,17 @@ export function getGuideDocument(documents: ContentDocument[]) {
     ...guide,
     intro: guide.intro ?? contentDocumentsSeed[0].intro,
     sections: guide.sections?.length ? guide.sections : guideSectionsSeed,
+    resources: guide.resources?.length ? guide.resources : guideResourcesSeed,
+  };
+}
+
+export function getWaiverDocument(documents: ContentDocument[]) {
+  const seed = contentDocumentsSeed.find((document) => document.id === "waiver")!;
+  const waiver = documents.find((document) => document.id === "waiver") ?? seed;
+  return {
+    ...seed,
+    ...waiver,
+    resources: waiver.resources?.length ? waiver.resources : waiverResourcesSeed,
   };
 }
 
@@ -338,6 +467,15 @@ export interface WaiverSignature {
   signedAt: string;
   signatureDataUrl?: string;
   guideAccepted: boolean;
+  waiverAccepted?: boolean;
+  isMinor?: boolean;
+  guardianFirstName?: string;
+  guardianLastName?: string;
+  documentTitle?: string;
+  documentUrl?: string;
+  documentPreviewUrl?: string;
+  acceptanceText?: string;
+  validatedBy?: string;
 }
 
 export const waiverSignaturesSeed: WaiverSignature[] = [];
@@ -399,7 +537,7 @@ export interface KafeSettings {
 }
 
 export const settingsSeed: KafeSettings = {
-  configurationVersion: 3,
+  configurationVersion: 4,
   depositThreshold: 8,
   depositFixedAmount: 100,
   defaultCapacity: 63,
@@ -439,11 +577,11 @@ export const settingsSeed: KafeSettings = {
   walkInNoticeText:
     "Pas besoin de réserver pour boire un café, manger un bagel ou bruncher. Pour peindre, l'atelier se fait avec une consommation sur place et les personnes ayant réservé sont prioritaires.",
   reservationConditionsText:
-    "Annulation possible jusqu'à 48 h avant. Au-delà, merci d'appeler le Kafé. Une réservation est libérée après plus de 30 minutes de retard. Pour les groupes, l'acompte est conservé si l'annulation intervient moins de 24 h avant.",
+    "Annulation possible jusqu'à 48 h avant. Au-delà, merci d'appeler le Kafé. Une réservation est libérée après plus de 35 minutes de retard. Pour les groupes, l'acompte est conservé si l'annulation intervient moins de 24 h avant.",
   guideAcceptanceText:
-    "J'ai pris connaissance des informations importantes de l'atelier et je m'engage à respecter le guide transmis par le Kafé Céramik.",
+    "J'ai pris connaissance du guide. Le Kafé ne pourra en aucun cas être tenu responsable des suites malheureuses d'un non-respect de ses consignes.",
   confirmationEmailText:
-    "Votre réservation est enregistrée. Le guide et les informations pratiques vous seront envoyés avant votre venue.",
+    "Votre réservation est enregistrée. Vous retrouverez les informations pratiques dans cette confirmation.",
   instagramUrl: "https://www.instagram.com/kafeceramik_guadeloupe/",
   facebookUrl: "",
   tiktokUrl: "",
@@ -474,6 +612,9 @@ export function useWaiverSignatures() {
     toRow: (signature) => ({
       id: signature.id,
       value: signature,
+      reservation_ref: signature.reservationRef ?? null,
+      document_version: signature.documentVersion,
+      signed_at: signature.signedAt,
       updated_at: new Date().toISOString(),
     }),
   });

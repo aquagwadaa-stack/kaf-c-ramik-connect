@@ -2,11 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
+import { jsPDF } from "jspdf";
 import {
   AlertCircle,
   BookOpenText,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   ClipboardSignature,
   Clock3,
   Coins,
@@ -20,6 +23,7 @@ import {
   PackageOpen,
   Plus,
   Save,
+  Search,
   Settings,
   ShieldCheck,
   Trash2,
@@ -49,20 +53,22 @@ import {
 import {
   useCeramicObjects,
   useContentDocuments,
-  contentDocumentsSeed,
   creationInspirationsSeed,
   getGuideDocument,
+  getWaiverDocument,
   useKafeSettings,
   useWaiverSignatures,
   type CreationInspiration,
   type GuideSection,
   type CeramicObject,
   type ContentDocument,
+  type ContentResource,
   type KafeSettings,
   type ScheduleRule,
   type SeatingArea,
   type WaiverSignature,
 } from "@/lib/admin-data";
+import { storeDocumentFile } from "@/lib/document-files";
 import {
   deleteRow,
   deleteRowsByColumn,
@@ -327,9 +333,11 @@ function AdminWorkspace({
         {tab === "waivers" && (
           <WaiversPanel
             documents={documents}
+            saveDocuments={saveDocuments}
             signatures={signatures}
             saveSignatures={saveSignatures}
             reservations={reservations}
+            validatedBy={adminEmail ?? undefined}
           />
         )}
         {tab === "objects" && <ObjectsPanel objects={objects} saveObjects={saveObjects} />}
@@ -1226,41 +1234,148 @@ function ReservationCard({
 
 function WaiversPanel({
   documents,
+  saveDocuments,
   signatures,
   saveSignatures,
   reservations,
+  validatedBy,
 }: {
   documents: ContentDocument[];
+  saveDocuments: (next: ContentDocument[]) => void;
   signatures: WaiverSignature[];
   saveSignatures: (next: WaiverSignature[]) => void;
   reservations: Reservation[];
+  validatedBy?: string;
 }) {
-  const waiver = documents.find((document) => document.id === "waiver");
-  const [form, setForm] = useState({ firstName: "", lastName: "", reservationRef: "" });
-  const [guideAccepted, setGuideAccepted] = useState(true);
+  const waiver = getWaiverDocument(documents);
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    reservationRef: "",
+    isMinor: false,
+    guardianFirstName: "",
+    guardianLastName: "",
+  });
+  const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | undefined>();
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [uploading, setUploading] = useState(false);
+
+  const filteredSignatures = useMemo(() => {
+    const needle = search.trim().toLocaleLowerCase("fr");
+    if (!needle) return signatures;
+    return signatures.filter((signature) => {
+      const reservation = reservations.find((item) => item.id === signature.reservationRef);
+      return [
+        signature.firstName,
+        signature.lastName,
+        signature.guardianFirstName,
+        signature.guardianLastName,
+        signature.reservationRef,
+        reservation?.date,
+        reservation?.slot,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase("fr")
+        .includes(needle);
+    });
+  }, [reservations, search, signatures]);
+
+  const incompleteWaiverReservations = reservations.filter((reservation) => {
+    if (reservation.status === "cancelled" || reservation.source === "walk_in") return false;
+    const signedPeople = signatures.filter(
+      (signature) => signature.reservationRef === reservation.id,
+    ).length;
+    return signedPeople < reservation.people;
+  });
+
+  function saveWaiver(patch: Partial<ContentDocument>) {
+    const next = { ...waiver, ...patch, updatedAt: new Date().toISOString() };
+    saveDocuments(
+      documents.some((document) => document.id === "waiver")
+        ? documents.map((document) => (document.id === "waiver" ? next : document))
+        : [...documents, next],
+    );
+  }
+
+  async function uploadWaiver(file?: File) {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const stored = await storeDocumentFile("decharge", file);
+      saveWaiver({
+        ...stored,
+        version: `decharge-${new Date().toISOString().slice(0, 10)}`,
+      });
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Import impossible.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function updateWaiverResource(resource: ContentResource, file?: File) {
+    let nextResource = resource;
+    if (file) {
+      setUploading(true);
+      try {
+        nextResource = {
+          ...resource,
+          ...(await storeDocumentFile(`decharge/${resource.id}`, file)),
+        };
+      } finally {
+        setUploading(false);
+      }
+    }
+    saveWaiver({
+      resources: (waiver.resources ?? []).map((item) =>
+        item.id === resource.id ? nextResource : item,
+      ),
+    });
+  }
 
   function saveSignature() {
-    if (!form.firstName || !form.lastName || !guideAccepted) {
-      setError("Nom, prénom et confirmation du guide sont obligatoires.");
+    if (!form.firstName.trim() || !form.lastName.trim() || !waiverAccepted || !signatureDataUrl) {
+      setError("Nom, prénom, acceptation de la décharge et signature sont obligatoires.");
+      return;
+    }
+    if (form.isMinor && (!form.guardianFirstName.trim() || !form.guardianLastName.trim())) {
+      setError("Le nom et le prénom du responsable légal sont obligatoires pour un mineur.");
       return;
     }
     const next: WaiverSignature = {
       id: `sig-${Date.now()}`,
-      firstName: form.firstName,
-      lastName: form.lastName,
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim(),
       reservationRef: form.reservationRef || undefined,
-      documentVersion: waiver?.version ?? "v1-demo",
+      documentVersion: waiver.version,
       signedAt: new Date().toISOString(),
       signatureDataUrl,
-      guideAccepted,
+      guideAccepted: true,
+      waiverAccepted: true,
+      isMinor: form.isMinor,
+      guardianFirstName: form.isMinor ? form.guardianFirstName.trim() : undefined,
+      guardianLastName: form.isMinor ? form.guardianLastName.trim() : undefined,
+      documentTitle: waiver.title,
+      documentUrl: waiver.attachmentUrl || waiver.attachmentDataUrl,
+      documentPreviewUrl: waiver.previewImageDataUrls?.[0] || waiver.previewImageUrls?.[0],
+      acceptanceText: waiver.body,
+      validatedBy,
     };
     saveSignatures([next, ...signatures]);
     if (form.reservationRef) updateStatus(form.reservationRef, "arrived");
-    setForm({ firstName: "", lastName: "", reservationRef: "" });
+    setForm({
+      firstName: "",
+      lastName: "",
+      reservationRef: "",
+      isMinor: false,
+      guardianFirstName: "",
+      guardianLastName: "",
+    });
     setSignatureDataUrl(undefined);
-    setGuideAccepted(true);
+    setWaiverAccepted(false);
     setError("");
   }
 
@@ -1273,13 +1388,132 @@ function WaiversPanel({
     }
   }
 
+  async function exportSignature(signature: WaiverSignature) {
+    const pdf = new jsPDF({ unit: "mm", format: "a4" });
+    const preview = signature.documentPreviewUrl;
+    if (preview) {
+      try {
+        const image = await imageToPngDataUrl(preview);
+        const props = pdf.getImageProperties(image);
+        const maxWidth = 180;
+        const maxHeight = 265;
+        const ratio = Math.min(maxWidth / props.width, maxHeight / props.height);
+        const width = props.width * ratio;
+        const height = props.height * ratio;
+        pdf.addImage(image, "PNG", (210 - width) / 2, 15, width, height);
+        pdf.addPage();
+      } catch {
+        // The proof page remains valid even if a legacy preview cannot be embedded.
+      }
+    }
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(18);
+    pdf.text("Preuve de signature - Kafé Céramik", 15, 20);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    const signedAt = new Date(signature.signedAt).toLocaleString("fr-FR");
+    const lines = [
+      `Participant : ${signature.firstName} ${signature.lastName}`,
+      signature.isMinor
+        ? `Responsable légal : ${signature.guardianFirstName ?? ""} ${signature.guardianLastName ?? ""}`
+        : "Participant majeur",
+      `Date et heure de signature : ${signedAt}`,
+      `Version du document : ${signature.documentVersion}`,
+      `Réservation liée : ${signature.reservationRef ?? "Aucune"}`,
+      `Validation équipe : ${signature.validatedBy ?? "Compte équipe connecté"}`,
+    ];
+    lines.forEach((line, index) => pdf.text(line, 15, 34 + index * 7));
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Texte accepté", 15, 82);
+    pdf.setFont("helvetica", "normal");
+    const accepted = pdf.splitTextToSize(signature.acceptanceText ?? waiver.body, 180);
+    pdf.text(accepted, 15, 90);
+    if (signature.signatureDataUrl) {
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Signature", 15, 142);
+      pdf.addImage(signature.signatureDataUrl, "PNG", 15, 148, 90, 36);
+    }
+    pdf.save(
+      `decharge-${signature.lastName.toLowerCase()}-${signature.firstName.toLowerCase()}-${signature.signedAt.slice(0, 10)}.pdf`,
+    );
+  }
+
   return (
     <Panel
-      title="Décharge sur tablette"
-      desc="Enregistrement du nom, de la date, de la version du document et de la signature."
+      title="Décharges"
+      desc="Signature individuelle sur la tablette et archives consultables."
     >
-      <div className="grid gap-5 lg:grid-cols-[1fr_1.1fr]">
-        <div className="rounded-2xl border border-border bg-background p-4">
+      <div className="grid gap-4 border-b border-border pb-5 lg:grid-cols-[1fr_0.8fr]">
+        <div className="border border-border bg-background p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-display text-xl">Document officiel</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Version présentée à chaque personne avant sa signature.
+              </p>
+            </div>
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+              <UploadCloud className="h-4 w-4" /> {uploading ? "Import…" : "Remplacer"}
+              <input
+                type="file"
+                accept="application/pdf,image/*"
+                className="sr-only"
+                disabled={uploading}
+                onChange={async (event) => {
+                  await uploadWaiver(event.currentTarget.files?.[0]);
+                  event.currentTarget.value = "";
+                }}
+              />
+            </label>
+          </div>
+          <DocumentPreview document={waiver} className="mt-4" compact />
+        </div>
+        <div className="border border-border bg-background p-4">
+          <h3 className="font-display text-xl">Prévention liée</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            La prévention casse reste associée à la décharge.
+          </p>
+          <ResourceAdminList
+            resources={waiver.resources ?? []}
+            onChange={updateWaiverResource}
+            compact
+          />
+        </div>
+      </div>
+
+      {incompleteWaiverReservations.length > 0 && (
+        <div className="mt-5 flex items-start gap-3 border-l-4 border-primary bg-secondary/45 p-4 text-sm">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+          <div>
+            <div className="font-medium">
+              {incompleteWaiverReservations.length} réservation
+              {incompleteWaiverReservations.length > 1 ? "s" : ""} avec des signatures à compléter
+            </div>
+            <div className="mt-2 grid gap-1 text-xs text-muted-foreground">
+              {incompleteWaiverReservations.slice(0, 6).map((reservation) => {
+                const signedPeople = signatures.filter(
+                  (signature) => signature.reservationRef === reservation.id,
+                ).length;
+                return (
+                  <div key={reservation.id}>
+                    {reservation.firstName} {reservation.lastName} ·{" "}
+                    {formatReservationDate(reservation.date)} · {signedPeople}/{reservation.people}{" "}
+                    signature{reservation.people > 1 ? "s" : ""}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1.1fr]">
+        <div className="border border-border bg-background p-4">
+          <h3 className="font-display text-xl">Faire signer une personne</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Chaque personne qui peint signe. Pour un mineur, le responsable légal signe en son nom.
+          </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field
               label="Prénom"
@@ -1309,16 +1543,41 @@ function WaiversPanel({
             </label>
           </div>
 
-          <DocumentPreview document={waiver} title="Document officiel à signer" className="mt-4" />
-
-          <label className="mt-4 flex cursor-pointer items-start gap-3 text-sm">
+          <label className="mt-4 flex cursor-pointer items-center gap-3 text-sm">
             <input
               type="checkbox"
-              checked={guideAccepted}
-              onChange={(event) => setGuideAccepted(event.target.checked)}
+              checked={form.isMinor}
+              onChange={(event) => setForm({ ...form, isMinor: event.target.checked })}
+              className="h-4 w-4 accent-primary"
+            />
+            <span>La personne qui peint est mineure</span>
+          </label>
+
+          {form.isMinor && (
+            <div className="mt-3 grid gap-3 border-l-4 border-primary bg-secondary/35 p-3 sm:grid-cols-2">
+              <Field
+                label="Prénom du responsable légal"
+                value={form.guardianFirstName}
+                onChange={(value) => setForm({ ...form, guardianFirstName: value })}
+              />
+              <Field
+                label="Nom du responsable légal"
+                value={form.guardianLastName}
+                onChange={(value) => setForm({ ...form, guardianLastName: value })}
+              />
+            </div>
+          )}
+
+          <DocumentPreview document={waiver} title="Document officiel à signer" className="mt-4" />
+
+          <label className="mt-4 flex cursor-pointer items-start gap-3 border border-border bg-secondary/30 p-3 text-sm">
+            <input
+              type="checkbox"
+              checked={waiverAccepted}
+              onChange={(event) => setWaiverAccepted(event.target.checked)}
               className="mt-1 h-4 w-4 accent-primary"
             />
-            <span>La personne confirme avoir lu le guide et la décharge avant signature.</span>
+            <span>{waiver.body}</span>
           </label>
 
           <SignaturePad onChange={setSignatureDataUrl} value={signatureDataUrl} />
@@ -1332,14 +1591,25 @@ function WaiversPanel({
           </button>
         </div>
 
-        <div className="rounded-2xl border border-border bg-background p-4">
-          <h3 className="font-display text-xl">Signatures enregistrées</h3>
+        <div className="border border-border bg-background p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="font-display text-xl">Signatures enregistrées</h3>
+            <div className="relative min-w-[230px] flex-1 sm:max-w-xs">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Nom, date, heure, réservation…"
+                className="h-10 w-full border border-input bg-card pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+          </div>
           <div className="mt-4 grid gap-2">
-            {signatures.length === 0 ? (
+            {filteredSignatures.length === 0 ? (
               <EmptyState text="Aucune signature enregistrée." />
             ) : (
-              signatures.map((signature) => (
-                <div key={signature.id} className="rounded-xl border border-border p-3 text-sm">
+              filteredSignatures.map((signature) => (
+                <div key={signature.id} className="border border-border p-3 text-sm">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="font-medium">
@@ -1349,9 +1619,23 @@ function WaiversPanel({
                         {new Date(signature.signedAt).toLocaleString("fr-FR")} ·{" "}
                         {signature.documentVersion}
                       </div>
+                      {signature.isMinor && (
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          Signé par {signature.guardianFirstName} {signature.guardianLastName},
+                          responsable légal
+                        </div>
+                      )}
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <InfoPill tone="success">Signé</InfoPill>
+                      <button
+                        onClick={() => exportSignature(signature)}
+                        className="grid h-8 w-8 place-items-center border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        aria-label="Exporter la décharge signée"
+                        title="Exporter la décharge signée"
+                      >
+                        <Download className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={() => removeSignature(signature.id)}
                         className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
@@ -1376,6 +1660,23 @@ function WaiversPanel({
       </div>
     </Panel>
   );
+}
+
+async function imageToPngDataUrl(source: string) {
+  const image = new Image();
+  image.crossOrigin = "anonymous";
+  await new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error("Aperçu inaccessible"));
+    image.src = source;
+  });
+  const canvas = document.createElement("canvas");
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Aperçu inaccessible");
+  context.drawImage(image, 0, 0);
+  return canvas.toDataURL("image/png");
 }
 
 function SignaturePad({ value, onChange }: { value?: string; onChange: (value?: string) => void }) {
@@ -1798,9 +2099,6 @@ function DocumentsPanel({
   saveDocuments: (next: ContentDocument[]) => void;
 }) {
   const guide = getGuideDocument(documents);
-  const waiver =
-    documents.find((document) => document.id === "waiver") ??
-    contentDocumentsSeed.find((document) => document.id === "waiver");
 
   function saveDocument(nextDocument: ContentDocument) {
     const exists = documents.some((document) => document.id === nextDocument.id);
@@ -1811,25 +2109,12 @@ function DocumentsPanel({
     );
   }
 
-  function updateDocument(id: ContentDocument["id"], patch: Partial<ContentDocument>) {
-    const current = id === "guide" ? guide : waiver;
-    if (!current) return;
-    saveDocument({ ...current, ...patch, updatedAt: new Date().toISOString() });
-  }
-
-  async function uploadDocument(id: ContentDocument["id"], file?: File) {
-    if (!file) return;
-    const attachmentDataUrl = await readFileAsDataUrl(file);
-    updateDocument(id, {
-      attachmentDataUrl,
-      attachmentName: file.name,
-      attachmentType: file.type || "application/octet-stream",
-      version: `${id}-${new Date().toISOString().slice(0, 10)}`,
-    });
+  function updateDocument(patch: Partial<ContentDocument>) {
+    saveDocument({ ...guide, ...patch, updatedAt: new Date().toISOString() });
   }
 
   function updateGuideSection(id: string, patch: Partial<GuideSection>) {
-    updateDocument("guide", {
+    updateDocument({
       sections: (guide.sections ?? []).map((section) =>
         section.id === id ? { ...section, ...patch } : section,
       ),
@@ -1844,7 +2129,7 @@ function DocumentsPanel({
 
   function addGuideSection() {
     const nextIndex = (guide.sections?.length ?? 0) + 1;
-    updateDocument("guide", {
+    updateDocument({
       sections: [
         ...(guide.sections ?? []),
         {
@@ -1858,133 +2143,147 @@ function DocumentsPanel({
   }
 
   function removeGuideSection(id: string) {
-    updateDocument("guide", {
+    updateDocument({
       sections: (guide.sections ?? []).filter((section) => section.id !== id),
+    });
+  }
+
+  async function updateResource(resource: ContentResource, file?: File) {
+    const nextResource = file
+      ? { ...resource, ...(await storeDocumentFile(`guide/${resource.id}`, file)) }
+      : resource;
+    updateDocument({
+      resources: (guide.resources ?? []).map((item) =>
+        item.id === resource.id ? nextResource : item,
+      ),
     });
   }
 
   return (
     <Panel
-      title="Guide & décharge"
-      desc="Le guide est une page publique modifiable. La décharge reste un document officiel importé pour la signature sur place."
+      title="Guide"
+      desc="Modifiez la page publique et remplacez les documents officiels sans toucher à sa mise en page."
     >
-      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-2xl border border-border bg-background p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <BookOpenText className="h-5 w-5 text-primary" />
-              <h3 className="font-display text-xl">Page guide</h3>
-            </div>
-            <Link
-              to="/guide"
-              className="rounded-full border border-border bg-card px-4 py-2 text-sm hover:bg-secondary"
-            >
-              Voir la page
-            </Link>
+      <div className="border border-border bg-background p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <BookOpenText className="h-5 w-5 text-primary" />
+            <h3 className="font-display text-xl">Page guide</h3>
           </div>
+          <Link
+            to="/guide"
+            className="rounded-full border border-border bg-card px-4 py-2 text-sm hover:bg-secondary"
+          >
+            Voir la page
+          </Link>
+        </div>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <Field
-              label="Titre"
-              value={guide.title}
-              onChange={(value) => updateDocument("guide", { title: value })}
-            />
-            <Field
-              label="Version interne"
-              value={guide.version}
-              onChange={(value) => updateDocument("guide", { version: value })}
-            />
-          </div>
-          <TextareaField
-            label="Introduction"
-            value={guide.intro ?? ""}
-            onChange={(value) => updateDocument("guide", { intro: value })}
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <Field
+            label="Titre"
+            value={guide.title}
+            onChange={(value) => updateDocument({ title: value })}
           />
-          <TextareaField
-            label="Texte important avant les étapes"
-            value={guide.body}
-            onChange={(value) => updateDocument("guide", { body: value })}
+          <Field
+            label="Version interne"
+            value={guide.version}
+            onChange={(value) => updateDocument({ version: value })}
           />
+        </div>
+        <TextareaField
+          label="Introduction"
+          value={guide.intro ?? ""}
+          onChange={(value) => updateDocument({ intro: value })}
+        />
+        <TextareaField
+          label="Texte important avant les étapes"
+          value={guide.body}
+          onChange={(value) => updateDocument({ body: value })}
+        />
 
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-            <h4 className="font-display text-xl">Étapes du guide</h4>
-            <button
-              onClick={addGuideSection}
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-            >
-              <Plus className="h-4 w-4" /> Ajouter une étape
-            </button>
-          </div>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <h4 className="font-display text-xl">Étapes du guide</h4>
+          <button
+            onClick={addGuideSection}
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+          >
+            <Plus className="h-4 w-4" /> Ajouter une étape
+          </button>
+        </div>
 
-          <div className="mt-3 grid gap-3">
-            {(guide.sections ?? []).map((section) => (
-              <div key={section.id} className="rounded-2xl border border-border bg-card p-4">
-                <div className="grid gap-3 md:grid-cols-[90px_1fr]">
-                  <Field
-                    label="Numéro"
-                    value={section.number}
-                    onChange={(value) => updateGuideSection(section.id, { number: value })}
-                  />
-                  <Field
-                    label="Titre"
-                    value={section.title}
-                    onChange={(value) => updateGuideSection(section.id, { title: value })}
-                  />
-                </div>
+        <div className="mt-3 grid gap-3">
+          {(guide.sections ?? []).map((section) => (
+            <div key={section.id} className="rounded-2xl border border-border bg-card p-4">
+              <div className="grid gap-3 md:grid-cols-[90px_1fr]">
+                <Field
+                  label="Numéro"
+                  value={section.number}
+                  onChange={(value) => updateGuideSection(section.id, { number: value })}
+                />
+                <Field
+                  label="Titre"
+                  value={section.title}
+                  onChange={(value) => updateGuideSection(section.id, { title: value })}
+                />
+              </div>
 
-                <div className="mt-3 grid gap-3 lg:grid-cols-[150px_1fr]">
-                  <div>
-                    <div className="flex h-32 w-full items-center justify-center overflow-hidden rounded-2xl border border-border bg-secondary/40">
-                      {section.imageDataUrl ? (
-                        <img
-                          src={section.imageDataUrl}
-                          alt={section.title}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs hover:bg-secondary">
-                        <UploadCloud className="h-3.5 w-3.5" /> Photo
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="sr-only"
-                          onChange={async (event) => {
-                            await uploadGuideImage(section.id, event.currentTarget.files?.[0]);
-                            event.currentTarget.value = "";
-                          }}
-                        />
-                      </label>
-                      {section.imageDataUrl && (
-                        <button
-                          onClick={() =>
-                            updateGuideSection(section.id, {
-                              imageDataUrl: undefined,
-                              imageName: undefined,
-                            })
-                          }
-                          className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary"
-                        >
-                          Retirer
-                        </button>
-                      )}
-                    </div>
+              <div className="mt-3 grid gap-3 lg:grid-cols-[150px_1fr]">
+                <div>
+                  <div className="flex h-32 w-full items-center justify-center overflow-hidden rounded-2xl border border-border bg-secondary/40">
+                    {section.imageDataUrl || section.imageUrl ? (
+                      <img
+                        src={section.imageDataUrl || section.imageUrl}
+                        alt={section.title}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                    )}
                   </div>
-                  <TextareaField
-                    label="Texte de l'étape"
-                    value={section.body}
-                    onChange={(value) => updateGuideSection(section.id, { body: value })}
-                  />
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs hover:bg-secondary">
+                      <UploadCloud className="h-3.5 w-3.5" /> Photo
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={async (event) => {
+                          await uploadGuideImage(section.id, event.currentTarget.files?.[0]);
+                          event.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+                    {(section.imageDataUrl || section.imageUrl) && (
+                      <button
+                        onClick={() =>
+                          updateGuideSection(section.id, {
+                            imageDataUrl: undefined,
+                            imageUrl: undefined,
+                            imageName: undefined,
+                          })
+                        }
+                        className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary"
+                      >
+                        Retirer
+                      </button>
+                    )}
+                  </div>
                 </div>
+                <TextareaField
+                  label="Texte de l'étape"
+                  value={section.body}
+                  onChange={(value) => updateGuideSection(section.id, { body: value })}
+                />
+              </div>
 
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    {section.imageName ??
-                      "Photo de remplacement utilisée côté client si aucune photo n'est ajoutée."}
-                  </span>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <ToggleRow
+                  label="Visible sur le guide"
+                  checked={section.visible !== false}
+                  onChange={(visible) => updateGuideSection(section.id, { visible })}
+                />
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground">{section.imageName}</span>
                   <button
                     onClick={() => removeGuideSection(section.id)}
                     className="inline-flex items-center gap-2 rounded-full border border-destructive/30 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10"
@@ -1993,71 +2292,133 @@ function DocumentsPanel({
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
-
-          <div className="mt-3 text-xs text-muted-foreground">
-            Dernière modification : {new Date(guide.updatedAt).toLocaleString("fr-FR")}
-          </div>
+            </div>
+          ))}
         </div>
 
-        {waiver && (
-          <div className="rounded-2xl border border-border bg-background p-4">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              <h3 className="font-display text-xl">Décharge officielle</h3>
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Importez le document qui sera présenté avant la signature sur tablette.
-            </p>
-            <div className="mt-4 rounded-2xl border border-border bg-card p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <div className="text-sm font-medium">
-                    {waiver.attachmentName ?? "Aucun document importé"}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    PDF, image, Word ou document fourni par Mala Madre.
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm hover:bg-secondary">
-                    <UploadCloud className="h-4 w-4" /> Importer
-                    <input
-                      type="file"
-                      accept="application/pdf,image/*,.doc,.docx"
-                      className="sr-only"
-                      onChange={async (event) => {
-                        await uploadDocument("waiver", event.currentTarget.files?.[0]);
-                        event.currentTarget.value = "";
-                      }}
-                    />
-                  </label>
-                  {waiver.attachmentDataUrl && (
-                    <button
-                      onClick={() =>
-                        updateDocument("waiver", {
-                          attachmentDataUrl: undefined,
-                          attachmentName: undefined,
-                          attachmentType: undefined,
-                        })
-                      }
-                      className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
-                    >
-                      <X className="h-4 w-4" /> Retirer
-                    </button>
-                  )}
-                </div>
-              </div>
-              <DocumentPreview document={waiver} className="mt-3" compact />
-            </div>
-            <div className="mt-3 text-xs text-muted-foreground">
-              Dernière modification : {new Date(waiver.updatedAt).toLocaleString("fr-FR")}
-            </div>
-          </div>
-        )}
+        <div className="mt-7 border-t border-border pt-5">
+          <h4 className="font-display text-xl">Documents officiels du guide</h4>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Leur ordre et leur visibilité sont repris exactement sur la page publique.
+          </p>
+          <ResourceAdminList
+            resources={guide.resources ?? []}
+            onChange={updateResource}
+            onReorder={(resources) => updateDocument({ resources })}
+          />
+        </div>
+
+        <div className="mt-3 text-xs text-muted-foreground">
+          Dernière modification : {new Date(guide.updatedAt).toLocaleString("fr-FR")}
+        </div>
       </div>
     </Panel>
+  );
+}
+
+function ResourceAdminList({
+  resources,
+  onChange,
+  onReorder,
+  compact,
+}: {
+  resources: ContentResource[];
+  onChange: (resource: ContentResource, file?: File) => void | Promise<void>;
+  onReorder?: (resources: ContentResource[]) => void;
+  compact?: boolean;
+}) {
+  function move(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (!onReorder || target < 0 || target >= resources.length) return;
+    const next = [...resources];
+    [next[index], next[target]] = [next[target], next[index]];
+    onReorder(next);
+  }
+
+  return (
+    <div className="mt-4 grid gap-3">
+      {resources.map((resource, index) => {
+        const previews = resource.previewImageDataUrls?.length
+          ? resource.previewImageDataUrls
+          : (resource.previewImageUrls ?? []);
+        return (
+          <div key={resource.id} className="border border-border bg-card p-3">
+            <div className={`grid gap-3 ${compact ? "" : "md:grid-cols-[140px_1fr]"}`}>
+              {previews[0] ? (
+                <img
+                  src={previews[0]}
+                  alt={resource.title}
+                  className={`w-full border border-border bg-white object-contain ${
+                    compact ? "max-h-40" : "h-36"
+                  }`}
+                />
+              ) : (
+                <div className="grid h-28 place-items-center border border-border bg-secondary/40">
+                  <FileText className="h-7 w-7 text-muted-foreground" />
+                </div>
+              )}
+              <div className="grid gap-2">
+                <Field
+                  label="Titre"
+                  value={resource.title}
+                  onChange={(title) => onChange({ ...resource, title })}
+                />
+                {!compact && (
+                  <TextareaField
+                    label="Description"
+                    value={resource.description}
+                    onChange={(description) => onChange({ ...resource, description })}
+                  />
+                )}
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs hover:bg-secondary">
+                  <UploadCloud className="h-3.5 w-3.5" /> Remplacer le document
+                  <input
+                    type="file"
+                    accept="application/pdf,image/*"
+                    className="sr-only"
+                    onChange={async (event) => {
+                      await onChange(resource, event.currentTarget.files?.[0]);
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+                {onReorder && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => move(index, -1)}
+                      disabled={index === 0}
+                      className="grid h-8 w-8 place-items-center border border-border disabled:opacity-30"
+                      title="Monter"
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => move(index, 1)}
+                      disabled={index === resources.length - 1}
+                      className="grid h-8 w-8 place-items-center border border-border disabled:opacity-30"
+                      title="Descendre"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </button>
+                  </>
+                )}
+              </div>
+              <ToggleRow
+                label="Visible"
+                checked={resource.visible}
+                onChange={(visible) => onChange({ ...resource, visible })}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -2073,9 +2434,11 @@ function DocumentPreview({
   compact?: boolean;
 }) {
   const previewTitle = title ?? item?.title ?? "Document";
-  const hasAttachment = Boolean(item?.attachmentDataUrl);
-  const isImage = item?.attachmentType?.startsWith("image/");
-  const isPdf = item?.attachmentType === "application/pdf";
+  const attachment = item?.attachmentDataUrl || item?.attachmentUrl;
+  const previews = item?.previewImageDataUrls?.length
+    ? item.previewImageDataUrls
+    : (item?.previewImageUrls ?? []);
+  const hasAttachment = Boolean(attachment);
 
   return (
     <div className={`rounded-xl border border-border bg-secondary/30 p-3 text-sm ${className}`}>
@@ -2091,7 +2454,7 @@ function DocumentPreview({
         </div>
         {hasAttachment && (
           <a
-            href={item?.attachmentDataUrl}
+            href={attachment}
             download={item?.attachmentName}
             className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-xs hover:bg-secondary"
           >
@@ -2100,37 +2463,28 @@ function DocumentPreview({
         )}
       </div>
 
-      {hasAttachment && isImage && (
-        <img
-          src={item?.attachmentDataUrl}
-          alt={previewTitle}
-          className={`mt-3 w-full rounded-lg border border-border bg-white object-contain ${
-            compact ? "max-h-52" : "max-h-80"
-          }`}
-        />
+      {previews.length > 0 && (
+        <div className="mt-3 grid gap-2">
+          {previews.map((preview, index) => (
+            <img
+              key={`${previewTitle}-${index}`}
+              src={preview}
+              alt={`${previewTitle}${previews.length > 1 ? ` - page ${index + 1}` : ""}`}
+              className={`w-full border border-border bg-white object-contain ${
+                compact ? "max-h-52" : "max-h-[34rem]"
+              }`}
+            />
+          ))}
+        </div>
       )}
 
-      {hasAttachment && isPdf && (
-        <object
-          data={item?.attachmentDataUrl}
-          type="application/pdf"
-          className={`mt-3 w-full rounded-lg border border-border bg-white ${
-            compact ? "h-52" : "h-80"
-          }`}
-        >
-          <a href={item?.attachmentDataUrl} download={item?.attachmentName}>
-            Télécharger le document
-          </a>
-        </object>
-      )}
-
-      {hasAttachment && !isImage && !isPdf && (
+      {hasAttachment && previews.length === 0 && (
         <div className="mt-3 flex items-center gap-3 rounded-lg border border-border bg-background p-3">
           <FileText className="h-5 w-5 text-primary" />
           <div>
             <div className="font-medium">Document importé</div>
             <div className="text-xs text-muted-foreground">
-              Aperçu non disponible ici, mais le fichier est bien lié à cette version.
+              Le fichier est bien lié à cette version. Ouvrez-le pour le consulter.
             </div>
           </div>
         </div>
