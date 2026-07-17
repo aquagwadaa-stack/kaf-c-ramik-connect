@@ -100,7 +100,7 @@ function GuidePage() {
               }`}
             >
               <Icon className="h-4 w-4 shrink-0" />
-              <span className="truncate">{label}</span>
+              <span className="text-center text-xs leading-4 sm:text-sm">{label}</span>
             </button>
           ))}
         </div>
