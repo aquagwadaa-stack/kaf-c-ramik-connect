@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarCheck2,
   CalendarDays,
-  CalendarHeart,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -13,7 +12,6 @@ import {
   Palette,
   Plus,
   Sparkles,
-  Users,
 } from "lucide-react";
 import { PageShell, PageHeader } from "@/components/page-shell";
 import { useKafeSettings, type KafeSettings } from "@/lib/admin-data";
@@ -59,24 +57,17 @@ const experiences: {
 }[] = [
   {
     id: "cafe_atelier",
-    title: "Kafé + atelier",
-    desc: "Peinture sur céramique avec une consommation sur place.",
-    icon: Coffee,
+    title: "Atelier céramique",
+    desc: "Peinture sur céramique avec consommation obligatoire sur place (café, boisson, bagel ou douceur).",
+    icon: Palette,
     price: "pièce + conso",
   },
   {
     id: "brunch_atelier",
-    title: "Brunch + atelier",
-    desc: "Déjeunette gourmande puis moment créatif.",
+    title: "Brunch",
+    desc: "Brunch gourmand seul, sans atelier céramique.",
     icon: CroissantIcon,
-    price: "pièce + brunch",
-  },
-  {
-    id: "groupe",
-    title: "Groupe",
-    desc: "Pour une grande table ou une demande à organiser.",
-    icon: Users,
-    price: "validation équipe",
+    price: "brunch seul",
   },
 ];
 
@@ -104,8 +95,8 @@ function ReserverPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const depositRequired = shouldRequireDeposit(people, settings);
-  const deposit = getDepositAmount(people, settings);
+  const depositRequired = shouldRequireDeposit(people, settings, experience);
+  const deposit = getDepositAmount(people, settings, experience);
   const requiresManualReview = shouldWaitForManualConfirmation(people, experience, settings);
 
   useEffect(() => {
@@ -174,7 +165,7 @@ function ReserverPage() {
         depositRequired,
         depositAmount: deposit,
         status,
-        isGroupRequest: people >= settings.manualConfirmationThreshold || experience === "groupe",
+        isGroupRequest: people >= settings.manualConfirmationThreshold,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -537,7 +528,7 @@ function ReserverPage() {
                   className="inline-flex items-center gap-1 rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground"
                 >
                   <CalendarCheck2 className="h-4 w-4" />
-                  {submitting ? "Enregistrement…" : "Envoyer la demande groupe"}
+                  {submitting ? "Enregistrement…" : "Envoyer la demande"}
                 </button>
               ) : (
                 <button
