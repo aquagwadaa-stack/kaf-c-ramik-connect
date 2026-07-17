@@ -470,12 +470,21 @@ export async function addWalkInReservation(input: {
   return full;
 }
 
-export function shouldRequireDeposit(people: number, settings: KafeSettings = settingsSeed) {
+export function shouldRequireDeposit(
+  people: number,
+  settings: KafeSettings = settingsSeed,
+  experience?: ExperienceType,
+) {
+  if (experience === "brunch_atelier") return false;
   return people >= settings.depositThreshold;
 }
 
-export function getDepositAmount(people: number, settings: KafeSettings = settingsSeed) {
-  return shouldRequireDeposit(people, settings) ? settings.depositFixedAmount : 0;
+export function getDepositAmount(
+  people: number,
+  settings: KafeSettings = settingsSeed,
+  experience?: ExperienceType,
+) {
+  return shouldRequireDeposit(people, settings, experience) ? settings.depositFixedAmount : 0;
 }
 
 export function shouldWaitForManualConfirmation(
