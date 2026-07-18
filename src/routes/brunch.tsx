@@ -3,7 +3,6 @@ import brunchAtelier from "@/assets/brunch-atelier.png.asset.json";
 import {
   ArrowRight,
   CalendarHeart,
-  CheckCircle2,
   Coffee,
   Flame,
   PackageCheck,
@@ -11,7 +10,6 @@ import {
   Utensils,
 } from "lucide-react";
 import { PageShell, PageHeader } from "@/components/page-shell";
-import { useKafeSettings } from "@/lib/admin-data";
 
 export const Route = createFileRoute("/brunch")({
   head: () => ({
