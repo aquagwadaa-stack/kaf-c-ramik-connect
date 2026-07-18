@@ -195,7 +195,6 @@ export type Database = {
         Args: { p_approved: boolean; p_id: string; p_message?: string }
         Returns: Json
       }
-      expire_kafe_no_shows: { Args: never; Returns: number }
       get_current_kafe_admin: {
         Args: never
         Returns: {
