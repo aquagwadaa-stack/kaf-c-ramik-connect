@@ -14,6 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
+      kafe_admin_access_requests: {
+        Row: {
+          decided_at: string | null
+          decided_by: string | null
+          email: string
+          id: string
+          requested_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          decided_at?: string | null
+          decided_by?: string | null
+          email: string
+          id?: string
+          requested_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          decided_at?: string | null
+          decided_by?: string | null
+          email?: string
+          id?: string
+          requested_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      kafe_admin_notification_reads: {
+        Row: {
+          notification_id: number
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          notification_id: number
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          notification_id?: number
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kafe_admin_notification_reads_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "kafe_admin_notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kafe_admin_notifications: {
+        Row: {
+          access_request_id: string | null
+          body: string
+          created_at: string
+          id: number
+          kind: string
+          reservation_id: string | null
+          title: string
+        }
+        Insert: {
+          access_request_id?: string | null
+          body?: string
+          created_at?: string
+          id?: number
+          kind: string
+          reservation_id?: string | null
+          title: string
+        }
+        Update: {
+          access_request_id?: string | null
+          body?: string
+          created_at?: string
+          id?: number
+          kind?: string
+          reservation_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kafe_admin_notifications_access_request_id_fkey"
+            columns: ["access_request_id"]
+            isOneToOne: false
+            referencedRelation: "kafe_admin_access_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kafe_admin_notifications_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "kafe_reservations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kafe_admin_profiles: {
         Row: {
           created_at: string
@@ -79,6 +180,62 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      kafe_payments: {
+        Row: {
+          amount: number
+          checkout_reference: string
+          created_at: string
+          currency: string
+          hosted_checkout_url: string | null
+          id: string
+          paid_at: string | null
+          provider: string
+          provider_checkout_id: string | null
+          provider_payload: Json
+          reservation_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          checkout_reference: string
+          created_at?: string
+          currency?: string
+          hosted_checkout_url?: string | null
+          id?: string
+          paid_at?: string | null
+          provider?: string
+          provider_checkout_id?: string | null
+          provider_payload?: Json
+          reservation_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          checkout_reference?: string
+          created_at?: string
+          currency?: string
+          hosted_checkout_url?: string | null
+          id?: string
+          paid_at?: string | null
+          provider?: string
+          provider_checkout_id?: string | null
+          provider_payload?: Json
+          reservation_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kafe_payments_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: true
+            referencedRelation: "kafe_reservations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       kafe_reservations: {
         Row: {
@@ -166,6 +323,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_kafe_admin_request: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
+      cancel_kafe_reservation_by_token: {
+        Args: { p_token: string }
+        Returns: Json
+      }
       create_kafe_reservation: {
         Args: {
           p_date: string
@@ -202,6 +367,23 @@ export type Database = {
           role: string
         }[]
       }
+      get_kafe_admin_notifications: {
+        Args: { p_limit?: number }
+        Returns: {
+          access_request_id: string
+          body: string
+          created_at: string
+          id: number
+          is_read: boolean
+          kind: string
+          reservation_id: string
+          title: string
+        }[]
+      }
+      get_kafe_reservation_by_token: {
+        Args: { p_token: string }
+        Returns: Json
+      }
       get_kafe_slot_capacity: {
         Args: { from_date: string; to_date: string }
         Returns: {
@@ -220,6 +402,15 @@ export type Database = {
           slot: string
         }[]
       }
+      mark_kafe_notification_read: {
+        Args: { p_notification_id: number }
+        Returns: undefined
+      }
+      reject_kafe_admin_request: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
+      revoke_kafe_admin_access: { Args: { p_user_id: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
