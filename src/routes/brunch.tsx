@@ -3,7 +3,6 @@ import brunchAtelier from "@/assets/brunch-atelier.png.asset.json";
 import {
   ArrowRight,
   CalendarHeart,
-  CheckCircle2,
   Coffee,
   Flame,
   PackageCheck,
@@ -11,7 +10,6 @@ import {
   Utensils,
 } from "lucide-react";
 import { PageShell, PageHeader } from "@/components/page-shell";
-import { useKafeSettings } from "@/lib/admin-data";
 
 export const Route = createFileRoute("/brunch")({
   head: () => ({
@@ -61,8 +59,6 @@ const flow = [
 ] as const;
 
 function BrunchPage() {
-  const [settings] = useKafeSettings();
-
   return (
     <PageShell>
       <PageHeader
@@ -72,40 +68,13 @@ function BrunchPage() {
       />
 
       <section className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
-        <div className="grid overflow-hidden rounded-[2rem] border border-border bg-cream lg:grid-cols-[1.05fr_0.95fr]">
-          <figure className="min-h-[340px] overflow-hidden">
-            <img
-              src={brunchAtelier.url}
-              alt="Atelier de peinture sur céramique"
-              className="h-full w-full object-cover"
-            />
-          </figure>
-          <aside className="p-6 sm:p-10">
-            <div className="inline-flex items-center gap-2 rounded-full bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-              <CheckCircle2 className="h-3.5 w-3.5 text-sage" /> À retenir
-            </div>
-            <h2 className="mt-5 font-display text-4xl leading-none">
-              Réserver, c'est pour l'atelier.
-            </h2>
-            <p className="mt-4 text-sm leading-6 text-muted-foreground">
-              {settings.walkInNoticeText}
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link
-                to="/reserver"
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
-              >
-                Réserver un atelier <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                to="/carte"
-                className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-3 text-sm font-medium"
-              >
-                Voir la carte
-              </Link>
-            </div>
-          </aside>
-        </div>
+        <figure className="overflow-hidden rounded-[2rem] border border-border bg-cream">
+          <img
+            src={brunchAtelier.url}
+            alt="Atelier de peinture sur céramique au Kafé Céramik"
+            className="h-[260px] w-full object-cover sm:h-[380px]"
+          />
+        </figure>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {flow.map((item, index) => {
