@@ -82,6 +82,7 @@ import {
 import { downloadSignedWaiver } from "@/lib/waiver-pdf";
 
 export const Route = createFileRoute("/admin")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Espace équipe — Kafé Céramik" },
