@@ -164,8 +164,10 @@ export function SiteFooter() {
   ].filter(Boolean) as { label: string; href: string; icon: LucideIcon }[];
 
   return (
-    <footer className="mt-20 border-t border-border bg-cream">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-3">
+    <footer className="relative mt-20 bg-cream grain">
+      <div aria-hidden className="absolute inset-x-0 -top-5 h-6 wavy-top bg-cream" />
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:grid-cols-3">
+
         <div>
           <div className="font-display text-xl">Kafé Céramik</div>
           <p className="mt-2 text-sm text-muted-foreground">
