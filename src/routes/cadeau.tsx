@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Gift, Phone } from "lucide-react";
+import { ExternalLink, Gift, Phone } from "lucide-react";
 import { PageShell, PageHeader } from "@/components/page-shell";
+import { useKafeSettings } from "@/lib/admin-data";
 
 export const Route = createFileRoute("/cadeau")({
   head: () => ({
@@ -16,12 +17,15 @@ export const Route = createFileRoute("/cadeau")({
 });
 
 function CadeauPage() {
+  const [settings] = useKafeSettings();
+  const paymentUrl = settings.giftCardPaymentUrl.trim();
+
   return (
     <PageShell>
       <PageHeader
         eyebrow="Offrir"
         title="Carte cadeau"
-        description="La carte cadeau en ligne n'est pas encore active. Pour offrir un moment au Kafe Ceramik, contactez directement l'equipe."
+        description="Offre un moment créatif et gourmand au Kafé Céramik."
       />
       <section className="mx-auto max-w-3xl px-4 py-10">
         <div className="rounded-3xl border border-border bg-card p-6 sm:p-8">
@@ -30,17 +34,28 @@ function CadeauPage() {
           </div>
           <h2 className="mt-5 font-display text-2xl">Offrir un atelier</h2>
           <p className="mt-2 text-muted-foreground">
-            Cette partie sera active uniquement si Mala Madre confirme le fonctionnement des cartes
-            cadeaux et le paiement associe. Pour le moment, aucune commande ni aucun paiement n'est
-            simule depuis le site.
+            La carte cadeau permet de laisser la personne choisir son moment et sa pièce à peindre.
+            Le paiement est réalisé sur la page sécurisée SumUp du Kafé.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <a
-              href="tel:+590690284788"
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
-            >
-              <Phone className="h-4 w-4" /> Appeler le Kafe
-            </a>
+            {paymentUrl ? (
+              <a
+                href={paymentUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
+              >
+                <Gift className="h-4 w-4" /> Acheter une carte cadeau
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            ) : (
+              <a
+                href={`tel:${settings.contactPhone.replace(/[^+\d]/g, "")}`}
+                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
+              >
+                <Phone className="h-4 w-4" /> Contacter le Kafé
+              </a>
+            )}
             <Link to="/reserver" className="rounded-full border border-border px-5 py-3 text-sm">
               Voir les ateliers
             </Link>

@@ -14,6 +14,11 @@ import {
 export type ReservationStatus = "pending" | "deposit_paid" | "confirmed" | "arrived" | "cancelled";
 export type ExperienceType = "atelier" | "cafe_atelier" | "brunch_atelier" | "groupe";
 
+export type SeatingAllocation = {
+  unitId: string;
+  people: number;
+};
+
 export interface Reservation {
   id: string;
   createdAt: string;
@@ -37,6 +42,7 @@ export interface Reservation {
   eventType?: string;
   budget?: string;
   seatingUnitId?: string;
+  seatingAllocations?: SeatingAllocation[];
   source?: "online" | "walk_in";
   walkInLabel?: string;
   decisionMessage?: string;
@@ -473,10 +479,13 @@ export async function addWalkInReservation(input: {
 export function shouldRequireDeposit(
   people: number,
   settings: KafeSettings = settingsSeed,
-  experience?: ExperienceType,
+  _experience?: ExperienceType,
 ) {
-  if (experience === "brunch_atelier") return false;
   return people >= settings.depositThreshold;
+}
+
+export function experienceUsesCeramicGuide(experience: ExperienceType) {
+  return experience !== "brunch_atelier";
 }
 
 export function getDepositAmount(
@@ -528,6 +537,7 @@ export interface SeatingUnitAvailability {
 export interface SlotPlacement {
   unitId: string | null;
   unitLabel: string | null;
+  allocations: SeatingAllocation[];
   maxGroupSize: number;
   totalRemaining: number;
 }
@@ -559,6 +569,21 @@ export function seatingUnitLabel(unitId: string | undefined, settings: KafeSetti
   return expandSeatingUnits(settings).find((unit) => unit.id === unitId)?.label ?? unitId;
 }
 
+export function seatingAllocationLabel(
+  reservation: Pick<Reservation, "seatingUnitId" | "seatingAllocations">,
+  settings: KafeSettings,
+) {
+  if (reservation.seatingAllocations?.length) {
+    return reservation.seatingAllocations
+      .map((allocation) => {
+        const label = seatingUnitLabel(allocation.unitId, settings) ?? allocation.unitId;
+        return `${label} (${allocation.people})`;
+      })
+      .join(" + ");
+  }
+  return seatingUnitLabel(reservation.seatingUnitId, settings);
+}
+
 function overlaps(slotA: string, slotB: string, durationMinutes: number) {
   const startA = timeToMinutes(slotA);
   const startB = timeToMinutes(slotB);
@@ -581,12 +606,56 @@ export function getSlotPlacement(
 ): SlotPlacement {
   const availability = getSeatingAvailability(reservations, occupancies, date, slot, settings);
   if (availability.hasUnassignedOverflow) {
-    return { unitId: null, unitLabel: null, maxGroupSize: 0, totalRemaining: 0 };
+    return {
+      unitId: null,
+      unitLabel: null,
+      allocations: [],
+      maxGroupSize: 0,
+      totalRemaining: 0,
+    };
   }
   const chosen = findBestFitUnit(availability.units, people);
+  if (chosen) {
+    return {
+      unitId: chosen.id,
+      unitLabel: chosen.label,
+      allocations: [{ unitId: chosen.id, people }],
+      maxGroupSize: availability.maxGroupSize,
+      totalRemaining: availability.totalRemaining,
+    };
+  }
+
+  if (people >= settings.manualConfirmationThreshold && availability.totalRemaining >= people) {
+    let remaining = people;
+    const allocations: SeatingAllocation[] = [];
+    [...availability.units]
+      .filter((unit) => unit.remaining > 0)
+      .sort((a, b) => b.remaining - a.remaining || b.capacity - a.capacity)
+      .forEach((unit) => {
+        if (remaining <= 0) return;
+        const allocated = Math.min(unit.remaining, remaining);
+        allocations.push({ unitId: unit.id, people: allocated });
+        remaining -= allocated;
+      });
+
+    if (remaining === 0) {
+      return {
+        unitId: allocations[0]?.unitId ?? null,
+        unitLabel: allocations
+          .map((allocation) => seatingUnitLabel(allocation.unitId, settings))
+          .filter(Boolean)
+          .join(" + "),
+        allocations,
+        maxGroupSize: availability.maxGroupSize,
+        totalRemaining: availability.totalRemaining,
+      };
+    }
+  }
+
   return {
-    unitId: chosen?.id ?? null,
-    unitLabel: chosen?.label ?? null,
+    unitId: null,
+    unitLabel: null,
+    allocations: [],
     maxGroupSize: availability.maxGroupSize,
     totalRemaining: availability.totalRemaining,
   };
@@ -602,7 +671,12 @@ export function getSeatingAvailability(
   const units = expandSeatingUnits(settings);
   const duration = Math.max(15, settings.slotDurationMinutes || 120);
   const localIds = new Set(reservations.map((reservation) => reservation.id));
-  const active = [
+  const active: {
+    id: string;
+    people: number;
+    seatingUnitId?: string;
+    seatingAllocations?: SeatingAllocation[];
+  }[] = [
     ...occupancies
       .filter(
         (occupancy) =>
@@ -626,11 +700,19 @@ export function getSeatingAvailability(
         id: reservation.id,
         people: reservation.people,
         seatingUnitId: reservation.seatingUnitId,
+        seatingAllocations: reservation.seatingAllocations,
       })),
   ];
 
   const unassigned: typeof active = [];
   active.forEach((reservation) => {
+    if (reservation.seatingAllocations?.length) {
+      reservation.seatingAllocations.forEach((allocation) => {
+        const assigned = units.find((unit) => unit.id === allocation.unitId);
+        if (assigned) assigned.remaining = Math.max(0, assigned.remaining - allocation.people);
+      });
+      return;
+    }
     const assigned = units.find((unit) => unit.id === reservation.seatingUnitId);
     if (!assigned) {
       unassigned.push(reservation);
@@ -718,7 +800,7 @@ export function formatDuration(minutes: number) {
   return `${hours}h${String(remainingMinutes).padStart(2, "0")}`;
 }
 
-export function updateStatus(id: string, status: ReservationStatus) {
+export async function updateStatus(id: string, status: ReservationStatus) {
   const list = read().map((reservation) =>
     reservation.id === id ? { ...reservation, status } : reservation,
   );
@@ -726,9 +808,22 @@ export function updateStatus(id: string, status: ReservationStatus) {
   const updated = list.find((reservation) => reservation.id === id);
   if (isSupabaseConfigured()) {
     if (!updated) return;
-    updateRemoteReservationStatus(updated).catch((error) => {
+    await updateRemoteReservationStatus(updated).catch((error) => {
       console.warn("Remote reservation status save skipped:", error);
     });
+    if (status === "cancelled") {
+      await invokeEdgeFunction<EmailDispatchResult>(
+        "kafe-emails",
+        {
+          action: "reservation-cancelled",
+          reservationId: id,
+          siteUrl: window.location.origin,
+        },
+        true,
+      ).catch((error) => {
+        console.warn("Reservation cancellation email skipped:", error);
+      });
+    }
   }
 }
 

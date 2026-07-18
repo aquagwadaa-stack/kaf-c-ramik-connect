@@ -18,6 +18,7 @@ import { useKafeSettings, type KafeSettings } from "@/lib/admin-data";
 import { formatPublicTime } from "@/lib/opening-hours";
 import {
   addReservation,
+  experienceUsesCeramicGuide,
   experienceLabel,
   formatDuration,
   formatReservationDate,
@@ -98,6 +99,7 @@ function ReserverPage() {
   const depositRequired = shouldRequireDeposit(people, settings, experience);
   const deposit = getDepositAmount(people, settings, experience);
   const requiresManualReview = shouldWaitForManualConfirmation(people, experience, settings);
+  const isCeramicBooking = experienceUsesCeramicGuide(experience);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -142,7 +144,7 @@ function ReserverPage() {
     if (!form.lastName) nextErrors.lastName = "Requis";
     if (!form.phone || form.phone.length < 8) nextErrors.phone = "Téléphone invalide";
     if (!form.email || !/.+@.+\..+/.test(form.email)) nextErrors.email = "Email invalide";
-    if (!guideAccepted)
+    if (isCeramicBooking && !guideAccepted)
       nextErrors.guideAccepted = "Merci de confirmer les consignes avant de continuer";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
@@ -159,8 +161,9 @@ function ReserverPage() {
         date,
         slot,
         ...form,
-        guideAccepted,
+        guideAccepted: isCeramicBooking ? guideAccepted : false,
         seatingUnitId: placement.unitId,
+        seatingAllocations: placement.allocations,
         depositPaid: false,
         depositRequired,
         depositAmount: deposit,
@@ -173,9 +176,12 @@ function ReserverPage() {
         message.includes("KAFE_SLOT_FULL") ||
         message.includes("KAFE_INVALID_SLOT") ||
         message.includes("KAFE_INVALID_DATE") ||
+        message.includes("KAFE_BOOKING_TOO_LATE") ||
         message.includes("KAFE_SEATING_REVIEW_REQUIRED");
       const friendlyMessage = message.includes("KAFE_SLOT_FULL")
         ? "Ce créneau vient d'être rempli par une autre réservation. Choisis un autre horaire."
+        : message.includes("KAFE_BOOKING_TOO_LATE")
+          ? "Les réservations se font au plus tard la veille. Choisis une autre date."
         : schedulingConflict
           ? "Ce créneau n'est plus réservable. Choisis une autre date ou un autre horaire."
           : "La réservation n'a pas pu être enregistrée. Réessayez dans un instant.";
@@ -213,8 +219,8 @@ function ReserverPage() {
     <PageShell>
       <PageHeader
         eyebrow="Réservation"
-        title="Réserve ton atelier"
-        description="La réservation concerne l'atelier céramique avec consommation sur place. Pour un café, un bagel ou une déjeunette sans peindre, tu peux passer librement."
+        title="Réserve ton moment au Kafé"
+        description="Choisis entre un atelier céramique avec consommation sur place ou une réservation brunch sans atelier. Pour un café, un bagel ou une déjeunette, tu peux aussi passer librement selon les places."
       />
       <section className="mx-auto max-w-5xl px-4 py-10">
         {settings.walkInCafeEnabled && (
@@ -403,7 +409,7 @@ function ReserverPage() {
                     <div className="text-sm">
                       <div className="font-medium">Acompte nécessaire : {deposit} €</div>
                       <p className="mt-1 text-muted-foreground">
-                        Il sera demandé après validation de ta demande par l'équipe.
+                        Il devra être réglé en ligne avant que l'équipe valide définitivement la demande.
                       </p>
                     </div>
                   </div>
@@ -420,6 +426,11 @@ function ReserverPage() {
                 <p className="mt-2 text-muted-foreground">
                   La cuisine ferme à {formatPublicTime(settings.kitchenClosingTime)}.
                 </p>
+                {requiresManualReview && (
+                  <p className="mt-2 font-medium text-foreground">
+                    {settings.groupOutsideFoodNotice}
+                  </p>
+                )}
                 <p className="mt-2 text-muted-foreground">
                   Ta demande sort du cadre habituel ?{" "}
                   <Link
@@ -431,6 +442,7 @@ function ReserverPage() {
                 </p>
               </div>
 
+              {isCeramicBooking && (
               <div className="mt-4 border-l-4 border-primary bg-secondary/45 px-4 py-4 text-sm">
                 <div className="font-medium">À savoir avant de confirmer</div>
                 <ul className="mt-2 grid gap-1.5 text-muted-foreground sm:grid-cols-2">
@@ -449,7 +461,9 @@ function ReserverPage() {
                   Consulter le guide complet
                 </Link>
               </div>
+              )}
 
+              {isCeramicBooking && (
               <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-background p-4 text-sm">
                 <input
                   type="checkbox"
@@ -471,6 +485,7 @@ function ReserverPage() {
                   )}
                 </span>
               </label>
+              )}
             </Step>
           )}
 
@@ -784,7 +799,7 @@ function WeekPlanner({
 
       <p className="mt-3 text-xs text-muted-foreground">
         Durée indicative d'un créneau : {formatDuration(settings.slotDurationMinutes)}. Les créneaux
-        complets ne peuvent pas être réservés.
+        complets ne peuvent pas être réservés. La réservation se fait au plus tard la veille.
       </p>
     </div>
   );
@@ -801,6 +816,9 @@ function getSlotAvailability(
   const today = startOfDay(new Date());
   const current = startOfDay(day);
   if (current < today) return { disabled: true, label: "passé" };
+
+  const earliestBookable = addDays(today, Math.max(0, settings.minimumBookingLeadDays ?? 1));
+  if (current < earliestBookable) return { disabled: true, label: "réservation la veille" };
 
   const date = toISODate(day);
   if (new Date(`${date}T${slot}:00`).getTime() <= Date.now()) {

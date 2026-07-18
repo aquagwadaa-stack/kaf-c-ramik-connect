@@ -41,6 +41,7 @@ import {
   getSeatingAvailability,
   getSlotsForDate,
   removeReservation,
+  seatingAllocationLabel,
   statusLabel,
   seatingUnitLabel,
   updateStatus,
@@ -187,7 +188,7 @@ function exportReservationsCsv(reservations: Reservation[], settings: KafeSettin
       reservation.email,
       reservation.people,
       experienceLabel(reservation.experience),
-      seatingUnitLabel(reservation.seatingUnitId, settings) ?? "À attribuer",
+      seatingAllocationLabel(reservation, settings) ?? "À attribuer",
       statusLabel(reservation.status),
       reservation.depositRequired ? "oui" : "non",
       reservation.depositPaid ? "oui" : "non",
@@ -500,7 +501,7 @@ function OverviewPanel({
           ) : (
             <div className="divide-y divide-border border-y border-border">
               {todayReservations.map((reservation) => {
-                const location = seatingUnitLabel(reservation.seatingUnitId, settings);
+                const location = seatingAllocationLabel(reservation, settings);
                 const signed = reservationIsSigned(reservation, signatures);
                 return (
                   <button
@@ -1091,7 +1092,7 @@ function ReservationCard({
   signed: boolean;
   settings: KafeSettings;
 }) {
-  const location = seatingUnitLabel(reservation.seatingUnitId, settings);
+  const location = seatingAllocationLabel(reservation, settings);
   const groupRequest =
     reservation.isGroupRequest || reservation.people >= settings.manualConfirmationThreshold;
   const pendingGroup = reservation.status === "pending" && groupRequest;
@@ -2200,6 +2201,12 @@ function SettingsPanel({
           onChange={(groupDepositForfeitHours) => update({ groupDepositForfeitHours })}
         />
         <NumberField
+          label="Réserver au minimum"
+          value={settings.minimumBookingLeadDays}
+          suffix="jour(s) avant"
+          onChange={(minimumBookingLeadDays) => update({ minimumBookingLeadDays })}
+        />
+        <NumberField
           label="Validation équipe à partir de"
           value={settings.manualConfirmationThreshold}
           suffix="personnes"
@@ -2240,6 +2247,11 @@ function SettingsPanel({
               onChange={(value) => update({ contactEmail: value })}
             />
             <Field
+              label="Email des notifications de réservation"
+              value={settings.adminNotificationEmail}
+              onChange={(value) => update({ adminNotificationEmail: value })}
+            />
+            <Field
               label="Téléphone"
               value={settings.contactPhone}
               onChange={(value) => update({ contactPhone: value })}
@@ -2253,6 +2265,36 @@ function SettingsPanel({
               label="Lien Google Maps"
               value={settings.contactMapUrl}
               onChange={(value) => update({ contactMapUrl: value })}
+            />
+            <Field
+              label="Lien de paiement SumUp - carte cadeau"
+              value={settings.giftCardPaymentUrl}
+              onChange={(value) => update({ giftCardPaymentUrl: value })}
+            />
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-background p-4">
+          <div className="flex items-center gap-2">
+            <Coins className="h-5 w-5 text-primary" />
+            <h3 className="font-display text-xl">Devis automatique des groupes</h3>
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Renseignez les deux forfaits dès qu'ils sont confirmés. Tant qu'ils restent à 0 EUR,
+            aucun montant estimatif n'est affiché au client.
+          </p>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <NumberField
+              label="Forfait céramique par personne"
+              value={settings.groupCeramicRatePerPerson}
+              suffix="EUR"
+              onChange={(groupCeramicRatePerPerson) => update({ groupCeramicRatePerPerson })}
+            />
+            <NumberField
+              label="Forfait repas par personne"
+              value={settings.groupMealRatePerPerson}
+              suffix="EUR"
+              onChange={(groupMealRatePerPerson) => update({ groupMealRatePerPerson })}
             />
           </div>
         </div>
@@ -2273,6 +2315,11 @@ function SettingsPanel({
           label="Conditions pratiques affichées avant confirmation"
           value={settings.reservationConditionsText}
           onChange={(value) => update({ reservationConditionsText: value })}
+        />
+        <TextareaField
+          label="Règle nourriture et boissons pour les groupes"
+          value={settings.groupOutsideFoodNotice}
+          onChange={(value) => update({ groupOutsideFoodNotice: value })}
         />
         <TextareaField
           label="Phrase d'acceptation du guide"
@@ -2569,7 +2616,7 @@ function StatusButton({
   const active = current === target;
   return (
     <button
-      onClick={() => updateStatus(id, target)}
+      onClick={() => void updateStatus(id, target)}
       disabled={active}
       className={`rounded-full border px-3 py-1 text-xs ${
         active

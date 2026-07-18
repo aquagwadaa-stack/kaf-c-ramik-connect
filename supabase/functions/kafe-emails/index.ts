@@ -10,6 +10,7 @@ type ReservationValue = {
   lastName: string;
   email: string;
   phone: string;
+  experience?: string;
   people: number;
   date: string;
   slot: string;
@@ -20,6 +21,8 @@ type ReservationValue = {
   decisionMessage?: string;
   reservationCreatedEmailSentAt?: string;
   adminAlertEmailSentAt?: string;
+  cancellationEmailSentAt?: string;
+  adminCancellationAlertEmailSentAt?: string;
   decisionEmailSentAt?: string;
   reminderEmailSentAt?: string;
 };
@@ -35,6 +38,7 @@ type ReservationRow = {
 
 type SettingsValue = {
   contactEmail?: string;
+  adminNotificationEmail?: string;
   contactPhone?: string;
   contactAddress?: string;
   depositFixedAmount?: number;
@@ -108,9 +112,17 @@ async function adminRecipients(settings: SettingsValue) {
     .split(/[;,]/)
     .map((email) => email.trim())
     .filter(Boolean);
-  return [...new Set([...contactEmails, ...profiles.map((profile) => profile.email ?? "")])].filter(
-    Boolean,
-  );
+  const notificationEmails = (settings.adminNotificationEmail ?? "")
+    .split(/[;,]/)
+    .map((email) => email.trim())
+    .filter(Boolean);
+  return [
+    ...new Set([
+      ...notificationEmails,
+      ...contactEmails,
+      ...profiles.map((profile) => profile.email ?? ""),
+    ]),
+  ].filter(Boolean);
 }
 
 async function sendEmail(to: string[], subject: string, html: string) {
@@ -159,6 +171,9 @@ function shell(title: string, content: string) {
 }
 
 function details(row: ReservationRow, settings: SettingsValue, siteUrl: string) {
+  const guideReminder = row.value.experience === "brunch_atelier"
+    ? ""
+    : `<p><strong>Avant de venir :</strong> prends quelques minutes pour relire le <a href="${escapeHtml(siteUrl)}/guide" style="color:#914735">guide de peinture</a>. Ses consignes sont importantes pour la cuisson et la récupération de ta création.</p>`;
   return `
     <div style="margin:20px 0;padding:18px;background:#f4dddd;border-radius:14px">
       <strong>${escapeHtml(formatDate(row.date))} à ${escapeHtml(row.slot)}</strong><br>
@@ -166,7 +181,7 @@ function details(row: ReservationRow, settings: SettingsValue, siteUrl: string) 
       ${escapeHtml(settings.contactAddress ?? "Lieu dit Loyette, 97118 Saint-François")}<br>
       Contact : ${escapeHtml(settings.contactPhone ?? "0690 28 47 88")}
     </div>
-    <p><strong>Avant de venir :</strong> prends quelques minutes pour relire le <a href="${escapeHtml(siteUrl)}/guide" style="color:#914735">guide de peinture</a>. Ses consignes sont importantes pour la cuisson et la récupération de ta création.</p>`;
+    ${guideReminder}`;
 }
 
 async function markReservation(row: ReservationRow, patch: Partial<ReservationValue>) {
@@ -201,13 +216,13 @@ async function reservationCreated(row: ReservationRow, settings: SettingsValue, 
     row.people >= (settings.manualConfirmationThreshold ?? 8) ||
     row.status === "pending";
   let customerDelivered = Boolean(row.value.reservationCreatedEmailSentAt);
-  let adminDelivered = !isGroup || Boolean(row.value.adminAlertEmailSentAt);
+  let adminDelivered = Boolean(row.value.adminAlertEmailSentAt);
 
   if (!customerDelivered) {
     const title = isGroup ? "Demande de groupe bien reçue" : "Ta réservation est confirmée";
     const intro = isGroup
-      ? `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Ta demande a bien été transmise à l'équipe. Ton créneau sera confirmé après validation.</p><p>Pour ce groupe, un acompte fixe de <strong>${escapeHtml(row.value.depositAmount ?? settings.depositFixedAmount ?? 100)} €</strong> sera demandé après acceptation.</p>`
-      : `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Ta réservation est bien enregistrée. Nous avons hâte de t'accueillir pour ce moment créatif.</p>`;
+      ? `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Ta demande a bien été transmise à l'équipe. Ton créneau sera confirmé après validation.</p><p>Pour ce groupe, un acompte fixe de <strong>${escapeHtml(row.value.depositAmount ?? settings.depositFixedAmount ?? 100)} €</strong> est nécessaire avant la validation définitive.</p>`
+      : `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Ta réservation est bien enregistrée. Nous avons hâte de t'accueillir ${row.value.experience === "brunch_atelier" ? "autour d'un brunch" : "pour ce moment créatif"}.</p>`;
     customerDelivered = await sendEmail(
       [row.value.email],
       isGroup ? "Ta demande de groupe – Kafé Céramik" : "Ta réservation – Kafé Céramik",
@@ -218,14 +233,16 @@ async function reservationCreated(row: ReservationRow, settings: SettingsValue, 
     }
   }
 
-  if (isGroup && !adminDelivered) {
+  if (!adminDelivered) {
     const recipients = await adminRecipients(settings);
     adminDelivered = await sendEmail(
       recipients,
-      `Nouvelle demande de groupe – ${row.people} personnes`,
+      isGroup
+        ? `Nouvelle demande de groupe – ${row.people} personnes`
+        : `Nouvelle réservation – ${row.people} personne${row.people > 1 ? "s" : ""}`,
       shell(
-        "Nouvelle demande à valider",
-        `<p><strong>${escapeHtml(row.value.firstName)} ${escapeHtml(row.value.lastName)}</strong> souhaite réserver pour ${row.people} personnes.</p>${details(row, settings, siteUrl)}<p>Ouvrez l'espace équipe pour accepter ou refuser la demande.</p>`,
+        isGroup ? "Nouvelle demande à valider" : "Nouvelle réservation",
+        `<p><strong>${escapeHtml(row.value.firstName)} ${escapeHtml(row.value.lastName)}</strong> souhaite réserver pour ${row.people} personnes.</p>${details(row, settings, siteUrl)}${isGroup ? "<p>Ouvrez l'espace équipe pour accepter ou refuser la demande.</p>" : "<p>Aucune validation n'est nécessaire.</p>"}`,
       ),
     );
     if (adminDelivered) {
@@ -246,7 +263,7 @@ async function groupDecision(
   if (row.value.decisionEmailSentAt) return true;
   const reason = message.trim() || row.value.decisionMessage?.trim() || "";
   const content = approved
-    ? `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Bonne nouvelle : ta demande de groupe est <strong>validée</strong>.</p><p>Un acompte de <strong>${escapeHtml(row.value.depositAmount ?? settings.depositFixedAmount ?? 100)} €</strong> est nécessaire pour finaliser l'organisation. L'équipe te transmettra les modalités de règlement.</p>${details(row, settings, siteUrl)}`
+    ? `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Bonne nouvelle : ta demande de groupe est <strong>validée</strong>.</p><p>Ton acompte de <strong>${escapeHtml(row.value.depositAmount ?? settings.depositFixedAmount ?? 100)} €</strong> est bien rattaché à cette réservation.</p>${details(row, settings, siteUrl)}`
     : `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>L'équipe ne peut malheureusement pas confirmer ta demande pour ce créneau.</p>${reason ? `<div style="margin:18px 0;padding:16px;background:#f4dddd;border-radius:14px"><strong>Précision de l'équipe :</strong><br>${escapeHtml(reason)}</div>` : ""}<p>Tu peux contacter le Kafé au ${escapeHtml(settings.contactPhone ?? "0690 28 47 88")} pour chercher une autre possibilité.</p>`;
   const delivered = await sendEmail(
     [row.value.email],
@@ -255,6 +272,46 @@ async function groupDecision(
   );
   if (delivered) await markReservation(row, { decisionEmailSentAt: new Date().toISOString() });
   return delivered;
+}
+
+async function reservationCancelled(
+  row: ReservationRow,
+  settings: SettingsValue,
+  siteUrl: string,
+) {
+  let customerDelivered = Boolean(row.value.cancellationEmailSentAt);
+  let adminDelivered = Boolean(row.value.adminCancellationAlertEmailSentAt);
+
+  if (!customerDelivered && row.value.email) {
+    customerDelivered = await sendEmail(
+      [row.value.email],
+      "Annulation de ta réservation – Kafé Céramik",
+      shell(
+        "Réservation annulée",
+        `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Ta réservation au Kafé Céramik a bien été annulée.</p>${details(row, settings, siteUrl)}<p>Pour toute question, tu peux contacter le Kafé au ${escapeHtml(settings.contactPhone ?? "0690 28 47 88")}.</p>`,
+      ),
+    );
+    if (customerDelivered) {
+      await markReservation(row, { cancellationEmailSentAt: new Date().toISOString() });
+    }
+  }
+
+  if (!adminDelivered) {
+    const recipients = await adminRecipients(settings);
+    adminDelivered = await sendEmail(
+      recipients,
+      `Réservation annulée – ${row.people} personne${row.people > 1 ? "s" : ""}`,
+      shell(
+        "Réservation annulée",
+        `<p>La réservation de <strong>${escapeHtml(row.value.firstName)} ${escapeHtml(row.value.lastName)}</strong> est annulée.</p>${details(row, settings, siteUrl)}`,
+      ),
+    );
+    if (adminDelivered) {
+      await markReservation(row, { adminCancellationAlertEmailSentAt: new Date().toISOString() });
+    }
+  }
+
+  return customerDelivered && adminDelivered;
 }
 
 async function processReminders(settings: SettingsValue, siteUrl: string) {
@@ -271,12 +328,13 @@ async function processReminders(settings: SettingsValue, siteUrl: string) {
     const slotDate = new Date(`${row.date}T${row.slot}:00-04:00`);
     const hoursUntil = (slotDate.getTime() - Date.now()) / (60 * 60 * 1000);
     if (hoursUntil < 23 || hoursUntil > 25) continue;
+    const isBrunch = row.value.experience === "brunch_atelier";
     const delivered = await sendEmail(
       [row.value.email],
-      "Rappel : ton atelier demain – Kafé Céramik",
+      `Rappel : ${isBrunch ? "ton brunch" : "ton atelier"} demain – Kafé Céramik`,
       shell(
-        "Ton atelier, c'est demain",
-        `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Petit rappel pour ton atelier au Kafé Céramik.</p>${details(row, settings, siteUrl)}<p>À très vite !</p>`,
+        `${isBrunch ? "Ton brunch" : "Ton atelier"}, c'est demain`,
+        `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Petit rappel pour ${isBrunch ? "ton brunch" : "ton atelier"} au Kafé Céramik.</p>${details(row, settings, siteUrl)}<p>À très vite !</p>`,
       ),
     );
     if (delivered) {
@@ -330,6 +388,16 @@ Deno.serve(async (request) => {
       if (!(await requireAdmin(request))) return json({ error: "Unauthorized" }, 401);
       const approved = action === "group-approved";
       const delivered = await groupDecision(row, settings, siteUrl, approved, body.message ?? "");
+      return json({
+        ok: true,
+        delivered,
+        reason: delivered ? undefined : "Le fournisseur email reste à configurer.",
+      });
+    }
+
+    if (action === "reservation-cancelled") {
+      if (!(await requireAdmin(request))) return json({ error: "Unauthorized" }, 401);
+      const delivered = await reservationCancelled(row, settings, siteUrl);
       return json({
         ok: true,
         delivered,

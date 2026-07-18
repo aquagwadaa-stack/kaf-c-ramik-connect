@@ -528,8 +528,10 @@ export interface KafeSettings {
   lateArrivalGraceMinutes: number;
   cancellationNoticeHours: number;
   groupDepositForfeitHours: number;
+  minimumBookingLeadDays: number;
   reservationFieldRequirements: ReservationFieldRequirements;
   manualConfirmationThreshold: number;
+  groupOutsideFoodNotice: string;
   signatureRequiredOnArrival: boolean;
   walkInCafeEnabled: boolean;
   walkInNoticeText: string;
@@ -543,11 +545,15 @@ export interface KafeSettings {
   contactPhone: string;
   contactAddress: string;
   contactMapUrl: string;
+  adminNotificationEmail: string;
+  giftCardPaymentUrl: string;
+  groupCeramicRatePerPerson: number;
+  groupMealRatePerPerson: number;
   creationInspirations: CreationInspiration[];
 }
 
 export const settingsSeed: KafeSettings = {
-  configurationVersion: 5,
+  configurationVersion: 6,
   depositThreshold: 8,
   depositFixedAmount: 100,
   defaultCapacity: 63,
@@ -576,12 +582,15 @@ export const settingsSeed: KafeSettings = {
   lateArrivalGraceMinutes: 35,
   cancellationNoticeHours: 48,
   groupDepositForfeitHours: 24,
+  minimumBookingLeadDays: 1,
   reservationFieldRequirements: {
     emailRequired: true,
     childrenAgesRequired: false,
     messageRequired: false,
   },
   manualConfirmationThreshold: 8,
+  groupOutsideFoodNotice:
+    "Pour les groupes, les boissons et la nourriture provenant de l'extérieur ne peuvent pas être consommées au Kafé.",
   signatureRequiredOnArrival: true,
   walkInCafeEnabled: true,
   walkInNoticeText:
@@ -599,6 +608,10 @@ export const settingsSeed: KafeSettings = {
   contactPhone: "0690 28 47 88",
   contactAddress: "Lieu dit Loyette, 97118 Saint-François, Guadeloupe",
   contactMapUrl: "https://www.google.com/maps?q=16.286364%2C-61.288357",
+  adminNotificationEmail: "malamadre971@gmail.com",
+  giftCardPaymentUrl: "",
+  groupCeramicRatePerPerson: 0,
+  groupMealRatePerPerson: 0,
   creationInspirations: creationInspirationsSeed,
 };
 
