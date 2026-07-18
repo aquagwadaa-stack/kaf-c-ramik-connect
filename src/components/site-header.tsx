@@ -19,15 +19,28 @@ const links = [
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [installedApp, setInstalledApp] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const admin = useAdminAccess();
   const showAdminLink = admin.configured && admin.signedIn && admin.allowed && !admin.checking;
+  const showTeamEntry = showAdminLink || installedApp;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const displayMode = window.matchMedia("(display-mode: standalone)");
+    const detectInstalledApp = () => {
+      const navigatorWithStandalone = window.navigator as Navigator & { standalone?: boolean };
+      setInstalledApp(displayMode.matches || navigatorWithStandalone.standalone === true);
+    };
+    detectInstalledApp();
+    displayMode.addEventListener("change", detectInstalledApp);
+    return () => displayMode.removeEventListener("change", detectInstalledApp);
   }, []);
 
   // close mobile menu on route change
@@ -68,7 +81,7 @@ export function SiteHeader() {
               {l.label}
             </Link>
           ))}
-          {showAdminLink && (
+          {showTeamEntry && (
             <Link
               to="/admin"
               className="nav-link inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm text-foreground/70 hover:text-foreground"
@@ -77,7 +90,8 @@ export function SiteHeader() {
                   "nav-link inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm text-foreground",
               }}
             >
-              <ShieldCheck className="h-3.5 w-3.5" /> Admin
+              <ShieldCheck className="h-3.5 w-3.5" />
+              {showAdminLink ? "Admin" : "Espace équipe"}
             </Link>
           )}
           <Link
@@ -130,13 +144,14 @@ export function SiteHeader() {
               {l.label}
             </Link>
           ))}
-          {showAdminLink && (
+          {showTeamEntry && (
             <Link
               to="/admin"
               onClick={() => setOpen(false)}
               className="press inline-flex items-center gap-2 rounded-xl px-3 py-3 text-left text-sm hover:bg-secondary"
             >
-              <ShieldCheck className="h-4 w-4" /> Admin
+              <ShieldCheck className="h-4 w-4" />
+              {showAdminLink ? "Admin" : "Espace équipe"}
             </Link>
           )}
           <Link
@@ -168,7 +183,6 @@ export function SiteFooter() {
     <footer className="relative mt-20 bg-cream grain">
       <div aria-hidden className="absolute inset-x-0 -top-5 h-6 wavy-top bg-cream" />
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:grid-cols-3">
-
         <div>
           <div className="font-display text-xl">Kafé Céramik</div>
           <p className="mt-2 text-sm text-muted-foreground">
