@@ -3,5 +3,8 @@ project_id = "qjipepztokduofkxbpqd"
 [functions.kafe-emails]
 verify_jwt = false
 
+[functions.kafe-push]
+verify_jwt = false
+
 [functions.sumup-checkout]
 verify_jwt = false

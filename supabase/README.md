@@ -68,6 +68,12 @@ Chaque membre utilise son propre email et son propre mot de passe. Les comptes a
   - `KAFE_EMAIL_FROM` : expediteur verifie, par exemple `Kafe Ceramik <reservations@domaine.fr>`.
   - `KAFE_REPLY_TO` : adresse a laquelle l'equipe souhaite recevoir les reponses.
   - `KAFE_CRON_SECRET` : secret long utilise uniquement par la tache de rappel.
+- Configurer les notifications de l'equipe :
+  - `KAFE_VAPID_PUBLIC_KEY` et `KAFE_VAPID_PRIVATE_KEY` : paire VAPID Web Push.
+  - `KAFE_VAPID_SUBJECT` : contact technique, par exemple `mailto:gwada.web.studio@gmail.com`.
+  - deployer `kafe-push`, puis redeployer `kafe-emails` avec les memes cles VAPID.
+  - chaque membre de l'equipe active ensuite les notifications sur son propre telephone depuis
+    la vue d'ensemble de l'administration.
 - Programmer l'appel horaire de l'action `process-reminders` sur la fonction `kafe-emails`
   avec l'en-tete `x-cron-secret`. La fonction envoie le rappel des qu'une reservation entre
   dans la fenetre des 24 heures et marque chaque reservation pour eviter les doublons.
@@ -78,5 +84,5 @@ Chaque membre utilise son propre email et son propre mot de passe. Les comptes a
   - `SUMUP_MERCHANT_CODE` : code marchand du compte qui encaisse les acomptes.
   - declarer l'URL de la fonction `sumup-checkout` comme webhook SumUp.
   - activer ensuite `sumupPaymentsEnabled` dans les reglages uniquement apres un paiement test reussi.
-- Le manifeste et le service worker permettent deja d'installer le site comme une application.
-  L'abonnement aux notifications push necessite encore les cles VAPID et le service d'envoi associe.
+- Le manifeste, le service worker et `kafe-push` permettent d'installer le site comme une application
+  et d'abonner individuellement les telephones de l'equipe aux notifications de reservations.

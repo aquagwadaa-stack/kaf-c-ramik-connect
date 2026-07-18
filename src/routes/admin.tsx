@@ -25,6 +25,7 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  Smartphone,
   Trash2,
   UploadCloud,
   UserCog,
@@ -73,6 +74,7 @@ import {
   deleteRow,
   callRpc,
   isSupabaseConfigured,
+  invokeEdgeFunction,
   selectRows,
   signInAdmin,
   signUpAdmin,
@@ -295,6 +297,191 @@ function useAdminNotifications(remoteMode: boolean) {
   return { notifications, markRead };
 }
 
+type AdminPushStatus = "checking" | "idle" | "active" | "blocked" | "unsupported";
+
+function urlBase64ToUint8Array(value: string) {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const base64 = (value + padding).replaceAll("-", "+").replaceAll("_", "/");
+  const raw = window.atob(base64);
+  return Uint8Array.from(raw, (character) => character.charCodeAt(0));
+}
+
+function AdminPushControl({ remoteMode }: { remoteMode: boolean }) {
+  const [status, setStatus] = useState<AdminPushStatus>("checking");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (!remoteMode) {
+      setStatus("unsupported");
+      return;
+    }
+    if (
+      !window.isSecureContext ||
+      !("serviceWorker" in navigator) ||
+      !("PushManager" in window) ||
+      !("Notification" in window)
+    ) {
+      setStatus("unsupported");
+      return;
+    }
+    if (Notification.permission === "denied") {
+      setStatus("blocked");
+      return;
+    }
+
+    let alive = true;
+    navigator.serviceWorker.ready
+      .then(async (registration) => {
+        const subscription = await registration.pushManager.getSubscription();
+        if (!alive) return;
+        if (!subscription) {
+          setStatus("idle");
+          return;
+        }
+        await invokeEdgeFunction(
+          "kafe-push",
+          {
+            action: "subscribe",
+            subscription: subscription.toJSON(),
+            userAgent: navigator.userAgent,
+          },
+          true,
+        );
+        if (alive) setStatus("active");
+      })
+      .catch((error) => {
+        console.warn("Push subscription check failed:", error);
+        if (alive) {
+          setStatus("idle");
+          setMessage(
+            "L'activation sera disponible une fois le service de notifications configuré.",
+          );
+        }
+      });
+    return () => {
+      alive = false;
+    };
+  }, [remoteMode]);
+
+  async function activate() {
+    setBusy(true);
+    setMessage("");
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setStatus(permission === "denied" ? "blocked" : "idle");
+        return;
+      }
+
+      const config = await invokeEdgeFunction<{
+        configured: boolean;
+        publicKey?: string;
+      }>("kafe-push", { action: "config" }, true);
+      if (!config.configured || !config.publicKey) {
+        throw new Error("Push service not configured");
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      const existing = await registration.pushManager.getSubscription();
+      const subscription =
+        existing ??
+        (await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(config.publicKey),
+        }));
+      await invokeEdgeFunction(
+        "kafe-push",
+        {
+          action: "subscribe",
+          subscription: subscription.toJSON(),
+          userAgent: navigator.userAgent,
+        },
+        true,
+      );
+      setStatus("active");
+      setMessage("Ce téléphone recevra les nouvelles réservations et les annulations.");
+    } catch (error) {
+      console.warn("Push activation failed:", error);
+      setStatus("idle");
+      setMessage("Impossible d'activer les notifications pour le moment.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deactivate() {
+    setBusy(true);
+    setMessage("");
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) {
+        await invokeEdgeFunction(
+          "kafe-push",
+          { action: "unsubscribe", endpoint: subscription.endpoint },
+          true,
+        );
+        await subscription.unsubscribe();
+      }
+      setStatus("idle");
+      setMessage("Notifications désactivées sur cet appareil.");
+    } catch (error) {
+      console.warn("Push deactivation failed:", error);
+      setMessage("La désactivation n'a pas pu être finalisée.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (status === "checking") return null;
+
+  return (
+    <Panel
+      title="Notifications sur cet appareil"
+      desc="Chaque téléphone de l'équipe active ses propres notifications après connexion."
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary">
+            <Smartphone className="h-4 w-4" />
+          </span>
+          <div className="text-sm">
+            <div className="font-medium">
+              {status === "active"
+                ? "Notifications actives"
+                : status === "blocked"
+                  ? "Notifications bloquées"
+                  : status === "unsupported"
+                    ? "Installation nécessaire"
+                    : "Notifications non activées"}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {status === "unsupported"
+                ? "Sur iPhone ou iPad, installe d'abord le site sur l'écran d'accueil, puis ouvre l'espace équipe depuis l'icône installée."
+                : status === "blocked"
+                  ? "Autorise les notifications dans les réglages du navigateur ou du téléphone, puis recharge cette page."
+                  : message ||
+                    "Tu recevras les nouvelles réservations, les demandes de groupe et les annulations, même lorsque le site est fermé."}
+            </p>
+          </div>
+        </div>
+        {status !== "unsupported" && status !== "blocked" && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void (status === "active" ? deactivate() : activate())}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
+          >
+            <Bell className="h-4 w-4" />
+            {busy ? "Patientez..." : status === "active" ? "Désactiver" : "Activer"}
+          </button>
+        )}
+      </div>
+    </Panel>
+  );
+}
+
 function AdminWorkspace({
   remoteMode,
   adminUserId,
@@ -382,6 +569,7 @@ function AdminWorkspace({
 
         {tab === "overview" && (
           <OverviewPanel
+            remoteMode={remoteMode}
             reservations={reservations}
             occupancies={occupancies}
             signatures={signatures}
@@ -429,6 +617,7 @@ function AdminWorkspace({
 }
 
 function OverviewPanel({
+  remoteMode,
   reservations,
   occupancies,
   signatures,
@@ -437,6 +626,7 @@ function OverviewPanel({
   onReadNotification,
   onNavigate,
 }: {
+  remoteMode: boolean;
   reservations: Reservation[];
   occupancies: SlotOccupancy[];
   signatures: WaiverSignature[];
@@ -520,6 +710,8 @@ function OverviewPanel({
           sub="décharges aujourd'hui"
         />
       </div>
+
+      <AdminPushControl remoteMode={remoteMode} />
 
       {notifications.length > 0 && (
         <Panel

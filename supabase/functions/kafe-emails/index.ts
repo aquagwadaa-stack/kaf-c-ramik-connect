@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "npm:pdf-lib@1.17.1";
+import webpush from "npm:web-push@3.6.7";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,8 +29,10 @@ type ReservationValue = {
   decisionMessage?: string;
   reservationCreatedEmailSentAt?: string;
   adminAlertEmailSentAt?: string;
+  adminPushSentAt?: string;
   cancellationEmailSentAt?: string;
   adminCancellationAlertEmailSentAt?: string;
+  adminCancellationPushSentAt?: string;
   decisionEmailSentAt?: string;
   reminderEmailSentAt?: string;
   managementToken?: string;
@@ -59,6 +62,13 @@ type EmailAttachment = {
   content: string;
 };
 
+type PushSubscriptionRow = {
+  id: string;
+  endpoint: string;
+  p256dh: string;
+  auth_key: string;
+};
+
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
@@ -66,6 +76,9 @@ const resendApiKey = Deno.env.get("RESEND_API_KEY") ?? "";
 const emailFrom = Deno.env.get("KAFE_EMAIL_FROM") ?? "";
 const replyTo = Deno.env.get("KAFE_REPLY_TO") ?? "";
 const cronSecret = Deno.env.get("KAFE_CRON_SECRET") ?? "";
+const vapidPublicKey = Deno.env.get("KAFE_VAPID_PUBLIC_KEY") ?? "";
+const vapidPrivateKey = Deno.env.get("KAFE_VAPID_PRIVATE_KEY") ?? "";
+const vapidSubject = Deno.env.get("KAFE_VAPID_SUBJECT") ?? "mailto:gwada.web.studio@gmail.com";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -132,6 +145,45 @@ async function adminRecipients(settings: SettingsValue) {
   if (notificationEmails.length > 0) return [...new Set(notificationEmails)];
   if (contactEmails.length > 0) return [...new Set(contactEmails)];
   return [...new Set(profiles.map((profile) => profile.email ?? "").filter(Boolean))];
+}
+
+async function sendAdminPush(payload: { title: string; body: string; url: string; tag: string }) {
+  if (!vapidPublicKey || !vapidPrivateKey) return 0;
+
+  webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+  const subscriptions = await api<PushSubscriptionRow[]>(
+    "/rest/v1/kafe_push_subscriptions?select=id,endpoint,p256dh,auth_key",
+  );
+  let delivered = 0;
+
+  for (const subscription of subscriptions) {
+    try {
+      await webpush.sendNotification(
+        {
+          endpoint: subscription.endpoint,
+          keys: { p256dh: subscription.p256dh, auth: subscription.auth_key },
+        },
+        JSON.stringify(payload),
+        { TTL: 60 * 60, urgency: "high" },
+      );
+      delivered += 1;
+    } catch (error) {
+      const statusCode =
+        typeof error === "object" && error && "statusCode" in error
+          ? Number((error as { statusCode?: number }).statusCode)
+          : 0;
+      if (statusCode === 404 || statusCode === 410) {
+        await api<void>(
+          `/rest/v1/kafe_push_subscriptions?id=eq.${encodeURIComponent(subscription.id)}`,
+          { method: "DELETE", headers: { Prefer: "return=minimal" } },
+        );
+      } else {
+        console.error("Web push error", statusCode, error);
+      }
+    }
+  }
+
+  return delivered;
 }
 
 async function sendEmail(
@@ -466,6 +518,16 @@ async function reservationCreated(row: ReservationRow, settings: SettingsValue, 
     }
   }
 
+  if (!row.value.adminPushSentAt) {
+    const pushed = await sendAdminPush({
+      title: isGroup ? "Nouvelle demande de groupe" : "Nouvelle réservation",
+      body: `${row.value.firstName} ${row.value.lastName} · ${row.people} pers. · ${formatDate(row.date)} à ${row.slot}`,
+      url: `${siteUrl}/admin`,
+      tag: `reservation-${row.id}`,
+    });
+    if (pushed > 0) await markReservation(row, { adminPushSentAt: new Date().toISOString() });
+  }
+
   return customerDelivered && adminDelivered;
 }
 
@@ -520,6 +582,18 @@ async function reservationCancelled(row: ReservationRow, settings: SettingsValue
     );
     if (adminDelivered) {
       await markReservation(row, { adminCancellationAlertEmailSentAt: new Date().toISOString() });
+    }
+  }
+
+  if (!row.value.adminCancellationPushSentAt) {
+    const pushed = await sendAdminPush({
+      title: "Réservation annulée",
+      body: `${row.value.firstName} ${row.value.lastName} · ${row.people} pers. · ${formatDate(row.date)} à ${row.slot}`,
+      url: `${siteUrl}/admin`,
+      tag: `cancellation-${row.id}`,
+    });
+    if (pushed > 0) {
+      await markReservation(row, { adminCancellationPushSentAt: new Date().toISOString() });
     }
   }
 
