@@ -9,67 +9,22 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ReserverRouteImport } from './routes/reserver'
-import { Route as ReservationRouteImport } from './routes/reservation'
-import { Route as ObjetsRouteImport } from './routes/objets'
-import { Route as GuideRouteImport } from './routes/guide'
-import { Route as DechargeSignatureRouteImport } from './routes/decharge-signature'
-import { Route as CreationsRouteImport } from './routes/creations'
-import { Route as ContactRouteImport } from './routes/contact'
-import { Route as CarteRouteImport } from './routes/carte'
-import { Route as CadeauRouteImport } from './routes/cadeau'
-import { Route as BrunchRouteImport } from './routes/brunch'
-import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as BrunchRouteImport } from './routes/brunch'
+import { Route as CadeauRouteImport } from './routes/cadeau'
+import { Route as CarteRouteImport } from './routes/carte'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as CreationsRouteImport } from './routes/creations'
+import { Route as DechargeSignatureRouteImport } from './routes/decharge-signature'
+import { Route as GuideRouteImport } from './routes/guide'
+import { Route as ObjetsRouteImport } from './routes/objets'
+import { Route as ReservationRouteImport } from './routes/reservation'
+import { Route as ReserverRouteImport } from './routes/reserver'
 
-const ReserverRoute = ReserverRouteImport.update({
-  id: '/reserver',
-  path: '/reserver',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReservationRoute = ReservationRouteImport.update({
-  id: '/reservation',
-  path: '/reservation',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ObjetsRoute = ObjetsRouteImport.update({
-  id: '/objets',
-  path: '/objets',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GuideRoute = GuideRouteImport.update({
-  id: '/guide',
-  path: '/guide',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DechargeSignatureRoute = DechargeSignatureRouteImport.update({
-  id: '/decharge-signature',
-  path: '/decharge-signature',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CreationsRoute = CreationsRouteImport.update({
-  id: '/creations',
-  path: '/creations',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContactRoute = ContactRouteImport.update({
-  id: '/contact',
-  path: '/contact',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CarteRoute = CarteRouteImport.update({
-  id: '/carte',
-  path: '/carte',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CadeauRoute = CadeauRouteImport.update({
-  id: '/cadeau',
-  path: '/cadeau',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BrunchRoute = BrunchRouteImport.update({
-  id: '/brunch',
-  path: '/brunch',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -77,9 +32,54 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const BrunchRoute = BrunchRouteImport.update({
+  id: '/brunch',
+  path: '/brunch',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CadeauRoute = CadeauRouteImport.update({
+  id: '/cadeau',
+  path: '/cadeau',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CarteRoute = CarteRouteImport.update({
+  id: '/carte',
+  path: '/carte',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreationsRoute = CreationsRouteImport.update({
+  id: '/creations',
+  path: '/creations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DechargeSignatureRoute = DechargeSignatureRouteImport.update({
+  id: '/decharge-signature',
+  path: '/decharge-signature',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuideRoute = GuideRouteImport.update({
+  id: '/guide',
+  path: '/guide',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ObjetsRoute = ObjetsRouteImport.update({
+  id: '/objets',
+  path: '/objets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReservationRoute = ReservationRouteImport.update({
+  id: '/reservation',
+  path: '/reservation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReserverRoute = ReserverRouteImport.update({
+  id: '/reserver',
+  path: '/reserver',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -188,74 +188,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/reserver': {
-      id: '/reserver'
-      path: '/reserver'
-      fullPath: '/reserver'
-      preLoaderRoute: typeof ReserverRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reservation': {
-      id: '/reservation'
-      path: '/reservation'
-      fullPath: '/reservation'
-      preLoaderRoute: typeof ReservationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/objets': {
-      id: '/objets'
-      path: '/objets'
-      fullPath: '/objets'
-      preLoaderRoute: typeof ObjetsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/guide': {
-      id: '/guide'
-      path: '/guide'
-      fullPath: '/guide'
-      preLoaderRoute: typeof GuideRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/decharge-signature': {
-      id: '/decharge-signature'
-      path: '/decharge-signature'
-      fullPath: '/decharge-signature'
-      preLoaderRoute: typeof DechargeSignatureRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/creations': {
-      id: '/creations'
-      path: '/creations'
-      fullPath: '/creations'
-      preLoaderRoute: typeof CreationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contact': {
-      id: '/contact'
-      path: '/contact'
-      fullPath: '/contact'
-      preLoaderRoute: typeof ContactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/carte': {
-      id: '/carte'
-      path: '/carte'
-      fullPath: '/carte'
-      preLoaderRoute: typeof CarteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cadeau': {
-      id: '/cadeau'
-      path: '/cadeau'
-      fullPath: '/cadeau'
-      preLoaderRoute: typeof CadeauRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/brunch': {
-      id: '/brunch'
-      path: '/brunch'
-      fullPath: '/brunch'
-      preLoaderRoute: typeof BrunchRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -265,11 +202,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/brunch': {
+      id: '/brunch'
+      path: '/brunch'
+      fullPath: '/brunch'
+      preLoaderRoute: typeof BrunchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cadeau': {
+      id: '/cadeau'
+      path: '/cadeau'
+      fullPath: '/cadeau'
+      preLoaderRoute: typeof CadeauRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/carte': {
+      id: '/carte'
+      path: '/carte'
+      fullPath: '/carte'
+      preLoaderRoute: typeof CarteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creations': {
+      id: '/creations'
+      path: '/creations'
+      fullPath: '/creations'
+      preLoaderRoute: typeof CreationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/decharge-signature': {
+      id: '/decharge-signature'
+      path: '/decharge-signature'
+      fullPath: '/decharge-signature'
+      preLoaderRoute: typeof DechargeSignatureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guide': {
+      id: '/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof GuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/objets': {
+      id: '/objets'
+      path: '/objets'
+      fullPath: '/objets'
+      preLoaderRoute: typeof ObjetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reservation': {
+      id: '/reservation'
+      path: '/reservation'
+      fullPath: '/reservation'
+      preLoaderRoute: typeof ReservationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reserver': {
+      id: '/reserver'
+      path: '/reserver'
+      fullPath: '/reserver'
+      preLoaderRoute: typeof ReserverRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -292,13 +292,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
