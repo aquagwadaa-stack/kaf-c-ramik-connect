@@ -77,29 +77,29 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Kafé Céramik — Réserve ton moment créatif à Saint-François" },
+      { title: "Kafé Céramik — Café-atelier à Saint-François, Guadeloupe" },
       {
         name: "description",
         content:
-          "Café-atelier en Guadeloupe. Réserve un atelier de peinture sur céramique à Saint-François.",
+          "Réserve ton moment créatif chez Kafé Céramik : peinture sur céramique, café, brunch et douceurs maison à Saint-François.",
       },
       {
         property: "og:title",
-        content: "Kafé Céramik — Réserve ton moment créatif à Saint-François",
+        content: "Kafé Céramik — Café-atelier à Saint-François, Guadeloupe",
       },
       {
         property: "og:description",
-        content: "Réserve ton atelier de peinture sur céramique à Saint-François, Guadeloupe.",
+        content: "Réserve ton moment créatif chez Kafé Céramik : peinture sur céramique, café, brunch et douceurs maison à Saint-François.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       {
         name: "twitter:title",
-        content: "Kafé Céramik — Réserve ton moment créatif à Saint-François",
+        content: "Kafé Céramik — Café-atelier à Saint-François, Guadeloupe",
       },
       {
         name: "twitter:description",
-        content: "Réserve ton atelier de peinture sur céramique à Saint-François, Guadeloupe.",
+        content: "Réserve ton moment créatif chez Kafé Céramik : peinture sur céramique, café, brunch et douceurs maison à Saint-François.",
       },
       {
         property: "og:image",
