@@ -59,8 +59,6 @@ const flow = [
 ] as const;
 
 function BrunchPage() {
-  const [settings] = useKafeSettings();
-
   return (
     <PageShell>
       <PageHeader
