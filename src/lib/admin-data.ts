@@ -585,7 +585,7 @@ export const settingsSeed: KafeSettings = {
   signatureRequiredOnArrival: true,
   walkInCafeEnabled: true,
   walkInNoticeText:
-    "Pas besoin de réserver pour boire un café, manger un bagel ou bruncher. Pour peindre, l'atelier se fait avec une consommation sur place et les personnes ayant réservé sont prioritaires.",
+    "Pour manger un bagel, bruncher ou boire un café, tu peux passer sans réserver selon les places. Pour peindre sur céramique, la réservation te donne la priorité.",
   reservationConditionsText:
     "Annulation possible jusqu'à 48 h avant. Au-delà, merci d'appeler le Kafé. Une réservation est libérée après plus de 35 minutes de retard. Pour les groupes, l'acompte est conservé si l'annulation intervient moins de 24 h avant.",
   guideAcceptanceText:

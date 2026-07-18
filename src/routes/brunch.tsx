@@ -84,7 +84,7 @@ function BrunchPage() {
               <CheckCircle2 className="h-3.5 w-3.5 text-sage" /> À retenir
             </div>
             <h2 className="mt-5 font-display text-4xl leading-none">
-              Pas besoin de réserver pour manger.
+              Réserver, c'est pour l'atelier.
             </h2>
             <p className="mt-4 text-sm leading-6 text-muted-foreground">
               {settings.walkInNoticeText}
