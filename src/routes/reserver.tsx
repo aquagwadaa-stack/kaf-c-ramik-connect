@@ -890,6 +890,11 @@ function WeekPlanner({
         </div>
       </div>
 
+      <p className="mt-4 text-sm text-muted-foreground">
+        Pour les réservations du lendemain, il faut s'y prendre la veille avant{" "}
+        {formatPublicTime(settings.bookingCutoffTime)}.
+      </p>
+
       <div ref={scrollerRef} className="mt-5 overflow-x-auto pb-2">
         <div className="grid min-w-[840px] grid-cols-7 gap-2">
           {days.map((day) => {
@@ -937,9 +942,13 @@ function WeekPlanner({
                           }`}
                         >
                           {state.disabled ? (
-                            <span className="flex items-center justify-between gap-1">
+                            <span
+                              className={`flex items-center gap-1 ${state.hideLabel ? "justify-center" : "justify-between"}`}
+                            >
                               <span className="text-xs font-medium line-through">{slotOption}</span>
-                              <span className="truncate text-[10px]">{state.label}</span>
+                              {!state.hideLabel && (
+                                <span className="truncate text-[10px]">{state.label}</span>
+                              )}
                             </span>
                           ) : (
                             <>
@@ -964,8 +973,7 @@ function WeekPlanner({
 
       <p className="mt-3 text-xs text-muted-foreground">
         Durée indicative d'un créneau : {formatDuration(settings.slotDurationMinutes)}. Les créneaux
-        complets ne peuvent pas être réservés. Pour le lendemain, réserve avant{" "}
-        {formatPublicTime(settings.bookingCutoffTime)}.
+        complets ne peuvent pas être réservés.
       </p>
     </div>
   );
@@ -983,7 +991,7 @@ function getSlotAvailability(
   const guadeloupeNow = getGuadeloupeNow();
   const minimumLeadDays = Math.max(1, settings.minimumBookingLeadDays ?? 1);
   const earliestBookable = addIsoDays(guadeloupeNow.date, minimumLeadDays);
-  if (date < earliestBookable) return { disabled: true, label: "réservation la veille" };
+  if (date < earliestBookable) return { disabled: true, label: "", hideLabel: true };
   if (
     minimumLeadDays === 1 &&
     date === earliestBookable &&
@@ -991,12 +999,13 @@ function getSlotAvailability(
   ) {
     return {
       disabled: true,
-      label: `fermé à ${formatPublicTime(settings.bookingCutoffTime || "18:00")}`,
+      label: "",
+      hideLabel: true,
     };
   }
 
   if (new Date(`${date}T${slot}:00`).getTime() <= Date.now()) {
-    return { disabled: true, label: "passé" };
+    return { disabled: true, label: "", hideLabel: true };
   }
 
   const placement = getSlotPlacement(reservations, occupancies, date, slot, people, settings);
