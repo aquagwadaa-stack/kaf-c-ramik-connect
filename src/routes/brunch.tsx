@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import brunchAtelier from "@/assets/brunch-atelier.png.asset.json";
 import {
   ArrowRight,
   CalendarHeart,
