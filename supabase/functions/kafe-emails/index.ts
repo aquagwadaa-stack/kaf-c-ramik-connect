@@ -1,3 +1,5 @@
+import { PDFDocument, StandardFonts, rgb } from "npm:pdf-lib@1.17.1";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-cron-secret",
@@ -19,6 +21,10 @@ type ReservationValue = {
   depositRequired?: boolean;
   depositPaid?: boolean;
   depositAmount?: number;
+  groupCeramicRatePerPerson?: number;
+  groupMealRatePerPerson?: number;
+  groupQuoteTotal?: number;
+  groupQuoteNumber?: string;
   decisionMessage?: string;
   reservationCreatedEmailSentAt?: string;
   adminAlertEmailSentAt?: string;
@@ -46,6 +52,11 @@ type SettingsValue = {
   depositFixedAmount?: number;
   manualConfirmationThreshold?: number;
   kitchenClosingTime?: string;
+};
+
+type EmailAttachment = {
+  filename: string;
+  content: string;
 };
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -123,7 +134,12 @@ async function adminRecipients(settings: SettingsValue) {
   return [...new Set(profiles.map((profile) => profile.email ?? "").filter(Boolean))];
 }
 
-async function sendEmail(to: string[], subject: string, html: string) {
+async function sendEmail(
+  to: string[],
+  subject: string,
+  html: string,
+  attachments: EmailAttachment[] = [],
+) {
   if (!resendApiKey || !emailFrom || to.length === 0) return false;
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -136,6 +152,7 @@ async function sendEmail(to: string[], subject: string, html: string) {
       to,
       subject,
       html,
+      ...(attachments.length ? { attachments } : {}),
       ...(replyTo ? { reply_to: replyTo } : {}),
     }),
   });
@@ -154,6 +171,187 @@ function formatDate(date: string) {
     year: "numeric",
     timeZone: "America/Guadeloupe",
   }).format(new Date(`${date}T12:00:00-04:00`));
+}
+
+function formatMoney(value: number) {
+  return `${value.toFixed(2).replace(".", ",")} EUR`;
+}
+
+function bytesToBase64(bytes: Uint8Array) {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return btoa(binary);
+}
+
+async function createGroupQuote(row: ReservationRow) {
+  const ceramicRate = Number(row.value.groupCeramicRatePerPerson ?? 0);
+  const mealRate = Number(row.value.groupMealRatePerPerson ?? 0);
+  if (ceramicRate <= 0 || mealRate <= 0 || row.people < 1) return null;
+
+  const quoteNumber =
+    row.value.groupQuoteNumber ??
+    `KC-${row.date.replaceAll("-", "")}-${row.id
+      .replace(/[^a-z0-9]/gi, "")
+      .slice(-6)
+      .toUpperCase()}`;
+  const ceramicTotal = ceramicRate * row.people;
+  const mealTotal = mealRate * row.people;
+  const total = ceramicTotal + mealTotal;
+  const pdf = await PDFDocument.create();
+  const page = pdf.addPage([595.28, 841.89]);
+  const regular = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const brown = rgb(0.55, 0.25, 0.19);
+  const pink = rgb(0.94, 0.79, 0.81);
+  const cream = rgb(1, 0.97, 0.91);
+  const ink = rgb(0.18, 0.13, 0.13);
+  const muted = rgb(0.4, 0.34, 0.34);
+
+  page.drawRectangle({ x: 0, y: 742, width: 595.28, height: 100, color: pink });
+  page.drawText("KAFE CERAMIK", { x: 44, y: 794, size: 22, font: bold, color: ink });
+  page.drawText("Dejeunette & creation - Saint-Francois, Guadeloupe", {
+    x: 44,
+    y: 772,
+    size: 10,
+    font: regular,
+    color: brown,
+  });
+  page.drawText("DEVIS ESTIMATIF DE GROUPE", {
+    x: 320,
+    y: 794,
+    size: 14,
+    font: bold,
+    color: brown,
+  });
+  page.drawText(`Reference : ${quoteNumber}`, {
+    x: 320,
+    y: 774,
+    size: 9,
+    font: regular,
+    color: ink,
+  });
+
+  page.drawText("MALA MADRE SARL - SIREN 918 088 097", {
+    x: 44,
+    y: 711,
+    size: 10,
+    font: bold,
+    color: ink,
+  });
+  page.drawText("Lieu dit Loyette, 97118 Saint-Francois", {
+    x: 44,
+    y: 695,
+    size: 9,
+    font: regular,
+    color: muted,
+  });
+  page.drawText(`Client : ${row.value.firstName} ${row.value.lastName}`, {
+    x: 320,
+    y: 711,
+    size: 10,
+    font: bold,
+    color: ink,
+  });
+  page.drawText(`Venue : ${formatDate(row.date)} a ${row.slot}`, {
+    x: 320,
+    y: 695,
+    size: 9,
+    font: regular,
+    color: muted,
+  });
+  page.drawText(`Participants : ${row.people}`, {
+    x: 320,
+    y: 679,
+    size: 9,
+    font: regular,
+    color: muted,
+  });
+
+  const tableTop = 630;
+  page.drawRectangle({ x: 44, y: tableTop, width: 507, height: 34, color: brown });
+  page.drawText("PRESTATION", { x: 58, y: tableTop + 12, size: 9, font: bold, color: cream });
+  page.drawText("QTE", { x: 330, y: tableTop + 12, size: 9, font: bold, color: cream });
+  page.drawText("PRIX / PERS.", { x: 382, y: tableTop + 12, size: 9, font: bold, color: cream });
+  page.drawText("TOTAL", { x: 490, y: tableTop + 12, size: 9, font: bold, color: cream });
+
+  const rows = [
+    ["Forfait ceramique", String(row.people), formatMoney(ceramicRate), formatMoney(ceramicTotal)],
+    ["Forfait brunch", String(row.people), formatMoney(mealRate), formatMoney(mealTotal)],
+  ];
+  rows.forEach((values, index) => {
+    const y = tableTop - 42 - index * 42;
+    page.drawRectangle({
+      x: 44,
+      y,
+      width: 507,
+      height: 42,
+      color: index % 2 === 0 ? cream : rgb(0.98, 0.91, 0.91),
+    });
+    page.drawText(values[0], { x: 58, y: y + 15, size: 10, font: regular, color: ink });
+    page.drawText(values[1], { x: 338, y: y + 15, size: 10, font: regular, color: ink });
+    page.drawText(values[2], { x: 390, y: y + 15, size: 10, font: regular, color: ink });
+    page.drawText(values[3], { x: 490, y: y + 15, size: 10, font: regular, color: ink });
+  });
+
+  const totalY = tableTop - 126;
+  page.drawRectangle({ x: 345, y: totalY, width: 206, height: 52, color: pink });
+  page.drawText("TOTAL ESTIMATIF TTC", {
+    x: 360,
+    y: totalY + 29,
+    size: 9,
+    font: bold,
+    color: brown,
+  });
+  page.drawText(formatMoney(total), { x: 455, y: totalY + 10, size: 14, font: bold, color: ink });
+
+  page.drawText("Acompte de reservation : 100 EUR", {
+    x: 44,
+    y: 430,
+    size: 11,
+    font: bold,
+    color: brown,
+  });
+  page.drawText("Ce devis est genere a partir des montants choisis lors de la demande.", {
+    x: 44,
+    y: 402,
+    size: 9,
+    font: regular,
+    color: muted,
+  });
+  page.drawText("La reservation et le devis restent soumis a la validation de l'equipe du Kafe.", {
+    x: 44,
+    y: 386,
+    size: 9,
+    font: regular,
+    color: muted,
+  });
+  page.drawText("Nourriture et boissons exterieures interdites au Kafe.", {
+    x: 44,
+    y: 370,
+    size: 9,
+    font: regular,
+    color: muted,
+  });
+  page.drawText("Kafe Ceramik - Mala Madre SARL", {
+    x: 44,
+    y: 58,
+    size: 9,
+    font: bold,
+    color: brown,
+  });
+
+  const bytes = await pdf.save();
+  return {
+    quoteNumber,
+    total,
+    attachment: {
+      filename: `devis-groupe-${quoteNumber}.pdf`,
+      content: bytesToBase64(bytes),
+    } satisfies EmailAttachment,
+  };
 }
 
 function shell(title: string, content: string) {
@@ -219,6 +417,11 @@ async function reservationCreated(row: ReservationRow, settings: SettingsValue, 
     (row.value.isGroupRequest ||
       row.people >= (settings.manualConfirmationThreshold ?? 8) ||
       row.status === "pending");
+  const groupQuote = isGroup ? await createGroupQuote(row) : null;
+  const attachments = groupQuote ? [groupQuote.attachment] : [];
+  const quoteSummary = groupQuote
+    ? `<div style="margin:18px 0;padding:16px;background:#f4dddd;border-radius:14px"><strong>Devis estimatif joint : ${escapeHtml(formatMoney(groupQuote.total))}</strong><br>Il reprend les forfaits choisis pour ${row.people} personnes.</div>`
+    : "";
   let customerDelivered = Boolean(row.value.reservationCreatedEmailSentAt);
   let adminDelivered = Boolean(row.value.adminAlertEmailSentAt);
 
@@ -232,10 +435,16 @@ async function reservationCreated(row: ReservationRow, settings: SettingsValue, 
     customerDelivered = await sendEmail(
       [row.value.email],
       isGroup ? "Ta demande de groupe – Kafé Céramik" : "Ta réservation – Kafé Céramik",
-      shell(title, `${intro}${details(row, settings, siteUrl)}`),
+      shell(title, `${intro}${quoteSummary}${details(row, settings, siteUrl)}`),
+      attachments,
     );
     if (customerDelivered) {
-      await markReservation(row, { reservationCreatedEmailSentAt: new Date().toISOString() });
+      await markReservation(row, {
+        reservationCreatedEmailSentAt: new Date().toISOString(),
+        ...(groupQuote
+          ? { groupQuoteNumber: groupQuote.quoteNumber, groupQuoteTotal: groupQuote.total }
+          : {}),
+      });
     }
   }
 
@@ -248,8 +457,9 @@ async function reservationCreated(row: ReservationRow, settings: SettingsValue, 
         : `Nouvelle réservation – ${row.people} personne${row.people > 1 ? "s" : ""}`,
       shell(
         isGroup ? "Nouvelle demande à valider" : "Nouvelle réservation",
-        `<p><strong>${escapeHtml(row.value.firstName)} ${escapeHtml(row.value.lastName)}</strong> souhaite réserver pour ${row.people} personnes.</p>${details(row, settings, siteUrl)}${isGroup ? "<p>Ouvrez l'espace équipe pour accepter ou refuser la demande.</p>" : "<p>Aucune validation n'est nécessaire.</p>"}`,
+        `<p><strong>${escapeHtml(row.value.firstName)} ${escapeHtml(row.value.lastName)}</strong> souhaite réserver pour ${row.people} personnes.</p>${quoteSummary}${details(row, settings, siteUrl)}${isGroup ? "<p>Ouvrez l'espace équipe pour accepter ou refuser la demande.</p>" : "<p>Aucune validation n'est nécessaire.</p>"}`,
       ),
+      attachments,
     );
     if (adminDelivered) {
       await markReservation(row, { adminAlertEmailSentAt: new Date().toISOString() });

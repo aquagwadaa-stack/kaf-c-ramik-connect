@@ -54,6 +54,8 @@ Chaque membre utilise son propre email et son propre mot de passe. Les comptes a
 - Les visiteurs peuvent lire les reglages publics, les objets et les documents publies.
 - Les visiteurs peuvent creer une reservation, mais ne peuvent pas lire les reservations.
 - La disponibilite publique passe par `get_kafe_slot_occupancy`, sans exposer les coordonnees des clients. La creation atomique avec `create_kafe_reservation` attribue une vraie table et refuse un groupe lorsqu'aucun espace unique ne peut l'accueillir.
+- Les reservations du lendemain ferment a l'heure configuree dans `bookingCutoffTime` (18 h par defaut, heure de Guadeloupe).
+- Les groupes peuvent etre repartis sur plusieurs tables. Leurs montants de devis sont controles en base et le PDF estimatif est joint automatiquement a l'email de demande.
 - Les reservations completes, signatures et modifications admin demandent une session Supabase Auth autorisee dans `kafe_admin_profiles`.
 
 ## A faire avant livraison

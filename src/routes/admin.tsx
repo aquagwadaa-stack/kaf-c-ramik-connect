@@ -179,6 +179,10 @@ function exportReservationsCsv(reservations: Reservation[], settings: KafeSettin
       "Acompte requis",
       "Acompte recu",
       "Montant acompte",
+      "Forfait ceramique / personne",
+      "Forfait brunch / personne",
+      "Total devis estimatif",
+      "Reference devis",
       "Message",
       "Reference",
     ],
@@ -196,6 +200,10 @@ function exportReservationsCsv(reservations: Reservation[], settings: KafeSettin
       reservation.depositRequired ? "oui" : "non",
       reservation.depositPaid ? "oui" : "non",
       reservation.depositAmount ?? "",
+      reservation.groupCeramicRatePerPerson ?? "",
+      reservation.groupMealRatePerPerson ?? "",
+      reservation.groupQuoteTotal ?? "",
+      reservation.groupQuoteNumber ?? "",
       reservation.message ?? "",
       reservation.id,
     ]),
@@ -1361,6 +1369,9 @@ function ReservationCard({
         ) : (
           <InfoPill>Pas d'acompte requis</InfoPill>
         )}
+        {reservation.groupQuoteTotal ? (
+          <InfoPill tone="success">Devis estimatif · {reservation.groupQuoteTotal} €</InfoPill>
+        ) : null}
         {reservation.source === "walk_in" ? (
           <InfoPill>Ajouté sur place</InfoPill>
         ) : (
@@ -1369,6 +1380,23 @@ function ReservationCard({
           </InfoPill>
         )}
       </div>
+
+      {reservation.groupQuoteTotal && (
+        <div className="mt-3 grid gap-2 rounded-xl bg-secondary/40 p-3 text-sm sm:grid-cols-3">
+          <div>
+            <span className="block text-xs text-muted-foreground">Céramique / personne</span>
+            <span className="font-medium">{reservation.groupCeramicRatePerPerson} €</span>
+          </div>
+          <div>
+            <span className="block text-xs text-muted-foreground">Brunch / personne</span>
+            <span className="font-medium">{reservation.groupMealRatePerPerson} €</span>
+          </div>
+          <div>
+            <span className="block text-xs text-muted-foreground">Total pour le groupe</span>
+            <span className="font-medium">{reservation.groupQuoteTotal} €</span>
+          </div>
+        </div>
+      )}
 
       {reservation.message && (
         <div className="mt-3 flex items-start gap-2 rounded-xl bg-secondary/40 p-3 text-sm">
@@ -2428,11 +2456,10 @@ function SettingsPanel({
           suffix="heures avant"
           onChange={(groupDepositForfeitHours) => update({ groupDepositForfeitHours })}
         />
-        <NumberField
-          label="Réserver au minimum"
-          value={settings.minimumBookingLeadDays}
-          suffix="jour(s) avant"
-          onChange={(minimumBookingLeadDays) => update({ minimumBookingLeadDays })}
+        <TimeField
+          label="Heure limite pour réserver le lendemain"
+          value={settings.bookingCutoffTime}
+          onChange={(bookingCutoffTime) => update({ bookingCutoffTime })}
         />
         <NumberField
           label="Validation équipe à partir de"
@@ -2508,21 +2535,33 @@ function SettingsPanel({
             <h3 className="font-display text-xl">Devis automatique des groupes</h3>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
-            Renseignez les deux forfaits dès qu'ils sont confirmés. Tant qu'ils restent à 0 EUR,
-            aucun montant estimatif n'est affiché au client.
+            Les groupes choisissent leurs montants par personne dans ces fourchettes. Le devis PDF
+            est calculé automatiquement avec le nombre de participants.
           </p>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <NumberField
-              label="Forfait céramique par personne"
-              value={settings.groupCeramicRatePerPerson}
+              label="Céramique minimum"
+              value={settings.groupCeramicRateMin}
               suffix="EUR"
-              onChange={(groupCeramicRatePerPerson) => update({ groupCeramicRatePerPerson })}
+              onChange={(groupCeramicRateMin) => update({ groupCeramicRateMin })}
             />
             <NumberField
-              label="Forfait repas par personne"
-              value={settings.groupMealRatePerPerson}
+              label="Céramique maximum"
+              value={settings.groupCeramicRateMax}
               suffix="EUR"
-              onChange={(groupMealRatePerPerson) => update({ groupMealRatePerPerson })}
+              onChange={(groupCeramicRateMax) => update({ groupCeramicRateMax })}
+            />
+            <NumberField
+              label="Brunch minimum"
+              value={settings.groupMealRateMin}
+              suffix="EUR"
+              onChange={(groupMealRateMin) => update({ groupMealRateMin })}
+            />
+            <NumberField
+              label="Brunch maximum"
+              value={settings.groupMealRateMax}
+              suffix="EUR"
+              onChange={(groupMealRateMax) => update({ groupMealRateMax })}
             />
           </div>
         </div>

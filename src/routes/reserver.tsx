@@ -91,6 +91,8 @@ function ReserverPage() {
     message: "",
   });
   const [guideAccepted, setGuideAccepted] = useState(false);
+  const [groupCeramicRate, setGroupCeramicRate] = useState(18);
+  const [groupMealRate, setGroupMealRate] = useState(15);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState<string | null>(null);
   const [doneToken, setDoneToken] = useState("");
@@ -102,6 +104,27 @@ function ReserverPage() {
   const deposit = getDepositAmount(people, settings, experience);
   const requiresManualReview = shouldWaitForManualConfirmation(people, experience, settings);
   const isCeramicBooking = experienceUsesCeramicGuide(experience);
+  const groupQuoteTotal = requiresManualReview ? people * (groupCeramicRate + groupMealRate) : 0;
+
+  useEffect(() => {
+    setGroupCeramicRate((current) =>
+      Math.min(
+        settings.groupCeramicRateMax,
+        Math.max(settings.groupCeramicRateMin, current || settings.groupCeramicRateMin),
+      ),
+    );
+    setGroupMealRate((current) =>
+      Math.min(
+        settings.groupMealRateMax,
+        Math.max(settings.groupMealRateMin, current || settings.groupMealRateMin),
+      ),
+    );
+  }, [
+    settings.groupCeramicRateMax,
+    settings.groupCeramicRateMin,
+    settings.groupMealRateMax,
+    settings.groupMealRateMin,
+  ]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -146,6 +169,19 @@ function ReserverPage() {
     if (!form.lastName) nextErrors.lastName = "Requis";
     if (!form.phone || form.phone.length < 8) nextErrors.phone = "Téléphone invalide";
     if (!form.email || !/.+@.+\..+/.test(form.email)) nextErrors.email = "Email invalide";
+    if (
+      requiresManualReview &&
+      (groupCeramicRate < settings.groupCeramicRateMin ||
+        groupCeramicRate > settings.groupCeramicRateMax)
+    ) {
+      nextErrors.groupCeramicRate = `Entre ${settings.groupCeramicRateMin} et ${settings.groupCeramicRateMax} €`;
+    }
+    if (
+      requiresManualReview &&
+      (groupMealRate < settings.groupMealRateMin || groupMealRate > settings.groupMealRateMax)
+    ) {
+      nextErrors.groupMealRate = `Entre ${settings.groupMealRateMin} et ${settings.groupMealRateMax} €`;
+    }
     if (isCeramicBooking && !guideAccepted)
       nextErrors.guideAccepted = "Merci de confirmer les consignes avant de continuer";
     setErrors(nextErrors);
@@ -169,6 +205,9 @@ function ReserverPage() {
         depositPaid: false,
         depositRequired,
         depositAmount: deposit,
+        groupCeramicRatePerPerson: requiresManualReview ? groupCeramicRate : undefined,
+        groupMealRatePerPerson: requiresManualReview ? groupMealRate : undefined,
+        groupQuoteTotal: requiresManualReview ? groupQuoteTotal : undefined,
         status,
         isGroupRequest: requiresManualReview,
       });
@@ -180,13 +219,15 @@ function ReserverPage() {
         message.includes("KAFE_INVALID_DATE") ||
         message.includes("KAFE_BOOKING_TOO_LATE") ||
         message.includes("KAFE_SEATING_REVIEW_REQUIRED");
-      const friendlyMessage = message.includes("KAFE_SLOT_FULL")
-        ? "Ce créneau vient d'être rempli par une autre réservation. Choisis un autre horaire."
-        : message.includes("KAFE_BOOKING_TOO_LATE")
-          ? "Les réservations se font au plus tard la veille. Choisis une autre date."
-          : schedulingConflict
-            ? "Ce créneau n'est plus réservable. Choisis une autre date ou un autre horaire."
-            : "La réservation n'a pas pu être enregistrée. Réessayez dans un instant.";
+      const friendlyMessage = message.includes("KAFE_INVALID_GROUP_QUOTE")
+        ? "Vérifie les deux montants du devis de groupe avant de continuer."
+        : message.includes("KAFE_SLOT_FULL")
+          ? "Ce créneau vient d'être rempli par une autre réservation. Choisis un autre horaire."
+          : message.includes("KAFE_BOOKING_TOO_LATE")
+            ? `Les réservations pour le lendemain ferment à ${formatPublicTime(settings.bookingCutoffTime)}. Choisis une autre date.`
+            : schedulingConflict
+              ? "Ce créneau n'est plus réservable. Choisis une autre date ou un autre horaire."
+              : "La réservation n'a pas pu être enregistrée. Réessayez dans un instant.";
       if (schedulingConflict) {
         setSlot("");
         setErrors((current) => ({ ...current, slot: friendlyMessage }));
@@ -422,6 +463,46 @@ function ReserverPage() {
                 </div>
               </div>
 
+              {requiresManualReview && (
+                <div className="mt-6 rounded-2xl border border-border bg-secondary/35 p-4 sm:p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="font-medium">Compose ton devis de groupe</div>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Choisis les montants par personne. Le devis récapitulatif sera envoyé en PDF
+                        avec ta demande.
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-card px-4 py-2 text-right">
+                      <div className="text-xs text-muted-foreground">Total estimatif</div>
+                      <div className="font-display text-2xl">{groupQuoteTotal} €</div>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <GroupRateField
+                      label="Forfait céramique"
+                      value={groupCeramicRate}
+                      min={settings.groupCeramicRateMin}
+                      max={settings.groupCeramicRateMax}
+                      onChange={setGroupCeramicRate}
+                      error={errors.groupCeramicRate}
+                    />
+                    <GroupRateField
+                      label="Forfait brunch"
+                      value={groupMealRate}
+                      min={settings.groupMealRateMin}
+                      max={settings.groupMealRateMax}
+                      onChange={setGroupMealRate}
+                      error={errors.groupMealRate}
+                    />
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Estimation pour {people} personne{people > 1 ? "s" : ""}. La demande et le devis
+                    restent soumis à la validation de l'équipe.
+                  </p>
+                </div>
+              )}
+
               {depositRequired && (
                 <div className="mt-6 rounded-2xl border border-dashed border-primary/40 bg-primary/10 p-4">
                   <div className="flex items-start gap-3">
@@ -528,6 +609,7 @@ function ReserverPage() {
                 <Row k="Personnes" v={`${people}`} />
                 <Row k="Date" v={formatReservationDate(date)} />
                 <Row k="Créneau" v={slot} />
+                {groupQuoteTotal > 0 && <Row k="Devis estimatif" v={`${groupQuoteTotal} €`} />}
                 {deposit > 0 && <Row k="Acompte" v={`${deposit} €`} />}
                 <Row k="Référence" v={done} />
               </div>
@@ -595,6 +677,7 @@ function ReserverPage() {
             date={date}
             slot={slot}
             deposit={deposit}
+            groupQuoteTotal={groupQuoteTotal}
             requiresManualReview={requiresManualReview}
           />
         )}
@@ -609,6 +692,59 @@ function Step({ title, children }: { title: string; children: React.ReactNode })
       <h2 className="text-xl sm:text-2xl">{title}</h2>
       <div className="mt-5">{children}</div>
     </div>
+  );
+}
+
+function GroupRateField({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+  error,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+  error?: string;
+}) {
+  return (
+    <label className="rounded-xl border border-border bg-card p-3">
+      <span className="flex items-center justify-between gap-3 text-sm font-medium">
+        {label}
+        <span className="text-xs font-normal text-muted-foreground">
+          {min} à {max} € / pers.
+        </span>
+      </span>
+      <div className="mt-3 grid grid-cols-[1fr_5.5rem] items-center gap-3">
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={1}
+          value={value}
+          onChange={(event) => onChange(Number(event.target.value))}
+          className="w-full accent-primary"
+        />
+        <div className="relative">
+          <input
+            type="number"
+            min={min}
+            max={max}
+            step={1}
+            value={value}
+            onChange={(event) => onChange(Number(event.target.value))}
+            className="h-10 w-full rounded-lg border border-input bg-background pl-3 pr-7 text-right text-sm outline-none focus:ring-2 focus:ring-ring"
+          />
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+            €
+          </span>
+        </div>
+      </div>
+      {error && <span className="mt-2 block text-xs text-destructive">{error}</span>}
+    </label>
   );
 }
 
@@ -828,7 +964,8 @@ function WeekPlanner({
 
       <p className="mt-3 text-xs text-muted-foreground">
         Durée indicative d'un créneau : {formatDuration(settings.slotDurationMinutes)}. Les créneaux
-        complets ne peuvent pas être réservés. La réservation se fait au plus tard la veille.
+        complets ne peuvent pas être réservés. Pour le lendemain, réserve avant{" "}
+        {formatPublicTime(settings.bookingCutoffTime)}.
       </p>
     </div>
   );
@@ -842,14 +979,22 @@ function getSlotAvailability(
   occupancies: SlotOccupancy[],
   settings: KafeSettings,
 ) {
-  const today = startOfDay(new Date());
-  const current = startOfDay(day);
-  if (current < today) return { disabled: true, label: "passé" };
-
-  const earliestBookable = addDays(today, Math.max(0, settings.minimumBookingLeadDays ?? 1));
-  if (current < earliestBookable) return { disabled: true, label: "réservation la veille" };
-
   const date = toISODate(day);
+  const guadeloupeNow = getGuadeloupeNow();
+  const minimumLeadDays = Math.max(1, settings.minimumBookingLeadDays ?? 1);
+  const earliestBookable = addIsoDays(guadeloupeNow.date, minimumLeadDays);
+  if (date < earliestBookable) return { disabled: true, label: "réservation la veille" };
+  if (
+    minimumLeadDays === 1 &&
+    date === earliestBookable &&
+    guadeloupeNow.minutes >= timeToMinutes(settings.bookingCutoffTime || "18:00")
+  ) {
+    return {
+      disabled: true,
+      label: `fermé à ${formatPublicTime(settings.bookingCutoffTime || "18:00")}`,
+    };
+  }
+
   if (new Date(`${date}T${slot}:00`).getTime() <= Date.now()) {
     return { disabled: true, label: "passé" };
   }
@@ -862,6 +1007,34 @@ function getSlotAvailability(
     return { disabled: true, label: "places restantes séparées" };
   }
   return { disabled: false, label: "disponible" };
+}
+
+function getGuadeloupeNow() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Guadeloupe",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return {
+    date: `${value.year}-${value.month}-${value.day}`,
+    minutes: Number(value.hour) * 60 + Number(value.minute),
+  };
+}
+
+function addIsoDays(date: string, count: number) {
+  const next = new Date(`${date}T12:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + count);
+  return next.toISOString().slice(0, 10);
+}
+
+function timeToMinutes(value: string) {
+  const [hours, minutes] = value.split(":").map(Number);
+  return (hours || 0) * 60 + (minutes || 0);
 }
 
 function startOfWeek(date: Date) {
@@ -903,6 +1076,7 @@ function Summary({
   date,
   slot,
   deposit,
+  groupQuoteTotal,
   requiresManualReview,
 }: {
   experience: ExperienceType;
@@ -910,6 +1084,7 @@ function Summary({
   date: string;
   slot: string;
   deposit: number;
+  groupQuoteTotal: number;
   requiresManualReview: boolean;
 }) {
   return (
@@ -930,8 +1105,13 @@ function Summary({
         </div>
         {deposit > 0 && (
           <div className="text-right">
-            <div className="text-xs text-muted-foreground">Acompte</div>
-            <div className="font-display text-xl">{deposit} €</div>
+            {groupQuoteTotal > 0 && (
+              <>
+                <div className="text-xs text-muted-foreground">Devis estimatif</div>
+                <div className="font-display text-xl">{groupQuoteTotal} €</div>
+              </>
+            )}
+            <div className="mt-1 text-xs text-muted-foreground">Acompte : {deposit} €</div>
           </div>
         )}
       </div>

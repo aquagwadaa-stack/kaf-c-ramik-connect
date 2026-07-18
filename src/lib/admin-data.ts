@@ -529,6 +529,7 @@ export interface KafeSettings {
   cancellationNoticeHours: number;
   groupDepositForfeitHours: number;
   minimumBookingLeadDays: number;
+  bookingCutoffTime: string;
   reservationFieldRequirements: ReservationFieldRequirements;
   manualConfirmationThreshold: number;
   groupOutsideFoodNotice: string;
@@ -547,14 +548,16 @@ export interface KafeSettings {
   contactMapUrl: string;
   adminNotificationEmail: string;
   giftCardPaymentUrl: string;
-  groupCeramicRatePerPerson: number;
-  groupMealRatePerPerson: number;
+  groupCeramicRateMin: number;
+  groupCeramicRateMax: number;
+  groupMealRateMin: number;
+  groupMealRateMax: number;
   sumupPaymentsEnabled: boolean;
   creationInspirations: CreationInspiration[];
 }
 
 export const settingsSeed: KafeSettings = {
-  configurationVersion: 6,
+  configurationVersion: 7,
   depositThreshold: 8,
   depositFixedAmount: 100,
   defaultCapacity: 63,
@@ -584,6 +587,7 @@ export const settingsSeed: KafeSettings = {
   cancellationNoticeHours: 48,
   groupDepositForfeitHours: 24,
   minimumBookingLeadDays: 1,
+  bookingCutoffTime: "18:00",
   reservationFieldRequirements: {
     emailRequired: true,
     childrenAgesRequired: false,
@@ -609,10 +613,12 @@ export const settingsSeed: KafeSettings = {
   contactPhone: "0690 28 47 88",
   contactAddress: "Lieu dit Loyette, 97118 Saint-François, Guadeloupe",
   contactMapUrl: "https://www.google.com/maps?q=16.286364%2C-61.288357",
-  adminNotificationEmail: "malamadre971@gmail.com",
+  adminNotificationEmail: "ceramikkafe@gmail.com",
   giftCardPaymentUrl: "",
-  groupCeramicRatePerPerson: 0,
-  groupMealRatePerPerson: 0,
+  groupCeramicRateMin: 18,
+  groupCeramicRateMax: 80,
+  groupMealRateMin: 15,
+  groupMealRateMax: 25,
   sumupPaymentsEnabled: false,
   creationInspirations: creationInspirationsSeed,
 };

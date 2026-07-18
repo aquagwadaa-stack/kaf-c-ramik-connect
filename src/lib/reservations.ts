@@ -36,6 +36,10 @@ export interface Reservation {
   depositPaid: boolean;
   depositRequired?: boolean;
   depositAmount?: number;
+  groupCeramicRatePerPerson?: number;
+  groupMealRatePerPerson?: number;
+  groupQuoteTotal?: number;
+  groupQuoteNumber?: string;
   status: ReservationStatus;
   notes?: string;
   isGroupRequest?: boolean;

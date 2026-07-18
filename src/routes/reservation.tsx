@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock3,
+  FileText,
   MapPin,
   Users,
 } from "lucide-react";
@@ -157,6 +158,11 @@ function ReservationPortalPage() {
                 <Info icon={MapPin} label="Formule">
                   {experienceLabel(data.reservation.experience)}
                 </Info>
+                {data.reservation.groupQuoteTotal && (
+                  <Info icon={FileText} label="Devis estimatif">
+                    {data.reservation.groupQuoteTotal} € pour le groupe
+                  </Info>
+                )}
               </div>
 
               {notice && (
