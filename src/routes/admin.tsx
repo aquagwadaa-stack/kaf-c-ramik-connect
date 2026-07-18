@@ -128,15 +128,6 @@ const tabs: { id: AdminTab; label: string; icon: LucideIcon }[] = [
   { id: "team", label: "Équipe", icon: UserCog },
 ];
 
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
-
 function csvCell(value: unknown) {
   const text = value === undefined || value === null ? "" : String(value);
   return `"${text.replaceAll('"', '""')}"`;
@@ -1963,16 +1954,12 @@ function ObjectsPanel({
 
   function removeObject(id: string) {
     saveObjects(objects.filter((object) => object.id !== id));
-    if (isSupabaseConfigured()) {
-      deleteRow("kafe_ceramic_objects", id).catch((remoteError) => {
-        console.warn("Remote object delete skipped:", remoteError);
-      });
-    }
   }
 
   async function uploadObjectImage(id: string, file?: File) {
     if (!file) return;
-    const imageDataUrl = await readFileAsDataUrl(file);
+    const stored = await storeDocumentFile(`objets/${id}`, file);
+    const imageDataUrl = stored.attachmentUrl || stored.attachmentDataUrl;
     updateObject(id, { imageDataUrl, imageName: file.name });
   }
 
@@ -2147,7 +2134,8 @@ function CreationsPanel({
 
   async function uploadCreationImage(id: string, file?: File) {
     if (!file) return;
-    const imageDataUrl = await readFileAsDataUrl(file);
+    const stored = await storeDocumentFile(`creations/${id}`, file);
+    const imageDataUrl = stored.attachmentUrl || stored.attachmentDataUrl;
     updateCreation(id, { imageDataUrl, imageName: file.name });
   }
 

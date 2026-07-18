@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { isSupabaseConfigured, selectRows, upsertRows } from "./supabase-rest";
+import { useEffect, useRef, useState } from "react";
+import { deleteRow, isSupabaseConfigured, selectRows, upsertRows } from "./supabase-rest";
 
 type Listener = () => void;
 
@@ -91,6 +91,7 @@ export function useStoredList<T extends { id: string }>(
   const remoteTable = remote?.table;
   const remoteAuthLoad = remote?.authLoad;
   const remoteHasSortOrder = remote?.hasSortOrder;
+  const remoteSaveQueue = useRef<Promise<unknown>>(Promise.resolve());
 
   useEffect(() => {
     let alive = true;
@@ -117,6 +118,8 @@ export function useStoredList<T extends { id: string }>(
   }, [key, remoteAuthLoad, remoteHasSortOrder, remoteTable, seed]);
 
   const save = (next: T[]) => {
+    const nextIds = new Set(next.map((item) => item.id));
+    const removedIds = list.filter((item) => !nextIds.has(item.id)).map((item) => item.id);
     writeStore(key, next);
     if (remote && isSupabaseConfigured()) {
       const toRow =
@@ -127,9 +130,15 @@ export function useStoredList<T extends { id: string }>(
           sort_order: index,
           updated_at: new Date().toISOString(),
         }));
-      saveRemoteList(remote.table, next, toRow).catch((error) => {
-        console.warn(`Remote save skipped for ${remote.table}:`, error);
-      });
+      remoteSaveQueue.current = remoteSaveQueue.current
+        .catch(() => undefined)
+        .then(async () => {
+          await Promise.all(removedIds.map((id) => deleteRow(remote.table, id, true)));
+          await saveRemoteList(remote.table, next, toRow);
+        })
+        .catch((error) => {
+          console.warn(`Remote save skipped for ${remote.table}:`, error);
+        });
     }
   };
   return [list, save] as const;
@@ -718,6 +727,7 @@ export function useKafeSettings() {
   const [settings, setSettings] = useState<KafeSettings>(() =>
     typeof window === "undefined" ? settingsSeed : settingsSeed,
   );
+  const remoteSaveQueue = useRef<Promise<unknown>>(Promise.resolve());
 
   useEffect(() => {
     let alive = true;
@@ -754,13 +764,18 @@ export function useKafeSettings() {
     });
     writeStore("kafe-ceramik-settings", normalized);
     if (isSupabaseConfigured()) {
-      upsertRows(
-        "kafe_settings",
-        [{ id: "main", value: normalized, updated_at: new Date().toISOString() }],
-        true,
-      ).catch((error) => {
-        console.warn("Remote settings save skipped:", error);
-      });
+      remoteSaveQueue.current = remoteSaveQueue.current
+        .catch(() => undefined)
+        .then(() =>
+          upsertRows(
+            "kafe_settings",
+            [{ id: "main", value: normalized, updated_at: new Date().toISOString() }],
+            true,
+          ),
+        )
+        .catch((error) => {
+          console.warn("Remote settings save skipped:", error);
+        });
     }
   };
   return [settings, save] as const;
