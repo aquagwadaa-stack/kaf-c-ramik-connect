@@ -549,6 +549,7 @@ export interface KafeSettings {
   giftCardPaymentUrl: string;
   groupCeramicRatePerPerson: number;
   groupMealRatePerPerson: number;
+  sumupPaymentsEnabled: boolean;
   creationInspirations: CreationInspiration[];
 }
 
@@ -612,6 +613,7 @@ export const settingsSeed: KafeSettings = {
   giftCardPaymentUrl: "",
   groupCeramicRatePerPerson: 0,
   groupMealRatePerPerson: 0,
+  sumupPaymentsEnabled: false,
   creationInspirations: creationInspirationsSeed,
 };
 

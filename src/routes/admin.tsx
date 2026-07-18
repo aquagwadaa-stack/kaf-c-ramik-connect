@@ -4,6 +4,7 @@ import type { FormEvent, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   AlertCircle,
+  Bell,
   BookOpenText,
   CalendarDays,
   CheckCircle2,
@@ -70,10 +71,11 @@ import {
 import { storeDocumentFile } from "@/lib/document-files";
 import {
   deleteRow,
-  deleteRowsByColumn,
+  callRpc,
   isSupabaseConfigured,
   selectRows,
   signInAdmin,
+  signUpAdmin,
   signOutAdmin,
   useAdminAccess,
 } from "@/lib/supabase-rest";
@@ -229,6 +231,61 @@ function AdminPage() {
   );
 }
 
+type AdminNotification = {
+  id: number;
+  kind: string;
+  title: string;
+  body: string;
+  reservation_id?: string | null;
+  access_request_id?: string | null;
+  created_at: string;
+  is_read: boolean;
+};
+
+function useAdminNotifications(remoteMode: boolean) {
+  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+
+  useEffect(() => {
+    if (!remoteMode) return;
+    let alive = true;
+    async function load() {
+      try {
+        const rows = await callRpc<AdminNotification[]>(
+          "get_kafe_admin_notifications",
+          { p_limit: 20 },
+          true,
+        );
+        if (alive) setNotifications(rows);
+      } catch (error) {
+        console.warn("Admin notifications unavailable:", error);
+      }
+    }
+    void load();
+    const timer = window.setInterval(load, 15_000);
+    window.addEventListener("focus", load);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", load);
+    };
+  }, [remoteMode]);
+
+  async function markRead(id: number) {
+    setNotifications((current) =>
+      current.map((notification) =>
+        notification.id === id ? { ...notification, is_read: true } : notification,
+      ),
+    );
+    if (remoteMode) {
+      await callRpc("mark_kafe_notification_read", { p_notification_id: id }, true).catch((error) =>
+        console.warn("Notification receipt unavailable:", error),
+      );
+    }
+  }
+
+  return { notifications, markRead };
+}
+
 function AdminWorkspace({
   remoteMode,
   adminUserId,
@@ -246,6 +303,7 @@ function AdminWorkspace({
   const [documents, saveDocuments] = useContentDocuments();
   const [signatures, saveSignatures] = useWaiverSignatures();
   const [settings, saveSettings] = useKafeSettings();
+  const { notifications, markRead: markNotificationRead } = useAdminNotifications(remoteMode);
   const [tab, setTab] = useState<AdminTab>("overview");
   const creations = settings.creationInspirations?.length
     ? settings.creationInspirations
@@ -319,6 +377,8 @@ function AdminWorkspace({
             occupancies={occupancies}
             signatures={signatures}
             settings={settings}
+            notifications={notifications}
+            onReadNotification={markNotificationRead}
             onNavigate={setTab}
           />
         )}
@@ -364,12 +424,16 @@ function OverviewPanel({
   occupancies,
   signatures,
   settings,
+  notifications,
+  onReadNotification,
   onNavigate,
 }: {
   reservations: Reservation[];
   occupancies: SlotOccupancy[];
   signatures: WaiverSignature[];
   settings: KafeSettings;
+  notifications: AdminNotification[];
+  onReadNotification: (id: number) => void;
   onNavigate: (tab: AdminTab) => void;
 }) {
   const today = new Date().toISOString().slice(0, 10);
@@ -381,8 +445,8 @@ function OverviewPanel({
     .sort((a, b) => a.slot.localeCompare(b.slot));
   const pendingGroups = activeReservations.filter(
     (reservation) =>
-      (reservation.isGroupRequest || reservation.people >= settings.manualConfirmationThreshold) &&
-      reservation.status === "pending",
+      reservation.isGroupRequest &&
+      (reservation.status === "pending" || reservation.status === "deposit_paid"),
   );
   const pendingDeposits = activeReservations.filter(
     (reservation) => reservation.depositRequired && !reservation.depositPaid,
@@ -447,6 +511,46 @@ function OverviewPanel({
           sub="décharges aujourd'hui"
         />
       </div>
+
+      {notifications.length > 0 && (
+        <Panel
+          title={`Notifications${notifications.some((item) => !item.is_read) ? ` · ${notifications.filter((item) => !item.is_read).length} nouvelle(s)` : ""}`}
+          desc="Réservations, annulations et demandes d'accès récentes."
+        >
+          <div className="divide-y divide-border border-y border-border">
+            {notifications.slice(0, 6).map((notification) => (
+              <button
+                key={notification.id}
+                type="button"
+                onClick={() => {
+                  void onReadNotification(notification.id);
+                  onNavigate(
+                    notification.kind === "admin_access_requested" ? "team" : "reservations",
+                  );
+                }}
+                className="flex w-full items-start gap-3 py-3 text-left hover:text-primary"
+              >
+                <span
+                  className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl ${
+                    notification.is_read ? "bg-secondary" : "bg-primary text-primary-foreground"
+                  }`}
+                >
+                  <Bell className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium">{notification.title}</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {notification.body}
+                  </span>
+                </span>
+                {!notification.is_read && (
+                  <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                )}
+              </button>
+            ))}
+          </div>
+        </Panel>
+      )}
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <Panel
@@ -761,15 +865,25 @@ function WalkInAvailability({
 function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mode, setMode] = useState<"login" | "request">("login");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError("");
+    setNotice("");
     try {
-      await signInAdmin(email, password);
+      if (mode === "login") {
+        await signInAdmin(email, password);
+      } else {
+        await signUpAdmin(email, password);
+        setNotice(
+          "La demande a bien été envoyée. Confirme ton adresse e-mail si nécessaire, puis attends la validation d'un membre de l'équipe.",
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connexion impossible.");
     } finally {
@@ -787,9 +901,13 @@ function AdminLogin() {
           <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary text-primary-foreground">
             <LockKeyhole className="h-5 w-5" />
           </div>
-          <h1 className="mt-5 font-display text-3xl">Connexion équipe</h1>
+          <h1 className="mt-5 font-display text-3xl">
+            {mode === "login" ? "Connexion équipe" : "Demander un accès"}
+          </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Accès réservé à l'administration du Kafé Céramik.
+            {mode === "login"
+              ? "Accès réservé à l'administration du Kafé Céramik."
+              : "Crée ton identifiant personnel. Un accès déjà autorisé devra ensuite valider la demande."}
           </p>
 
           <div className="mt-5 grid gap-3">
@@ -806,12 +924,34 @@ function AdminLogin() {
           </div>
 
           {error && <div className="mt-4 text-sm text-destructive">{error}</div>}
+          {notice && (
+            <div className="mt-4 rounded-xl border border-sage/35 bg-sage/10 p-3 text-sm">
+              {notice}
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading}
             className="mt-5 w-full rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground disabled:opacity-60"
           >
-            {loading ? "Connexion..." : "Se connecter"}
+            {loading
+              ? mode === "login"
+                ? "Connexion..."
+                : "Envoi..."
+              : mode === "login"
+                ? "Se connecter"
+                : "Envoyer ma demande"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode((current) => (current === "login" ? "request" : "login"));
+              setError("");
+              setNotice("");
+            }}
+            className="mt-3 w-full text-sm font-medium text-primary underline underline-offset-4"
+          >
+            {mode === "login" ? "Je n'ai pas encore d'accès" : "J'ai déjà un compte"}
           </button>
         </form>
       </section>
@@ -872,21 +1012,38 @@ type AdminTeamRow = {
   updated_at?: string;
 };
 
+type AdminAccessRequest = {
+  id: string;
+  user_id: string;
+  email: string;
+  status: "pending" | "approved" | "rejected";
+  requested_at: string;
+};
+
 function useAdminTeam(remoteMode: boolean) {
   const [members, setMembers] = useState<AdminTeamRow[]>([]);
+  const [requests, setRequests] = useState<AdminAccessRequest[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!remoteMode || !isSupabaseConfigured()) return;
     let alive = true;
-    selectRows<AdminTeamRow>(
-      "kafe_admin_profiles",
-      "?select=user_id,email,role,created_at,updated_at&order=created_at.asc",
-      true,
-    )
-      .then((rows) => {
+    Promise.all([
+      selectRows<AdminTeamRow>(
+        "kafe_admin_profiles",
+        "?select=user_id,email,role,created_at,updated_at&order=created_at.asc",
+        true,
+      ),
+      selectRows<AdminAccessRequest>(
+        "kafe_admin_access_requests",
+        "?select=id,user_id,email,status,requested_at&status=eq.pending&order=requested_at.asc",
+        true,
+      ),
+    ])
+      .then(([rows, pendingRequests]) => {
         if (!alive) return;
         setMembers(rows);
+        setRequests(pendingRequests);
         setError("");
       })
       .catch((teamError) => {
@@ -899,7 +1056,7 @@ function useAdminTeam(remoteMode: boolean) {
     };
   }, [remoteMode]);
 
-  return { members, setMembers, error };
+  return { members, setMembers, requests, setRequests, error };
 }
 
 function TeamPanel({
@@ -913,9 +1070,9 @@ function TeamPanel({
   adminEmail?: string | null;
   adminRole?: string;
 }) {
-  const { members, setMembers, error } = useAdminTeam(remoteMode);
+  const { members, setMembers, requests, setRequests, error } = useAdminTeam(remoteMode);
   const [savingId, setSavingId] = useState("");
-  const canManageTeam = adminRole === "owner";
+  const canManageTeam = Boolean(adminRole);
 
   async function removeMember(member: AdminTeamRow) {
     if (!canManageTeam || member.user_id === adminUserId) return;
@@ -923,8 +1080,35 @@ function TeamPanel({
     if (!confirmed) return;
     setSavingId(member.user_id);
     try {
-      await deleteRowsByColumn("kafe_admin_profiles", "user_id", member.user_id, true);
+      await callRpc("revoke_kafe_admin_access", { p_user_id: member.user_id }, true);
       setMembers((current) => current.filter((item) => item.user_id !== member.user_id));
+    } finally {
+      setSavingId("");
+    }
+  }
+
+  async function decideAccess(request: AdminAccessRequest, approved: boolean) {
+    setSavingId(request.id);
+    try {
+      if (approved) {
+        const result = await callRpc<{ ok: boolean; userId: string; email: string }>(
+          "approve_kafe_admin_request",
+          { p_request_id: request.id },
+          true,
+        );
+        setMembers((current) => [
+          ...current.filter((member) => member.user_id !== result.userId),
+          {
+            user_id: result.userId,
+            email: result.email,
+            role: "manager",
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } else {
+        await callRpc("reject_kafe_admin_request", { p_request_id: request.id }, true);
+      }
+      setRequests((current) => current.filter((item) => item.id !== request.id));
     } finally {
       setSavingId("");
     }
@@ -935,6 +1119,47 @@ function TeamPanel({
       title="Équipe"
       desc="Un seul niveau d'accès complet pour les personnes autorisées, avec un identifiant personnel pour chacune."
     >
+      {requests.length > 0 && (
+        <div className="mb-4 rounded-2xl border border-mustard/45 bg-mustard/10 p-4">
+          <div className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-primary" />
+            <h3 className="font-display text-xl">Demandes à valider</h3>
+          </div>
+          <div className="mt-3 grid gap-2">
+            {requests.map((request) => (
+              <div
+                key={request.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-card p-3"
+              >
+                <div>
+                  <div className="text-sm font-medium">{request.email}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Demande du {new Date(request.requested_at).toLocaleDateString("fr-FR")}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => decideAccess(request, false)}
+                    disabled={Boolean(savingId)}
+                    className="rounded-full border border-border px-3 py-1.5 text-xs hover:bg-secondary disabled:opacity-50"
+                  >
+                    Refuser
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => decideAccess(request, true)}
+                    disabled={Boolean(savingId)}
+                    className="rounded-full bg-primary px-3 py-1.5 text-xs text-primary-foreground disabled:opacity-50"
+                  >
+                    Autoriser
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="grid gap-4 lg:grid-cols-[1fr_0.85fr]">
         <div className="rounded-2xl border border-border bg-background p-4">
           <div className="flex items-center gap-2">
@@ -996,8 +1221,8 @@ function TeamPanel({
             Compte connecté :{" "}
             <span className="font-medium text-foreground">{adminEmail ?? "-"}</span>. Chaque
             personne utilise sa propre adresse e-mail et son propre mot de passe, sans partager les
-            identifiants. Le compte propriétaire technique sert uniquement à autoriser ou retirer
-            ces accès.
+            identifiants. Toute nouvelle demande doit être acceptée ici par une personne déjà
+            autorisée.
           </div>
         </div>
       </div>
@@ -1028,7 +1253,7 @@ function ReservationsPanel({
   const filtered = useMemo(() => {
     if (filter === "today") return reservations.filter((r) => r.date === today);
     if (filter === "upcoming") return reservations.filter((r) => r.date >= today);
-    if (filter === "groups") return reservations.filter((r) => r.isGroupRequest || r.people >= 8);
+    if (filter === "groups") return reservations.filter((r) => r.isGroupRequest);
     return reservations;
   }, [filter, reservations, today]);
 
@@ -1093,9 +1318,9 @@ function ReservationCard({
   settings: KafeSettings;
 }) {
   const location = seatingAllocationLabel(reservation, settings);
-  const groupRequest =
-    reservation.isGroupRequest || reservation.people >= settings.manualConfirmationThreshold;
-  const pendingGroup = reservation.status === "pending" && groupRequest;
+  const groupRequest = Boolean(reservation.isGroupRequest);
+  const pendingGroup =
+    groupRequest && (reservation.status === "pending" || reservation.status === "deposit_paid");
   return (
     <div className="rounded-2xl border border-border bg-background p-4">
       <div className="grid gap-3 sm:grid-cols-[1fr_1.4fr_auto] sm:items-center">
@@ -1218,7 +1443,7 @@ function GroupDecisionControls({ reservation }: { reservation: Reservation }) {
     }
   }
 
-  if (reservation.status !== "pending") {
+  if (reservation.status !== "pending" && reservation.status !== "deposit_paid") {
     if (!notice && !reservation.decisionMessage) return null;
     return (
       <div className="mt-3 rounded-xl bg-secondary/45 px-3 py-2 text-xs text-muted-foreground">
@@ -1231,7 +1456,9 @@ function GroupDecisionControls({ reservation }: { reservation: Reservation }) {
     <div className="mt-4 rounded-2xl border border-primary/25 bg-primary/5 p-4">
       <div className="font-medium">Décision de l'équipe</div>
       <p className="mt-1 text-xs text-muted-foreground">
-        Le client recevra automatiquement la réponse par email.
+        {reservation.depositPaid
+          ? "L'acompte est reçu. Le client recevra automatiquement la décision par email."
+          : "La demande reste bloquée jusqu'à la confirmation du paiement de l'acompte."}
       </p>
       <textarea
         value={message}
@@ -1243,7 +1470,7 @@ function GroupDecisionControls({ reservation }: { reservation: Reservation }) {
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
-          disabled={saving !== null}
+          disabled={saving !== null || !reservation.depositPaid}
           onClick={() => void decide(true)}
           className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
         >

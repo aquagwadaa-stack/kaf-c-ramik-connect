@@ -156,6 +156,26 @@ export async function signInAdmin(email: string, password: string) {
   return session;
 }
 
+export async function signUpAdmin(email: string, password: string) {
+  const response = await fetch(`${baseUrl()}/auth/v1/signup`, {
+    method: "POST",
+    headers: {
+      apikey: anonKey(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!response.ok) throw new Error(await errorMessage(response));
+  const data = (await response.json()) as SupabaseSession & { expires_in?: number };
+  if (data.access_token) {
+    saveAdminSession({
+      ...data,
+      expires_at: data.expires_at ?? Math.floor(Date.now() / 1000) + (data.expires_in ?? 3600),
+    });
+  }
+  return data;
+}
+
 export function signOutAdmin() {
   saveAdminSession(null);
 }

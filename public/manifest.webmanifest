@@ -1,0 +1,19 @@
+{
+  "name": "Kafé Céramik Guadeloupe",
+  "short_name": "Kafé Céramik",
+  "description": "Réservations, guide et espace équipe du Kafé Céramik.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fff8ef",
+  "theme_color": "#efcfd3",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    }
+  ]
+}

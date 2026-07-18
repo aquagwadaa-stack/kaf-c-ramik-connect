@@ -49,7 +49,24 @@ export interface Reservation {
   decisionAt?: string;
   reservationCreatedEmailSentAt?: string;
   reminderEmailSentAt?: string;
+  managementToken?: string;
 }
+
+export type ReservationPortalData = {
+  reservation: Reservation;
+  canCancel: boolean;
+  cancellationDeadline: string;
+  cancellationNoticeHours: number;
+  paymentEnabled: boolean;
+};
+
+export type SumUpCheckoutResult = {
+  ok: boolean;
+  configured: boolean;
+  paid?: boolean;
+  checkoutUrl?: string;
+  status?: string;
+};
 
 export type EmailDispatchResult = {
   ok: boolean;
@@ -239,11 +256,13 @@ export function useReservations() {
   );
   useEffect(() => {
     let alive = true;
+    let refreshInterval: number | undefined;
     setList(read());
     const update = () => setList(read());
     listeners.add(update);
 
-    if (isSupabaseConfigured() && readAdminSession()) {
+    const syncRemote = () => {
+      if (!isSupabaseConfigured() || !readAdminSession()) return;
       loadRemoteReservations()
         .then((remoteList) => {
           if (!alive) return;
@@ -253,10 +272,18 @@ export function useReservations() {
         .catch((error) => {
           console.warn("Remote reservations load skipped:", error);
         });
+    };
+
+    if (isSupabaseConfigured() && readAdminSession()) {
+      syncRemote();
+      refreshInterval = window.setInterval(syncRemote, 15_000);
+      window.addEventListener("focus", syncRemote);
     }
 
     return () => {
       alive = false;
+      if (refreshInterval) window.clearInterval(refreshInterval);
+      window.removeEventListener("focus", syncRemote);
       listeners.delete(update);
     };
   }, []);
@@ -330,6 +357,7 @@ export async function addReservation(
     ...r,
     id: `r${Date.now()}`,
     createdAt: new Date().toISOString(),
+    managementToken: r.managementToken ?? crypto.randomUUID(),
   };
 
   if (isSupabaseConfigured()) {
@@ -362,13 +390,17 @@ export async function addReservation(
   return full;
 }
 
-export async function sendReservationCreatedEmails(reservationId: string) {
+export async function sendReservationCreatedEmails(
+  reservationId: string,
+  managementToken?: string,
+) {
   if (!isSupabaseConfigured()) {
     return { ok: false, delivered: false, reason: "Supabase non configuré" };
   }
   return invokeEdgeFunction<EmailDispatchResult>("kafe-emails", {
     action: "reservation-created",
     reservationId,
+    managementToken,
     siteUrl: window.location.origin,
   });
 }
@@ -479,9 +511,9 @@ export async function addWalkInReservation(input: {
 export function shouldRequireDeposit(
   people: number,
   settings: KafeSettings = settingsSeed,
-  _experience?: ExperienceType,
+  experience: ExperienceType = "cafe_atelier",
 ) {
-  return people >= settings.depositThreshold;
+  return experienceUsesCeramicGuide(experience) && people >= settings.depositThreshold;
 }
 
 export function experienceUsesCeramicGuide(experience: ExperienceType) {
@@ -498,10 +530,43 @@ export function getDepositAmount(
 
 export function shouldWaitForManualConfirmation(
   people: number,
-  _experience: ExperienceType,
+  experience: ExperienceType,
   settings: KafeSettings = settingsSeed,
 ) {
-  return people >= settings.manualConfirmationThreshold;
+  return experienceUsesCeramicGuide(experience) && people >= settings.manualConfirmationThreshold;
+}
+
+export async function getReservationPortal(managementToken: string) {
+  if (!managementToken) throw new Error("KAFE_INVALID_MANAGEMENT_TOKEN");
+  return callRpc<ReservationPortalData>("get_kafe_reservation_by_token", {
+    p_token: managementToken,
+  });
+}
+
+export async function cancelReservationFromPortal(managementToken: string) {
+  if (!managementToken) throw new Error("KAFE_INVALID_MANAGEMENT_TOKEN");
+  const result = await callRpc<ReservationPortalData>("cancel_kafe_reservation_by_token", {
+    p_token: managementToken,
+  });
+  refreshReservationOccupancies();
+  await invokeEdgeFunction<EmailDispatchResult>("kafe-emails", {
+    action: "customer-cancelled",
+    reservationId: result.reservation.id,
+    managementToken,
+    siteUrl: window.location.origin,
+  }).catch((error) => {
+    console.warn("Customer cancellation email skipped:", error);
+  });
+  return result;
+}
+
+export async function createSumUpCheckout(managementToken: string) {
+  if (!managementToken) throw new Error("KAFE_INVALID_MANAGEMENT_TOKEN");
+  return invokeEdgeFunction<SumUpCheckoutResult>("sumup-checkout", {
+    action: "create",
+    managementToken,
+    siteUrl: window.location.origin,
+  });
 }
 
 export function getReservedPeopleForSlot(reservations: Reservation[], date: string, slot: string) {

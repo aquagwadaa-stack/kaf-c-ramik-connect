@@ -14,9 +14,9 @@ Sans ces variables, le site reste en mode demo local avec `localStorage`.
 ## Mise en place
 
 1. Creer un projet Supabase au nom du client ou dans l'espace convenu.
-2. Executer `supabase/migrations/202607150001_kafe_core.sql` dans l'editeur SQL Supabase.
-3. Creer au moins un utilisateur dans Supabase Auth pour l'equipe.
-4. Autoriser cet utilisateur dans `kafe_admin_profiles`.
+2. Executer toutes les migrations de `supabase/migrations` dans l'ordre.
+3. Creer le premier utilisateur administrateur dans Supabase Auth et l'autoriser dans `kafe_admin_profiles`.
+4. Les comptes suivants peuvent demander leur acces depuis `/admin`; un administrateur deja autorise valide ensuite la demande dans l'onglet Equipe.
 5. Ajouter les variables dans Lovable.
 6. Tester `/admin` : la page doit demander une connexion.
 
@@ -47,7 +47,7 @@ Roles prevus :
 - `team` : operations limitees a definir si besoin.
 - `readonly` : consultation seule a definir si besoin.
 
-Pour l'instant, creer un seul compte `owner` suffit. Les niveaux plus fins pourront etre actives si l'equipe en a vraiment besoin.
+Chaque membre utilise son propre email et son propre mot de passe. Les comptes autorises ont actuellement le meme niveau fonctionnel, tandis que le compte `owner` reste protege contre une suppression accidentelle.
 
 ## Securite
 
@@ -67,7 +67,14 @@ Pour l'instant, creer un seul compte `owner` suffit. Les niveaux plus fins pourr
   - `KAFE_REPLY_TO` : adresse a laquelle l'equipe souhaite recevoir les reponses.
   - `KAFE_CRON_SECRET` : secret long utilise uniquement par la tache de rappel.
 - Programmer l'appel horaire de l'action `process-reminders` sur la fonction `kafe-emails`
-  avec l'en-tete `x-cron-secret`. La fonction envoie uniquement les rappels situes entre 23 et
-  25 heures avant le creneau et marque chaque reservation pour eviter les doublons.
+  avec l'en-tete `x-cron-secret`. La fonction envoie le rappel des qu'une reservation entre
+  dans la fenetre des 24 heures et marque chaque reservation pour eviter les doublons.
 - Tester en conditions reelles les quatre emails : confirmation simple, demande de groupe,
   decision de l'equipe et rappel 24 heures avant.
+- Configurer les secrets de la fonction `sumup-checkout` avec le compte SumUp de Mala Madre :
+  - `SUMUP_API_KEY` : cle d'API creee dans le compte SumUp du client.
+  - `SUMUP_MERCHANT_CODE` : code marchand du compte qui encaisse les acomptes.
+  - declarer l'URL de la fonction `sumup-checkout` comme webhook SumUp.
+  - activer ensuite `sumupPaymentsEnabled` dans les reglages uniquement apres un paiement test reussi.
+- Le manifeste et le service worker permettent deja d'installer le site comme une application.
+  L'abonnement aux notifications push necessite encore les cles VAPID et le service d'envoi associe.

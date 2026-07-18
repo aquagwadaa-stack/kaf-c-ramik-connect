@@ -18,6 +18,7 @@ import { useKafeSettings, type KafeSettings } from "@/lib/admin-data";
 import { formatPublicTime } from "@/lib/opening-hours";
 import {
   addReservation,
+  createSumUpCheckout,
   experienceUsesCeramicGuide,
   experienceLabel,
   formatDuration,
@@ -92,6 +93,7 @@ function ReserverPage() {
   const [guideAccepted, setGuideAccepted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState<string | null>(null);
+  const [doneToken, setDoneToken] = useState("");
   const [doneNotice, setDoneNotice] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -168,7 +170,7 @@ function ReserverPage() {
         depositRequired,
         depositAmount: deposit,
         status,
-        isGroupRequest: people >= settings.manualConfirmationThreshold,
+        isGroupRequest: requiresManualReview,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -182,9 +184,9 @@ function ReserverPage() {
         ? "Ce créneau vient d'être rempli par une autre réservation. Choisis un autre horaire."
         : message.includes("KAFE_BOOKING_TOO_LATE")
           ? "Les réservations se font au plus tard la veille. Choisis une autre date."
-        : schedulingConflict
-          ? "Ce créneau n'est plus réservable. Choisis une autre date ou un autre horaire."
-          : "La réservation n'a pas pu être enregistrée. Réessayez dans un instant.";
+          : schedulingConflict
+            ? "Ce créneau n'est plus réservable. Choisis une autre date ou un autre horaire."
+            : "La réservation n'a pas pu être enregistrée. Réessayez dans un instant.";
       if (schedulingConflict) {
         setSlot("");
         setErrors((current) => ({ ...current, slot: friendlyMessage }));
@@ -196,13 +198,31 @@ function ReserverPage() {
       setSubmitting(false);
       return;
     }
-    const emailDispatch = await sendReservationCreatedEmails(reservation.id).catch(() => ({
+    if (depositRequired && settings.sumupPaymentsEnabled && reservation.managementToken) {
+      try {
+        const checkout = await createSumUpCheckout(reservation.managementToken);
+        if (checkout.configured && checkout.checkoutUrl) {
+          window.location.assign(checkout.checkoutUrl);
+          return;
+        }
+      } catch (error) {
+        console.warn("SumUp checkout unavailable:", error);
+        setSubmitError(
+          "La demande est enregistrée, mais le paiement n'a pas pu s'ouvrir. Tu pourras le relancer depuis ta réservation.",
+        );
+      }
+    }
+    const emailDispatch = await sendReservationCreatedEmails(
+      reservation.id,
+      reservation.managementToken,
+    ).catch(() => ({
       ok: false,
       delivered: false,
     }));
     setSubmitting(false);
 
     setDone(reservation.id);
+    setDoneToken(reservation.managementToken ?? "");
     setDoneNotice(
       emailDispatch.delivered
         ? requiresManualReview
@@ -409,7 +429,8 @@ function ReserverPage() {
                     <div className="text-sm">
                       <div className="font-medium">Acompte nécessaire : {deposit} €</div>
                       <p className="mt-1 text-muted-foreground">
-                        Il devra être réglé en ligne avant que l'équipe valide définitivement la demande.
+                        Il devra être réglé en ligne avant que l'équipe valide définitivement la
+                        demande.
                       </p>
                     </div>
                   </div>
@@ -443,48 +464,48 @@ function ReserverPage() {
               </div>
 
               {isCeramicBooking && (
-              <div className="mt-4 border-l-4 border-primary bg-secondary/45 px-4 py-4 text-sm">
-                <div className="font-medium">À savoir avant de confirmer</div>
-                <ul className="mt-2 grid gap-1.5 text-muted-foreground sm:grid-cols-2">
-                  <li>• Consommation sur place obligatoire pour peindre</li>
-                  <li>• Cuisson et finition réalisées après ton départ</li>
-                  <li>• Création prête habituellement sous 7 à 10 jours</li>
-                  <li>• Photo et initiales indispensables pour la récupérer</li>
-                  <li>• Pièces conservées au maximum deux mois</li>
-                  <li>• Enfants sous la surveillance de leur accompagnateur</li>
-                </ul>
-                <Link
-                  to="/guide"
-                  target="_blank"
-                  className="mt-3 inline-flex font-medium text-primary underline underline-offset-4"
-                >
-                  Consulter le guide complet
-                </Link>
-              </div>
+                <div className="mt-4 border-l-4 border-primary bg-secondary/45 px-4 py-4 text-sm">
+                  <div className="font-medium">À savoir avant de confirmer</div>
+                  <ul className="mt-2 grid gap-1.5 text-muted-foreground sm:grid-cols-2">
+                    <li>• Consommation sur place obligatoire pour peindre</li>
+                    <li>• Cuisson et finition réalisées après ton départ</li>
+                    <li>• Création prête habituellement sous 7 à 10 jours</li>
+                    <li>• Photo et initiales indispensables pour la récupérer</li>
+                    <li>• Pièces conservées au maximum deux mois</li>
+                    <li>• Enfants sous la surveillance de leur accompagnateur</li>
+                  </ul>
+                  <Link
+                    to="/guide"
+                    target="_blank"
+                    className="mt-3 inline-flex font-medium text-primary underline underline-offset-4"
+                  >
+                    Consulter le guide complet
+                  </Link>
+                </div>
               )}
 
               {isCeramicBooking && (
-              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-background p-4 text-sm">
-                <input
-                  type="checkbox"
-                  checked={guideAccepted}
-                  onChange={(event) => setGuideAccepted(event.target.checked)}
-                  className="mt-1 h-4 w-4 accent-primary"
-                />
-                <span>
-                  <span className="font-medium">J'ai compris les consignes de l'atelier.</span>
-                  <span className="mt-1 block text-muted-foreground">
-                    {settings.guideAcceptanceText}
-                    {settings.signatureRequiredOnArrival &&
-                      " La décharge devra être lue et signée à l'arrivée sur la tablette du Kafé."}
-                  </span>
-                  {errors.guideAccepted && (
-                    <span className="mt-1 block text-xs text-destructive">
-                      {errors.guideAccepted}
+                <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-background p-4 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={guideAccepted}
+                    onChange={(event) => setGuideAccepted(event.target.checked)}
+                    className="mt-1 h-4 w-4 accent-primary"
+                  />
+                  <span>
+                    <span className="font-medium">J'ai compris les consignes de l'atelier.</span>
+                    <span className="mt-1 block text-muted-foreground">
+                      {settings.guideAcceptanceText}
+                      {settings.signatureRequiredOnArrival &&
+                        " La décharge devra être lue et signée à l'arrivée sur la tablette du Kafé."}
                     </span>
-                  )}
-                </span>
-              </label>
+                    {errors.guideAccepted && (
+                      <span className="mt-1 block text-xs text-destructive">
+                        {errors.guideAccepted}
+                      </span>
+                    )}
+                  </span>
+                </label>
               )}
             </Step>
           )}
@@ -511,6 +532,14 @@ function ReserverPage() {
                 <Row k="Référence" v={done} />
               </div>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
+                {doneToken && (
+                  <a
+                    href={`/reservation?token=${encodeURIComponent(doneToken)}`}
+                    className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                  >
+                    Accéder à ma réservation
+                  </a>
+                )}
                 <Link to="/" className="rounded-full border border-border px-4 py-2 text-sm">
                   Accueil
                 </Link>
