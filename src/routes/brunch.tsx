@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import brunchAtelier from "@/assets/brunch-atelier.png.asset.json";
 import {
   ArrowRight,
   CalendarHeart,
@@ -74,7 +75,7 @@ function BrunchPage() {
         <div className="grid overflow-hidden rounded-[2rem] border border-border bg-cream lg:grid-cols-[1.05fr_0.95fr]">
           <figure className="min-h-[340px] overflow-hidden">
             <img
-              src="/photos/atelier-portrait.webp"
+              src={brunchAtelier.url}
               alt="Atelier de peinture sur céramique"
               className="h-full w-full object-cover"
             />
