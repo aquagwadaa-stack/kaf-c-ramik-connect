@@ -9,6 +9,8 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   ClipboardSignature,
   Clock3,
@@ -702,6 +704,12 @@ function OverviewPanel({
         />
       </div>
 
+      <WeeklyCapacityPlanner
+        reservations={reservations}
+        occupancies={occupancies}
+        settings={settings}
+      />
+
       <div className="grid gap-5 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <Panel
           title="Actions rapides"
@@ -832,6 +840,166 @@ function OverviewPanel({
 
       <AdminPushControl remoteMode={remoteMode} />
     </div>
+  );
+}
+
+function startOfAdminWeek(date: Date) {
+  const result = new Date(date);
+  const daysSinceMonday = (result.getDay() + 6) % 7;
+  result.setDate(result.getDate() - daysSinceMonday);
+  result.setHours(12, 0, 0, 0);
+  return result;
+}
+
+function addAdminDays(date: Date, days: number) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function WeeklyCapacityPlanner({
+  reservations,
+  occupancies,
+  settings,
+}: {
+  reservations: Reservation[];
+  occupancies: SlotOccupancy[];
+  settings: KafeSettings;
+}) {
+  const [weekStart, setWeekStart] = useState(() => startOfAdminWeek(new Date()));
+  const days = useMemo(
+    () => Array.from({ length: 7 }, (_, index) => addAdminDays(weekStart, index)),
+    [weekStart],
+  );
+  const today = localDateValue(new Date());
+  const weekLabel = `${days[0].toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+  })} - ${days[6].toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })}`;
+
+  return (
+    <Panel
+      title="Planning de la semaine"
+      desc="Visualisez les places encore disponibles pour chaque créneau, réservations en ligne et ajouts sur place compris."
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-sm font-medium">
+          <CalendarDays className="h-4 w-4 text-primary" /> {weekLabel}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setWeekStart((current) => addAdminDays(current, -7))}
+            className="grid h-9 w-9 place-items-center rounded-full border border-border bg-background hover:bg-secondary"
+            aria-label="Semaine précédente"
+            title="Semaine précédente"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setWeekStart(startOfAdminWeek(new Date()))}
+            className="h-9 rounded-full border border-border bg-background px-3 text-xs font-medium hover:bg-secondary"
+          >
+            Aujourd'hui
+          </button>
+          <button
+            type="button"
+            onClick={() => setWeekStart((current) => addAdminDays(current, 7))}
+            className="grid h-9 w-9 place-items-center rounded-full border border-border bg-background hover:bg-secondary"
+            aria-label="Semaine suivante"
+            title="Semaine suivante"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4 overflow-x-auto pb-2">
+        <div className="grid min-w-[980px] grid-cols-7 gap-2">
+          {days.map((day) => {
+            const iso = localDateValue(day);
+            const slots = getSlotsForDate(iso, settings);
+            const isToday = iso === today;
+            const isPast = iso < today;
+
+            return (
+              <div
+                key={iso}
+                className={`rounded-xl border p-2.5 ${
+                  isToday
+                    ? "border-primary bg-primary/5"
+                    : isPast
+                      ? "border-border bg-muted/30"
+                      : "border-border bg-background"
+                }`}
+              >
+                <div className="flex min-h-11 items-start justify-between gap-2">
+                  <div>
+                    <div className="text-[11px] uppercase text-muted-foreground">
+                      {day.toLocaleDateString("fr-FR", { weekday: "short" })}
+                    </div>
+                    <div className="font-display text-xl leading-none">{day.getDate()}</div>
+                  </div>
+                  {isToday && (
+                    <span className="rounded-full bg-primary px-2 py-1 text-[10px] font-medium text-primary-foreground">
+                      Aujourd'hui
+                    </span>
+                  )}
+                </div>
+
+                {slots.length === 0 ? (
+                  <div className="mt-3 rounded-lg border border-dashed border-border px-2 py-3 text-center text-xs text-muted-foreground">
+                    Fermé
+                  </div>
+                ) : (
+                  <div className="mt-3 grid gap-1.5">
+                    {slots.map((slot) => {
+                      const availability = getSeatingAvailability(
+                        reservations,
+                        occupancies,
+                        iso,
+                        slot,
+                        settings,
+                      );
+                      const totalCapacity = availability.units.reduce(
+                        (total, unit) => total + unit.capacity,
+                        0,
+                      );
+                      const remaining = availability.hasUnassignedOverflow
+                        ? 0
+                        : availability.totalRemaining;
+                      const ratio = totalCapacity > 0 ? remaining / totalCapacity : 0;
+                      const tone =
+                        remaining === 0
+                          ? "border-destructive/30 bg-destructive/10 text-destructive"
+                          : ratio <= 0.25
+                            ? "border-gold/45 bg-gold/10"
+                            : "border-sage/30 bg-sage/10";
+
+                      return (
+                        <div key={slot} className={`rounded-lg border px-2 py-2 ${tone}`}>
+                          <div className="text-sm font-semibold">{slot}</div>
+                          <div className="mt-0.5 text-[11px] leading-tight">
+                            {remaining === 0
+                              ? "Complet"
+                              : `${remaining} / ${totalCapacity} places libres`}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </Panel>
   );
 }
 
