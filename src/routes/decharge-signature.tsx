@@ -2,7 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import {
   ArrowLeft,
+  CalendarDays,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   ClipboardSignature,
   Coffee,
   Download,
@@ -45,6 +48,19 @@ const emptyForm = {
   guardianFirstName: "",
   guardianLastName: "",
 };
+
+function localDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function reservationDateTime(reservation: Reservation) {
+  const [year, month, day] = reservation.date.split("-").map(Number);
+  const [hours, minutes] = reservation.slot.split(":").map(Number);
+  return new Date(year, month - 1, day, hours, minutes);
+}
 
 function WaiverSigningPage() {
   const admin = useAdminAccess();
@@ -96,13 +112,36 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | undefined>();
   const [error, setError] = useState("");
   const [savedSignature, setSavedSignature] = useState<WaiverSignature | null>(null);
+  const [showEarlierToday, setShowEarlierToday] = useState(false);
+  const [showFutureDays, setShowFutureDays] = useState(false);
 
-  const availableReservations = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    return reservations
-      .filter((reservation) => reservation.status !== "cancelled" && reservation.date >= today)
+  const reservationChoices = useMemo(() => {
+    const now = new Date();
+    const today = localDateKey(now);
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const active = reservations
+      .filter((reservation) => reservation.status !== "cancelled")
       .sort((a, b) => `${a.date}-${a.slot}`.localeCompare(`${b.date}-${b.slot}`));
-  }, [reservations]);
+    const earlierToday = active.filter(
+      (reservation) => reservation.date === today && reservationDateTime(reservation) < oneHourAgo,
+    );
+    const currentToday = active.filter(
+      (reservation) => reservation.date === today && reservationDateTime(reservation) >= oneHourAgo,
+    );
+    const futureDays = active.filter((reservation) => reservation.date > today);
+
+    return {
+      today,
+      earlierToday,
+      currentToday,
+      futureDays,
+      visible: [
+        ...(showEarlierToday ? earlierToday : []),
+        ...currentToday,
+        ...(showFutureDays ? futureDays : []),
+      ],
+    };
+  }, [reservations, showEarlierToday, showFutureDays]);
   const selectedReservation = reservations.find((reservation) => reservation.id === reservationRef);
   const signedCount = reservationRef
     ? signatures.filter((signature) => signature.reservationRef === reservationRef).length
@@ -179,7 +218,37 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
               </div>
             </div>
 
-            <label className="mt-7 block">
+            {reservationChoices.futureDays.length > 0 && (
+              <div className="mt-7 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      showFutureDays &&
+                      reservationChoices.futureDays.some(
+                        (reservation) => reservation.id === reservationRef,
+                      )
+                    ) {
+                      setReservationRef("");
+                    }
+                    setShowFutureDays((current) => !current);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-secondary"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  {showFutureDays ? "Masquer les jours suivants" : "Voir les jours suivants"}
+                  {showFutureDays ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            )}
+
+            <label
+              className={reservationChoices.futureDays.length > 0 ? "mt-3 block" : "mt-7 block"}
+            >
               <span className="mb-2 block text-sm font-medium">Réservation liée</span>
               <select
                 value={reservationRef}
@@ -187,11 +256,38 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
                 className="h-12 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">Personne sans réservation</option>
-                {availableReservations.map((reservation) => (
+                {reservationChoices.visible.map((reservation) => (
                   <ReservationOption key={reservation.id} reservation={reservation} />
                 ))}
               </select>
             </label>
+
+            {reservationChoices.earlierToday.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (
+                    showEarlierToday &&
+                    reservationChoices.earlierToday.some(
+                      (reservation) => reservation.id === reservationRef,
+                    )
+                  ) {
+                    setReservationRef("");
+                  }
+                  setShowEarlierToday((current) => !current);
+                }}
+                className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-primary underline-offset-4 hover:underline"
+              >
+                {showEarlierToday ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+                {showEarlierToday
+                  ? "Masquer les réservations plus anciennes"
+                  : `Voir plus tôt aujourd'hui (${reservationChoices.earlierToday.length})`}
+              </button>
+            )}
 
             {selectedReservation && (
               <div className="mt-4 rounded-2xl border border-primary/20 bg-secondary/45 p-4 text-sm">

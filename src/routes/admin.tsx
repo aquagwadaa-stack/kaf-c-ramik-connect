@@ -702,48 +702,6 @@ function OverviewPanel({
         />
       </div>
 
-      <AdminPushControl remoteMode={remoteMode} />
-
-      {notifications.length > 0 && (
-        <Panel
-          title={`Notifications${notifications.some((item) => !item.is_read) ? ` · ${notifications.filter((item) => !item.is_read).length} nouvelle(s)` : ""}`}
-          desc="Réservations, annulations et demandes d'accès récentes."
-        >
-          <div className="divide-y divide-border border-y border-border">
-            {notifications.slice(0, 6).map((notification) => (
-              <button
-                key={notification.id}
-                type="button"
-                onClick={() => {
-                  void onReadNotification(notification.id);
-                  onNavigate(
-                    notification.kind === "admin_access_requested" ? "team" : "reservations",
-                  );
-                }}
-                className="flex w-full items-start gap-3 py-3 text-left hover:text-primary"
-              >
-                <span
-                  className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl ${
-                    notification.is_read ? "bg-secondary" : "bg-primary text-primary-foreground"
-                  }`}
-                >
-                  <Bell className="h-4 w-4" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium">{notification.title}</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    {notification.body}
-                  </span>
-                </span>
-                {!notification.is_read && (
-                  <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                )}
-              </button>
-            ))}
-          </div>
-        </Panel>
-      )}
-
       <div className="grid gap-5 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <Panel
           title="Actions rapides"
@@ -831,6 +789,48 @@ function OverviewPanel({
         occupancies={occupancies}
         settings={settings}
       />
+
+      {notifications.length > 0 && (
+        <Panel
+          title={`Notifications${notifications.some((item) => !item.is_read) ? ` · ${notifications.filter((item) => !item.is_read).length} nouvelle(s)` : ""}`}
+          desc="Réservations, annulations et demandes d'accès récentes."
+        >
+          <div className="divide-y divide-border border-y border-border">
+            {notifications.slice(0, 6).map((notification) => (
+              <button
+                key={notification.id}
+                type="button"
+                onClick={() => {
+                  void onReadNotification(notification.id);
+                  onNavigate(
+                    notification.kind === "admin_access_requested" ? "team" : "reservations",
+                  );
+                }}
+                className="flex w-full items-start gap-3 py-3 text-left hover:text-primary"
+              >
+                <span
+                  className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl ${
+                    notification.is_read ? "bg-secondary" : "bg-primary text-primary-foreground"
+                  }`}
+                >
+                  <Bell className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium">{notification.title}</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {notification.body}
+                  </span>
+                </span>
+                {!notification.is_read && (
+                  <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                )}
+              </button>
+            ))}
+          </div>
+        </Panel>
+      )}
+
+      <AdminPushControl remoteMode={remoteMode} />
     </div>
   );
 }
@@ -1720,27 +1720,70 @@ function WaiversPanel({
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [archiveView, setArchiveView] = useState<"reservation" | "date">("reservation");
 
   const filteredSignatures = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase("fr");
-    if (!needle) return signatures;
-    return signatures.filter((signature) => {
-      const reservation = reservations.find((item) => item.id === signature.reservationRef);
-      return [
-        signature.firstName,
-        signature.lastName,
-        signature.guardianFirstName,
-        signature.guardianLastName,
-        signature.reservationRef,
-        reservation?.date,
-        reservation?.slot,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLocaleLowerCase("fr")
-        .includes(needle);
-    });
+    return [...signatures]
+      .filter((signature) => {
+        if (!needle) return true;
+        const reservation = reservations.find((item) => item.id === signature.reservationRef);
+        return [
+          signature.firstName,
+          signature.lastName,
+          signature.guardianFirstName,
+          signature.guardianLastName,
+          signature.reservationRef,
+          reservation?.date,
+          reservation?.slot,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLocaleLowerCase("fr")
+          .includes(needle);
+      })
+      .sort((a, b) => b.signedAt.localeCompare(a.signedAt));
   }, [reservations, search, signatures]);
+
+  const signatureGroups = useMemo(() => {
+    const groups = new Map<
+      string,
+      { label: string; detail: string; signatures: WaiverSignature[] }
+    >();
+
+    filteredSignatures.forEach((signature) => {
+      const reservation = reservations.find((item) => item.id === signature.reservationRef);
+      const signedDate = signature.signedAt.slice(0, 10);
+      const key =
+        archiveView === "date"
+          ? `date-${signedDate}`
+          : reservation
+            ? `reservation-${reservation.id}`
+            : `walk-in-${signedDate}`;
+      const label =
+        archiveView === "date"
+          ? new Date(`${signedDate}T12:00:00`).toLocaleDateString("fr-FR", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })
+          : reservation
+            ? `${reservation.firstName} ${reservation.lastName}`
+            : "Sans réservation";
+      const detail =
+        archiveView === "date"
+          ? "Signatures enregistrées ce jour"
+          : reservation
+            ? `${formatReservationDate(reservation.date)} à ${reservation.slot} · ${reservation.people} pers.`
+            : `Signatures du ${new Date(`${signedDate}T12:00:00`).toLocaleDateString("fr-FR")}`;
+      const current = groups.get(key) ?? { label, detail, signatures: [] };
+      current.signatures.push(signature);
+      groups.set(key, current);
+    });
+
+    return [...groups.entries()].map(([key, value]) => ({ key, ...value }));
+  }, [archiveView, filteredSignatures, reservations]);
 
   const incompleteWaiverReservations = reservations.filter((reservation) => {
     if (reservation.status === "cancelled" || reservation.source === "walk_in") return false;
@@ -1864,69 +1907,100 @@ function WaiversPanel({
               Retrouvez, recherchez et exportez chaque document signé.
             </p>
           </div>
-          <div className="relative min-w-[230px] flex-1 sm:max-w-xs">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Nom, date, heure, réservation…"
-              className="h-10 w-full border border-input bg-card pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-            />
+          <div className="flex min-w-[230px] flex-1 flex-col gap-2 sm:max-w-xl sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Nom, date, heure, réservation…"
+                className="h-10 w-full rounded-xl border border-input bg-card pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <select
+              value={archiveView}
+              onChange={(event) => setArchiveView(event.target.value as "reservation" | "date")}
+              aria-label="Trier les décharges"
+              className="h-10 rounded-xl border border-input bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="reservation">Par réservation</option>
+              <option value="date">Par date</option>
+            </select>
           </div>
         </div>
         <div className="mt-4 grid gap-2">
-          {filteredSignatures.length === 0 ? (
+          {signatureGroups.length === 0 ? (
             <EmptyState text="Aucune signature enregistrée." />
           ) : (
-            filteredSignatures.map((signature) => (
-              <div key={signature.id} className="border border-border p-3 text-sm">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="font-medium">
-                      {signature.firstName} {signature.lastName}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(signature.signedAt).toLocaleString("fr-FR")} ·{" "}
-                      {signature.documentVersion}
-                    </div>
-                    {signature.isMinor && (
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        Signé par {signature.guardianFirstName} {signature.guardianLastName},
-                        responsable légal
+            signatureGroups.map((group, index) => (
+              <details
+                key={group.key}
+                className="group rounded-2xl border border-border bg-card"
+                open={index === 0}
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+                  <span>
+                    <span className="block text-sm font-medium capitalize">{group.label}</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      {group.detail} · {group.signatures.length} décharge
+                      {group.signatures.length > 1 ? "s" : ""}
+                    </span>
+                  </span>
+                  <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="divide-y divide-border border-t border-border px-4">
+                  {group.signatures.map((signature) => (
+                    <div key={signature.id} className="py-3 text-sm">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-medium">
+                            {signature.firstName} {signature.lastName}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(signature.signedAt).toLocaleString("fr-FR")} ·{" "}
+                            {signature.documentVersion}
+                          </div>
+                          {signature.isMinor && (
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              Signé par {signature.guardianFirstName} {signature.guardianLastName},
+                              responsable légal
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <InfoPill tone="success">Signé</InfoPill>
+                          <button
+                            onClick={() =>
+                              downloadSignedWaiver(signature, waiver.body).catch(() =>
+                                setError("Impossible de générer cette décharge pour le moment."),
+                              )
+                            }
+                            className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+                            aria-label="Exporter la décharge signée"
+                            title="Exporter la décharge signée"
+                          >
+                            <Download className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => removeSignature(signature.id)}
+                            className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            aria-label="Supprimer la signature"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <InfoPill tone="success">Signé</InfoPill>
-                    <button
-                      onClick={() =>
-                        downloadSignedWaiver(signature, waiver.body).catch(() =>
-                          setError("Impossible de générer cette décharge pour le moment."),
-                        )
-                      }
-                      className="grid h-8 w-8 place-items-center border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
-                      aria-label="Exporter la décharge signée"
-                      title="Exporter la décharge signée"
-                    >
-                      <Download className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => removeSignature(signature.id)}
-                      className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                      aria-label="Supprimer la signature"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+                      {signature.signatureDataUrl && (
+                        <img
+                          src={signature.signatureDataUrl}
+                          alt="Signature"
+                          className="mt-3 h-16 rounded-lg border border-border bg-white object-contain"
+                        />
+                      )}
+                    </div>
+                  ))}
                 </div>
-                {signature.signatureDataUrl && (
-                  <img
-                    src={signature.signatureDataUrl}
-                    alt="Signature"
-                    className="mt-3 h-16 rounded-lg border border-border bg-white object-contain"
-                  />
-                )}
-              </div>
+              </details>
             ))
           )}
         </div>
