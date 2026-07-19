@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, ExternalLink, Gift, Heart, Paintbrush, Phone, Sparkles } from "lucide-react";
+import { ArrowRight, ExternalLink, Gift, Heart, Paintbrush, Sparkles } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { useKafeSettings } from "@/lib/admin-data";
 
@@ -19,7 +19,6 @@ export const Route = createFileRoute("/cadeau")({
 function CadeauPage() {
   const [settings] = useKafeSettings();
   const paymentUrl = settings.giftCardPaymentUrl.trim();
-  const phoneUrl = `tel:${settings.contactPhone.replace(/[^+\d]/g, "")}`;
 
   return (
     <PageShell>
@@ -54,12 +53,14 @@ function CadeauPage() {
                   <ExternalLink className="h-4 w-4" />
                 </a>
               ) : (
-                <a
-                  href={phoneUrl}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#e90061] px-6 py-3.5 font-semibold text-white shadow-lg shadow-black/15 hover:bg-[#cf0057]"
+                <button
+                  type="button"
+                  aria-disabled="true"
+                  title="Le lien de paiement SumUp sera ajouté prochainement"
+                  className="inline-flex cursor-default items-center gap-2 rounded-full bg-[#e90061] px-6 py-3.5 font-semibold text-white shadow-lg shadow-black/15"
                 >
-                  <Phone className="h-5 w-5" /> Commander auprès du Kafé
-                </a>
+                  <Gift className="h-5 w-5" /> Acheter la carte cadeau
+                </button>
               )}
               <Link
                 to="/creations"
@@ -143,12 +144,14 @@ function CadeauPage() {
               Choisir la carte <ExternalLink className="h-4 w-4" />
             </a>
           ) : (
-            <a
-              href={phoneUrl}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#301c1a] px-6 py-3.5 font-semibold text-white"
+            <button
+              type="button"
+              aria-disabled="true"
+              title="Le lien de paiement SumUp sera ajouté prochainement"
+              className="inline-flex shrink-0 cursor-default items-center justify-center gap-2 rounded-full bg-[#301c1a] px-6 py-3.5 font-semibold text-white"
             >
-              <Phone className="h-4 w-4" /> Appeler le Kafé
-            </a>
+              <Gift className="h-4 w-4" /> Choisir la carte
+            </button>
           )}
         </div>
       </section>
