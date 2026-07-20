@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarCheck2,
   CalendarDays,
+  CalendarOff,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -76,7 +77,7 @@ const experiences: {
 function ReserverPage() {
   const reservations = useReservations();
   const occupancies = useReservationOccupancies();
-  const [settings] = useKafeSettings();
+  const [settings, , settingsReady] = useKafeSettings();
   const [step, setStep] = useState(1);
   const [experience, setExperience] = useState<ExperienceType>("cafe_atelier");
   const [people, setPeople] = useState(2);
@@ -129,6 +130,62 @@ function ReserverPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [step]);
+
+  if (!settingsReady) {
+    return (
+      <PageShell>
+        <section className="mx-auto flex min-h-[55vh] max-w-3xl items-center justify-center px-4 py-16">
+          <div className="text-center" role="status">
+            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-secondary text-primary">
+              <CalendarDays className="h-6 w-6" />
+            </span>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Vérification des réservations en cours…
+            </p>
+          </div>
+        </section>
+      </PageShell>
+    );
+  }
+
+  if (!settings.reservationsEnabled) {
+    return (
+      <PageShell>
+        <PageHeader
+          eyebrow="Réservation"
+          title="Les réservations sont temporairement en pause."
+          description="Le formulaire de réservation en ligne n'est pas accessible pour le moment."
+        />
+        <section className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
+          <div className="rounded-3xl border border-border bg-card p-6 text-center sm:p-10">
+            <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-secondary text-primary">
+              <CalendarOff className="h-7 w-7" />
+            </span>
+            <h2 className="mt-5 text-2xl sm:text-3xl">Reviens très vite</h2>
+            {settings.reservationPauseMessage.trim() && (
+              <p className="mx-auto mt-3 max-w-xl leading-7 text-muted-foreground">
+                {settings.reservationPauseMessage}
+              </p>
+            )}
+            <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link
+                to="/"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 py-2.5 font-medium text-primary-foreground"
+              >
+                Retour à l'accueil
+              </Link>
+              <Link
+                to="/contact"
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-background px-5 py-2.5 font-medium hover:bg-secondary"
+              >
+                Contacter le Kafé
+              </Link>
+            </div>
+          </div>
+        </section>
+      </PageShell>
+    );
+  }
 
   function chooseSlot(nextDate: string, nextSlot: string) {
     setDate(nextDate);
@@ -221,13 +278,15 @@ function ReserverPage() {
         message.includes("KAFE_SEATING_REVIEW_REQUIRED");
       const friendlyMessage = message.includes("KAFE_INVALID_GROUP_QUOTE")
         ? "Vérifie les deux montants du devis de groupe avant de continuer."
-        : message.includes("KAFE_SLOT_FULL")
-          ? "Ce créneau vient d'être rempli par une autre réservation. Choisis un autre horaire."
-          : message.includes("KAFE_BOOKING_TOO_LATE")
-            ? `Les réservations pour le lendemain ferment à ${formatPublicTime(settings.bookingCutoffTime)}. Choisis une autre date.`
-            : schedulingConflict
-              ? "Ce créneau n'est plus réservable. Choisis une autre date ou un autre horaire."
-              : "La réservation n'a pas pu être enregistrée. Réessayez dans un instant.";
+        : message.includes("KAFE_RESERVATIONS_PAUSED")
+          ? "Les réservations en ligne viennent d'être temporairement mises en pause. Recharge la page pour consulter le message du Kafé."
+          : message.includes("KAFE_SLOT_FULL")
+            ? "Ce créneau vient d'être rempli par une autre réservation. Choisis un autre horaire."
+            : message.includes("KAFE_BOOKING_TOO_LATE")
+              ? `Les réservations pour le lendemain ferment à ${formatPublicTime(settings.bookingCutoffTime)}. Choisis une autre date.`
+              : schedulingConflict
+                ? "Ce créneau n'est plus réservable. Choisis une autre date ou un autre horaire."
+                : "La réservation n'a pas pu être enregistrée. Réessayez dans un instant.";
       if (schedulingConflict) {
         setSlot("");
         setErrors((current) => ({ ...current, slot: friendlyMessage }));

@@ -6,6 +6,7 @@ import {
   AlertCircle,
   Bell,
   BookOpenText,
+  CalendarOff,
   CalendarDays,
   CheckCircle2,
   ChevronDown,
@@ -2832,6 +2833,51 @@ function SettingsPanel({
       title="Réglages"
       desc="Chaque paramètre modifie réellement le parcours client ou le travail de l'équipe."
     >
+      <div
+        className={`rounded-2xl border p-4 ${
+          settings.reservationsEnabled
+            ? "border-sage/35 bg-sage/10"
+            : "border-destructive/35 bg-destructive/10"
+        }`}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-background text-primary">
+              <CalendarOff className="h-5 w-5" />
+            </span>
+            <div>
+              <h3 className="font-display text-xl">Ouverture des réservations</h3>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                Fermez temporairement le parcours public sans bloquer les réservations déjà
+                enregistrées ni les ajouts sur place depuis l'administration.
+              </p>
+            </div>
+          </div>
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              settings.reservationsEnabled
+                ? "bg-sage/20 text-foreground"
+                : "bg-destructive text-destructive-foreground"
+            }`}
+          >
+            {settings.reservationsEnabled ? "Réservations ouvertes" : "Réservations en pause"}
+          </span>
+        </div>
+
+        <div className="mt-4 grid gap-4">
+          <ToggleRow
+            label="Autoriser les réservations en ligne"
+            checked={settings.reservationsEnabled}
+            onChange={(reservationsEnabled) => update({ reservationsEnabled })}
+          />
+          <TextareaField
+            label="Message affiché pendant la fermeture (facultatif)"
+            value={settings.reservationPauseMessage}
+            onChange={(reservationPauseMessage) => update({ reservationPauseMessage })}
+          />
+        </div>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         <NumberField
           label="Acompte à partir de"

@@ -524,6 +524,8 @@ export interface ReservationFieldRequirements {
 
 export interface KafeSettings {
   configurationVersion: number;
+  reservationsEnabled: boolean;
+  reservationPauseMessage: string;
   depositThreshold: number;
   depositFixedAmount: number;
   defaultCapacity: number;
@@ -566,7 +568,9 @@ export interface KafeSettings {
 }
 
 export const settingsSeed: KafeSettings = {
-  configurationVersion: 7,
+  configurationVersion: 8,
+  reservationsEnabled: true,
+  reservationPauseMessage: "",
   depositThreshold: 8,
   depositFixedAmount: 100,
   defaultCapacity: 63,
@@ -727,6 +731,7 @@ export function useKafeSettings() {
   const [settings, setSettings] = useState<KafeSettings>(() =>
     typeof window === "undefined" ? settingsSeed : settingsSeed,
   );
+  const [ready, setReady] = useState(() => !isSupabaseConfigured());
   const remoteSaveQueue = useRef<Promise<unknown>>(Promise.resolve());
 
   useEffect(() => {
@@ -748,7 +753,12 @@ export function useKafeSettings() {
         })
         .catch((error) => {
           console.warn("Remote settings load skipped:", error);
+        })
+        .finally(() => {
+          if (alive) setReady(true);
         });
+    } else {
+      setReady(true);
     }
 
     return () => {
@@ -778,5 +788,5 @@ export function useKafeSettings() {
         });
     }
   };
-  return [settings, save] as const;
+  return [settings, save, ready] as const;
 }
