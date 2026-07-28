@@ -87,8 +87,8 @@ function HomePage() {
               <span className="text-[#f5bdc9]">Déjeunette</span> &amp; création.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-7 text-cream/90 sm:text-lg">
-              Viens boire un café, manger un morceau ou peindre ta propre pièce. Pour l’atelier,
-              réserve ton créneau pour être prioritaire sur les places disponibles.
+              Viens boire un café, manger un morceau ou peindre ta propre pièce. Réserve ta venue
+              pour être certain d’avoir une place adaptée.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -113,18 +113,18 @@ function HomePage() {
         <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:grid-cols-3 sm:py-10">
           <VisitNote
             icon={Coffee}
-            title="Café et déjeunette, sans réservation"
-            body="Passe quand tu veux pour boire ou manger, selon les places du moment."
+            title="Réserve aussi pour le Kafé"
+            body="Café, bagel ou brunch : la réservation te garantit une place. Sans elle, l'accueil dépend des disponibilités."
           />
           <VisitNote
             icon={CalendarHeart}
-            title="Atelier prioritaire sur réservation"
-            body="Pour peindre, réserve ta table et prévois une consommation sur place."
+            title="Atelier avec consommation"
+            body="Pour peindre, réserve ta table et prévois une consommation obligatoire sur place."
           />
           <VisitNote
             icon={Sparkles}
-            title="Un atelier reste parfois possible le jour même"
-            body="Sans réservation, l’équipe t’accueille seulement s’il reste une place adaptée."
+            title="Jusqu’à 4 heures sur place"
+            body="Profite de ton moment créatif, puis laisse la place aux artistes suivants."
           />
         </div>
       </section>

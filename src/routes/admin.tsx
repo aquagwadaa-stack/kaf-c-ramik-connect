@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
+import QRCode from "qrcode";
 import {
   AlertCircle,
   Bell,
@@ -18,18 +19,22 @@ import {
   Coins,
   Download,
   FileText,
+  Gift,
   Home,
   Image as ImageIcon,
   LayoutDashboard,
   LockKeyhole,
   LogOut,
+  MessageSquareHeart,
   PackageOpen,
   Plus,
+  QrCode,
   Search,
   Settings,
   ShieldCheck,
   Smartphone,
   Trash2,
+  Trophy,
   UploadCloud,
   UserCog,
   UserPlus,
@@ -60,6 +65,7 @@ import {
   useContentDocuments,
   creationInspirationsSeed,
   getGuideDocument,
+  getMenuDocument,
   getWaiverDocument,
   useKafeSettings,
   useWaiverSignatures,
@@ -67,11 +73,14 @@ import {
   type CeramicObject,
   type ContentDocument,
   type ContentResource,
+  type GiftCardOption,
   type KafeSettings,
   type ScheduleRule,
   type SeatingArea,
+  type VoteEntry,
   type WaiverSignature,
 } from "@/lib/admin-data";
+import { useAdminGuestbookEntries, type GuestbookEntry } from "@/lib/guestbook";
 import { storeDocumentFile } from "@/lib/document-files";
 import {
   deleteRow,
@@ -106,6 +115,9 @@ type AdminTab =
   | "waivers"
   | "objects"
   | "creations"
+  | "vote"
+  | "guestbook"
+  | "giftcards"
   | "documents"
   | "settings"
   | "team";
@@ -126,7 +138,10 @@ const tabs: { id: AdminTab; label: string; icon: LucideIcon }[] = [
   { id: "waivers", label: "Décharges", icon: ClipboardSignature },
   { id: "objects", label: "Objets", icon: PackageOpen },
   { id: "creations", label: "Créations", icon: ImageIcon },
-  { id: "documents", label: "Guide", icon: BookOpenText },
+  { id: "vote", label: "Vote du mois", icon: Trophy },
+  { id: "guestbook", label: "Livre d'or", icon: MessageSquareHeart },
+  { id: "giftcards", label: "Cartes cadeaux", icon: Gift },
+  { id: "documents", label: "Documents", icon: BookOpenText },
   { id: "settings", label: "Réglages", icon: Settings },
   { id: "team", label: "Équipe", icon: UserCog },
 ];
@@ -493,6 +508,7 @@ function AdminWorkspace({
   const [documents, saveDocuments] = useContentDocuments();
   const [signatures, saveSignatures] = useWaiverSignatures();
   const [settings, saveSettings] = useKafeSettings();
+  const [guestbookEntries, saveGuestbookEntries] = useAdminGuestbookEntries();
   const { notifications, markRead: markNotificationRead } = useAdminNotifications(remoteMode);
   const [tab, setTab] = useState<AdminTab>("overview");
   const creations = settings.creationInspirations?.length
@@ -593,6 +609,16 @@ function AdminWorkspace({
         {tab === "creations" && (
           <CreationsPanel creations={creations} saveCreations={saveCreations} />
         )}
+        {tab === "vote" && <VotePanel settings={settings} saveSettings={saveSettings} />}
+        {tab === "guestbook" && (
+          <GuestbookPanel
+            entries={guestbookEntries}
+            saveEntries={saveGuestbookEntries}
+            settings={settings}
+            saveSettings={saveSettings}
+          />
+        )}
+        {tab === "giftcards" && <GiftCardsPanel settings={settings} saveSettings={saveSettings} />}
         {tab === "documents" && (
           <DocumentsPanel documents={documents} saveDocuments={saveDocuments} />
         )}
@@ -2498,6 +2524,626 @@ function CreationsPanel({
   );
 }
 
+function GuestbookPanel({
+  entries,
+  saveEntries,
+  settings,
+  saveSettings,
+}: {
+  entries: GuestbookEntry[];
+  saveEntries: (next: GuestbookEntry[]) => void;
+  settings: KafeSettings;
+  saveSettings: (next: KafeSettings) => void;
+}) {
+  const [qrDataUrl, setQrDataUrl] = useState("");
+  const [draft, setDraft] = useState({ author: "", message: "", rating: 5 });
+  const guestbookUrl =
+    typeof window === "undefined"
+      ? "https://kafeceramik.fr/livre-dor"
+      : `${window.location.origin}/livre-dor`;
+
+  useEffect(() => {
+    QRCode.toDataURL(guestbookUrl, {
+      width: 720,
+      margin: 2,
+      color: { dark: "#301c1a", light: "#fff8ef" },
+      errorCorrectionLevel: "H",
+    })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(""));
+  }, [guestbookUrl]);
+
+  function updateEntry(id: string, patch: Partial<GuestbookEntry>) {
+    saveEntries(entries.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)));
+  }
+
+  function addGoogleReview() {
+    if (draft.author.trim().length < 2 || draft.message.trim().length < 4) return;
+    saveEntries([
+      {
+        id: `guest-google-${Date.now()}`,
+        author: draft.author.trim(),
+        message: draft.message.trim(),
+        rating: draft.rating,
+        status: "published",
+        source: "google",
+        sourceUrl: settings.googleReviewUrl,
+        createdAt: new Date().toISOString(),
+      },
+      ...entries,
+    ]);
+    setDraft({ author: "", message: "", rating: 5 });
+  }
+
+  const pending = entries.filter((entry) => entry.status === "pending");
+  const others = entries.filter((entry) => entry.status !== "pending");
+
+  return (
+    <Panel
+      title="Livre d'or"
+      desc="Validez les messages reçus, ajoutez certains avis Google et téléchargez le QR code à poser au Kafé."
+    >
+      <div className="grid gap-4 lg:grid-cols-[1fr_270px]">
+        <div className="rounded-2xl border border-border bg-background p-4">
+          <div className="flex items-center gap-2">
+            <MessageSquareHeart className="h-5 w-5 text-primary" />
+            <h3 className="font-display text-xl">Réglages publics</h3>
+          </div>
+          <div className="mt-4 grid gap-3">
+            <ToggleRow
+              label="Afficher le livre d'or"
+              checked={settings.guestbookEnabled}
+              onChange={(guestbookEnabled) => saveSettings({ ...settings, guestbookEnabled })}
+            />
+            <Field
+              label="Lien direct pour laisser un avis Google"
+              value={settings.googleReviewUrl}
+              onChange={(googleReviewUrl) => saveSettings({ ...settings, googleReviewUrl })}
+            />
+            <Link
+              to="/livre-dor"
+              className="inline-flex w-fit rounded-full border border-border px-4 py-2 text-sm hover:bg-secondary"
+            >
+              Voir la page publique
+            </Link>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-[#fff8ef] p-4 text-center">
+          <QrCode className="mx-auto h-5 w-5 text-primary" />
+          <h3 className="mt-2 font-display text-xl">QR code du livre d'or</h3>
+          {qrDataUrl && (
+            <img
+              src={qrDataUrl}
+              alt="QR code du livre d'or"
+              className="mx-auto mt-3 aspect-square w-44 rounded-xl bg-white p-2"
+            />
+          )}
+          {qrDataUrl && (
+            <a
+              href={qrDataUrl}
+              download="qr-code-livre-dor-kafe-ceramik.png"
+              className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground"
+            >
+              <Download className="h-3.5 w-3.5" /> Télécharger
+            </a>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <h3 className="font-display text-xl">
+          Messages à valider {pending.length > 0 && `(${pending.length})`}
+        </h3>
+        <div className="mt-3 grid gap-3">
+          {pending.length === 0 && <EmptyState text="Aucun message en attente." />}
+          {pending.map((entry) => (
+            <GuestbookAdminCard
+              key={entry.id}
+              entry={entry}
+              onPublish={() => updateEntry(entry.id, { status: "published" })}
+              onHide={() => updateEntry(entry.id, { status: "hidden" })}
+              onDelete={() => saveEntries(entries.filter((item) => item.id !== entry.id))}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-border bg-background p-4">
+        <h3 className="font-display text-xl">Ajouter un avis Google sélectionné</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Recopiez uniquement les avis que vous souhaitez mettre en avant.
+        </p>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <Field
+            label="Auteur"
+            value={draft.author}
+            onChange={(author) => setDraft({ ...draft, author })}
+          />
+          <NumberField
+            label="Note"
+            value={draft.rating}
+            suffix="/ 5"
+            onChange={(rating) => setDraft({ ...draft, rating: Math.max(1, Math.min(5, rating)) })}
+          />
+        </div>
+        <TextareaField
+          label="Avis"
+          value={draft.message}
+          onChange={(message) => setDraft({ ...draft, message })}
+        />
+        <button
+          type="button"
+          onClick={addGoogleReview}
+          className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground"
+        >
+          <Plus className="h-4 w-4" /> Ajouter l'avis
+        </button>
+      </div>
+
+      <div className="mt-6">
+        <h3 className="font-display text-xl">Messages traités</h3>
+        <div className="mt-3 grid gap-3">
+          {others.length === 0 && <EmptyState text="Aucun message traité pour le moment." />}
+          {others.map((entry) => (
+            <GuestbookAdminCard
+              key={entry.id}
+              entry={entry}
+              onPublish={() => updateEntry(entry.id, { status: "published" })}
+              onHide={() => updateEntry(entry.id, { status: "hidden" })}
+              onDelete={() => saveEntries(entries.filter((item) => item.id !== entry.id))}
+            />
+          ))}
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function GuestbookAdminCard({
+  entry,
+  onPublish,
+  onHide,
+  onDelete,
+}: {
+  entry: GuestbookEntry;
+  onPublish: () => void;
+  onHide: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <article className="rounded-2xl border border-border bg-background p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="font-medium">{entry.author}</div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {entry.rating}/5 · {entry.source === "google" ? "Google" : "Livre d'or"} ·{" "}
+            {new Date(entry.createdAt).toLocaleDateString("fr-FR")}
+          </div>
+        </div>
+        <InfoPill tone={entry.status === "published" ? "success" : undefined}>
+          {entry.status === "published"
+            ? "Publié"
+            : entry.status === "pending"
+              ? "À valider"
+              : "Masqué"}
+        </InfoPill>
+      </div>
+      <p className="mt-3 text-sm leading-6">{entry.message}</p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {entry.status !== "published" && (
+          <button
+            type="button"
+            onClick={onPublish}
+            className="rounded-full bg-primary px-3 py-1.5 text-xs text-primary-foreground"
+          >
+            Publier
+          </button>
+        )}
+        {entry.status !== "hidden" && (
+          <button
+            type="button"
+            onClick={onHide}
+            className="rounded-full border border-border px-3 py-1.5 text-xs hover:bg-secondary"
+          >
+            Masquer
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onDelete}
+          className="rounded-full border border-destructive/30 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10"
+        >
+          Supprimer
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function GiftCardsPanel({
+  settings,
+  saveSettings,
+}: {
+  settings: KafeSettings;
+  saveSettings: (next: KafeSettings) => void;
+}) {
+  function update(patch: Partial<KafeSettings>) {
+    saveSettings({ ...settings, ...patch });
+  }
+
+  function updateOption(id: string, patch: Partial<GiftCardOption>) {
+    update({
+      giftCardOptions: settings.giftCardOptions.map((option) =>
+        option.id === id ? { ...option, ...patch } : option,
+      ),
+    });
+  }
+
+  function addOption() {
+    update({
+      giftCardOptions: [
+        ...settings.giftCardOptions,
+        {
+          id: `gift-${Date.now()}`,
+          title: "Nouvelle suggestion",
+          amount: 30,
+          description: "Décrivez ce que ce budget permet d'imaginer au Kafé.",
+          visible: true,
+          visual: "rose",
+          paymentUrl: "",
+        },
+      ],
+    });
+  }
+
+  return (
+    <Panel
+      title="Cartes cadeaux"
+      desc="Configurez les montants suggérés, les textes, les visuels et les liens de paiement SumUp."
+    >
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field
+          label="Email qui reçoit les détails de personnalisation"
+          value={settings.giftCardContactEmail}
+          onChange={(giftCardContactEmail) => update({ giftCardContactEmail })}
+        />
+        <Field
+          label="Lien SumUp général ou montant libre"
+          value={settings.giftCardPaymentUrl}
+          onChange={(giftCardPaymentUrl) => update({ giftCardPaymentUrl })}
+        />
+        <ToggleRow
+          label="Proposer un montant libre"
+          checked={settings.giftCardCustomEnabled}
+          onChange={(giftCardCustomEnabled) => update({ giftCardCustomEnabled })}
+        />
+        <div className="grid grid-cols-2 gap-3">
+          <NumberField
+            label="Minimum libre"
+            value={settings.giftCardCustomMin}
+            suffix="EUR"
+            onChange={(giftCardCustomMin) => update({ giftCardCustomMin })}
+          />
+          <NumberField
+            label="Maximum libre"
+            value={settings.giftCardCustomMax}
+            suffix="EUR"
+            onChange={(giftCardCustomMax) => update({ giftCardCustomMax })}
+          />
+        </div>
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
+        <div>
+          <h3 className="font-display text-xl">Suggestions proposées</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Chaque formule peut avoir son propre lien SumUp à montant fixe.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Link
+            to="/cadeau"
+            className="rounded-full border border-border bg-background px-4 py-2 text-sm hover:bg-secondary"
+          >
+            Voir la page
+          </Link>
+          <button
+            type="button"
+            onClick={addOption}
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground"
+          >
+            <Plus className="h-4 w-4" /> Ajouter
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        {settings.giftCardOptions.map((option) => (
+          <div key={option.id} className="rounded-2xl border border-border bg-background p-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field
+                label="Nom de la formule"
+                value={option.title}
+                onChange={(title) => updateOption(option.id, { title })}
+              />
+              <NumberField
+                label="Montant"
+                value={option.amount}
+                suffix="EUR"
+                onChange={(amount) => updateOption(option.id, { amount })}
+              />
+            </div>
+            <TextareaField
+              label="Ce que ce budget permet"
+              value={option.description}
+              onChange={(description) => updateOption(option.id, { description })}
+            />
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label>
+                <span className="mb-1.5 block text-sm font-medium">Visuel par défaut</span>
+                <select
+                  value={option.visual}
+                  onChange={(event) =>
+                    updateOption(option.id, {
+                      visual: event.target.value as GiftCardOption["visual"],
+                    })
+                  }
+                  className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="rose">Rose Kafé</option>
+                  <option value="tropical">Tropical</option>
+                  <option value="confetti">Confettis</option>
+                </select>
+              </label>
+              <Field
+                label="Lien SumUp de cette formule"
+                value={option.paymentUrl ?? ""}
+                onChange={(paymentUrl) => updateOption(option.id, { paymentUrl })}
+              />
+            </div>
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <ToggleRow
+                label="Visible"
+                checked={option.visible}
+                onChange={(visible) => updateOption(option.id, { visible })}
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  update({
+                    giftCardOptions: settings.giftCardOptions.filter(
+                      (item) => item.id !== option.id,
+                    ),
+                  })
+                }
+                className="grid h-10 w-10 place-items-center rounded-full border border-destructive/30 text-destructive hover:bg-destructive/10"
+                title="Supprimer"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-mustard/40 bg-mustard/10 p-4 text-sm leading-6">
+        L'envoi automatique du PDF après paiement sera finalisé pendant la connexion technique à
+        SumUp. Les montants, textes et visuels sont déjà prêts côté site.
+      </div>
+    </Panel>
+  );
+}
+
+function VotePanel({
+  settings,
+  saveSettings,
+}: {
+  settings: KafeSettings;
+  saveSettings: (next: KafeSettings) => void;
+}) {
+  const vote = settings.voteOfMonth;
+  const [results, setResults] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !vote.campaignId) {
+      setResults({});
+      return;
+    }
+    callRpc<{ entry_id: string; vote_count: number }[]>(
+      "get_admin_kafe_vote_results",
+      { p_campaign_id: vote.campaignId },
+      true,
+    )
+      .then((rows) =>
+        setResults(
+          Object.fromEntries(rows.map((row) => [row.entry_id, Number(row.vote_count) || 0])),
+        ),
+      )
+      .catch(() => setResults({}));
+  }, [vote.campaignId, vote.entries.length]);
+
+  function updateVote(patch: Partial<KafeSettings["voteOfMonth"]>) {
+    saveSettings({ ...settings, voteOfMonth: { ...vote, ...patch } });
+  }
+
+  function updateEntry(id: string, patch: Partial<VoteEntry>) {
+    updateVote({
+      entries: vote.entries.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)),
+    });
+  }
+
+  function addEntry() {
+    updateVote({
+      entries: [
+        ...vote.entries,
+        {
+          id: `vote-entry-${Date.now()}`,
+          title: "Nouvelle création",
+          artistName: "Prénom de l'artiste",
+          description: "",
+          visible: true,
+        },
+      ],
+    });
+  }
+
+  async function uploadEntryImage(id: string, file?: File) {
+    if (!file) return;
+    const stored = await storeDocumentFile(`vote-du-mois/${vote.campaignId}/${id}`, file);
+    updateEntry(id, {
+      imageUrl: stored.attachmentUrl,
+      imageDataUrl: stored.attachmentDataUrl,
+      imageName: stored.attachmentName,
+    });
+  }
+
+  const totalVotes = Object.values(results).reduce((total, count) => total + count, 0);
+
+  return (
+    <Panel
+      title="Vote du mois"
+      desc="Préparez la sélection, ouvrez le vote pendant une période précise et suivez les résultats."
+    >
+      <div className="grid gap-4 md:grid-cols-2">
+        <ToggleRow
+          label="Afficher et ouvrir la page de vote"
+          checked={vote.enabled}
+          onChange={(enabled) => updateVote({ enabled })}
+        />
+        <ToggleRow
+          label="Afficher les résultats après le vote"
+          checked={vote.showResults}
+          onChange={(showResults) => updateVote({ showResults })}
+        />
+        <Field
+          label="Titre de l'édition"
+          value={vote.title}
+          onChange={(title) => updateVote({ title })}
+        />
+        <Field
+          label="Identifiant interne de l'édition"
+          value={vote.campaignId}
+          onChange={(campaignId) => updateVote({ campaignId })}
+        />
+        <DateField
+          label="Ouverture"
+          value={vote.startsAt}
+          onChange={(startsAt) => updateVote({ startsAt })}
+        />
+        <DateField
+          label="Clôture"
+          value={vote.endsAt}
+          onChange={(endsAt) => updateVote({ endsAt })}
+        />
+      </div>
+      <TextareaField
+        label="Introduction de la page"
+        value={vote.introduction}
+        onChange={(introduction) => updateVote({ introduction })}
+      />
+
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
+        <div>
+          <h3 className="font-display text-xl">Créations en compétition</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {vote.entries.length} création{vote.entries.length > 1 ? "s" : ""} · {totalVotes} vote
+            {totalVotes > 1 ? "s" : ""}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            to="/vote-du-mois"
+            className="rounded-full border border-border bg-background px-4 py-2 text-sm hover:bg-secondary"
+          >
+            Voir la page
+          </Link>
+          <button
+            type="button"
+            onClick={addEntry}
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground"
+          >
+            <Plus className="h-4 w-4" /> Ajouter une création
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        {vote.entries.map((entry) => (
+          <div key={entry.id} className="rounded-2xl border border-border bg-background p-4">
+            <div className="grid gap-4 sm:grid-cols-[130px_1fr]">
+              <div>
+                {entry.imageDataUrl || entry.imageUrl ? (
+                  <img
+                    src={entry.imageDataUrl || entry.imageUrl}
+                    alt={entry.title}
+                    className="aspect-[4/5] w-full rounded-xl object-cover"
+                  />
+                ) : (
+                  <div className="grid aspect-[4/5] place-items-center rounded-xl bg-secondary">
+                    <ImageIcon className="h-7 w-7 text-muted-foreground" />
+                  </div>
+                )}
+                <label className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-full border border-border px-3 py-2 text-xs hover:bg-secondary">
+                  <UploadCloud className="h-3.5 w-3.5" /> Photo
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={async (event) => {
+                      await uploadEntryImage(entry.id, event.currentTarget.files?.[0]);
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+              </div>
+              <div className="grid gap-3">
+                <Field
+                  label="Nom de la création"
+                  value={entry.title}
+                  onChange={(title) => updateEntry(entry.id, { title })}
+                />
+                <Field
+                  label="Artiste"
+                  value={entry.artistName}
+                  onChange={(artistName) => updateEntry(entry.id, { artistName })}
+                />
+                <TextareaField
+                  label="Description (facultatif)"
+                  value={entry.description}
+                  onChange={(description) => updateEntry(entry.id, { description })}
+                />
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="rounded-full bg-secondary px-3 py-1 text-sm font-medium">
+                {results[entry.id] ?? 0} vote{(results[entry.id] ?? 0) > 1 ? "s" : ""}
+              </div>
+              <div className="flex items-center gap-2">
+                <ToggleRow
+                  label="Visible"
+                  checked={entry.visible}
+                  onChange={(visible) => updateEntry(entry.id, { visible })}
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateVote({ entries: vote.entries.filter((item) => item.id !== entry.id) })
+                  }
+                  className="grid h-10 w-10 place-items-center rounded-full border border-destructive/30 text-destructive hover:bg-destructive/10"
+                  title="Supprimer"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
 function DocumentsPanel({
   documents,
   saveDocuments,
@@ -2506,6 +3152,7 @@ function DocumentsPanel({
   saveDocuments: (next: ContentDocument[]) => void;
 }) {
   const guide = getGuideDocument(documents);
+  const menu = getMenuDocument(documents);
 
   function saveDocument(nextDocument: ContentDocument) {
     const exists = documents.some((document) => document.id === nextDocument.id);
@@ -2520,12 +3167,27 @@ function DocumentsPanel({
     saveDocument({ ...guide, ...patch, updatedAt: new Date().toISOString() });
   }
 
+  function updateMenu(patch: Partial<ContentDocument>) {
+    saveDocument({ ...menu, ...patch, updatedAt: new Date().toISOString() });
+  }
+
   async function updateResource(resource: ContentResource, file?: File) {
     const nextResource = file
       ? { ...resource, ...(await storeDocumentFile(`guide/${resource.id}`, file)) }
       : resource;
     updateDocument({
       resources: (guide.resources ?? []).map((item) =>
+        item.id === resource.id ? nextResource : item,
+      ),
+    });
+  }
+
+  async function updateMenuResource(resource: ContentResource, file?: File) {
+    const nextResource = file
+      ? { ...resource, ...(await storeDocumentFile(`menu/${resource.id}`, file)) }
+      : resource;
+    updateMenu({
+      resources: (menu.resources ?? []).map((item) =>
         item.id === resource.id ? nextResource : item,
       ),
     });
@@ -2555,9 +3217,33 @@ function DocumentsPanel({
 
   return (
     <Panel
-      title="Guide"
-      desc="Les trois chapitres ci-dessous correspondent exactement aux trois onglets de la page publique."
+      title="Documents officiels"
+      desc="Remplacez les PDF du guide et de la carte. Le site les affiche fidèlement, sans réécrire leur contenu."
     >
+      <div className="mb-5 rounded-[1.75rem] border border-border bg-background p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            <div>
+              <h3 className="font-display text-xl">Carte du Kafé</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Importez ici le PDF officiel exporté depuis Canva.
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/carte"
+            className="rounded-full border border-border bg-card px-4 py-2 text-sm hover:bg-secondary"
+          >
+            Voir la carte
+          </Link>
+        </div>
+        <ResourceAdminList
+          resources={(menu.resources ?? []).filter((resource) => resource.category === "menu")}
+          onChange={updateMenuResource}
+        />
+      </div>
+
       <div className="rounded-[1.75rem] border border-border bg-background p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -2593,10 +3279,8 @@ function DocumentsPanel({
         <div className="mt-5 flex items-start gap-3 rounded-2xl border border-primary/20 bg-secondary/45 p-4 text-sm leading-6">
           <FileText className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
           <p>
-            Lorsqu'un PDF est remplacé, son aperçu fidèle apparaît aussitôt dans le bon onglet
-            public. La présentation web reconstruite est conservée pour les documents officiels déjà
-            validés ; si leur contenu change, la nouvelle version reste lisible immédiatement puis
-            sa mise en page intégrée peut être adaptée après vérification.
+            Lorsqu'un PDF est remplacé, le site génère ses pages d'aperçu et conserve le fichier
+            original à télécharger. Le contenu n'est ni reformulé ni adapté.
           </p>
         </div>
 
@@ -2936,7 +3620,7 @@ function SettingsPanel({
           onChange={(value) => update({ manualConfirmationThreshold: value })}
         />
         <ToggleRow
-          label="Accueil café sans réservation"
+          label="Accueil sans réservation possible selon les places"
           checked={settings.walkInCafeEnabled}
           onChange={(value) => update({ walkInCafeEnabled: value })}
         />
@@ -2965,6 +3649,11 @@ function SettingsPanel({
               onChange={(value) => update({ tiktokUrl: value })}
             />
             <Field
+              label="Pinterest - inspirations"
+              value={settings.pinterestUrl}
+              onChange={(value) => update({ pinterestUrl: value })}
+            />
+            <Field
               label="Email de contact"
               value={settings.contactEmail}
               onChange={(value) => update({ contactEmail: value })}
@@ -2988,11 +3677,6 @@ function SettingsPanel({
               label="Lien Google Maps"
               value={settings.contactMapUrl}
               onChange={(value) => update({ contactMapUrl: value })}
-            />
-            <Field
-              label="Lien de paiement SumUp - carte cadeau"
-              value={settings.giftCardPaymentUrl}
-              onChange={(value) => update({ giftCardPaymentUrl: value })}
             />
           </div>
         </div>
@@ -3045,6 +3729,27 @@ function SettingsPanel({
           label="Texte affiché pour les clients qui viennent seulement au Kafé"
           value={settings.walkInNoticeText}
           onChange={(value) => update({ walkInNoticeText: value })}
+        />
+        <NumberField
+          label="Durée maximale sur place"
+          value={settings.maximumVisitHours}
+          suffix="heures"
+          onChange={(maximumVisitHours) => update({ maximumVisitHours })}
+        />
+        <TextareaField
+          label="Information sur le partage des tables"
+          value={settings.sharedTableNotice}
+          onChange={(sharedTableNotice) => update({ sharedTableNotice })}
+        />
+        <TextareaField
+          label="Information pour les commandes à emporter"
+          value={settings.takeawayNotice}
+          onChange={(takeawayNotice) => update({ takeawayNotice })}
+        />
+        <TextareaField
+          label="Rappel de consommation obligatoire"
+          value={settings.consumptionMandatoryNotice}
+          onChange={(consumptionMandatoryNotice) => update({ consumptionMandatoryNotice })}
         />
         <TextareaField
           label="Conditions pratiques affichées avant confirmation"

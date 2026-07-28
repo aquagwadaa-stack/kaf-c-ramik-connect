@@ -9,67 +9,29 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as BrunchRouteImport } from './routes/brunch'
-import { Route as CadeauRouteImport } from './routes/cadeau'
-import { Route as CarteRouteImport } from './routes/carte'
-import { Route as ContactRouteImport } from './routes/contact'
-import { Route as CreationsRouteImport } from './routes/creations'
-import { Route as DechargeSignatureRouteImport } from './routes/decharge-signature'
-import { Route as GuideRouteImport } from './routes/guide'
-import { Route as ObjetsRouteImport } from './routes/objets'
-import { Route as ReservationRouteImport } from './routes/reservation'
+import { Route as VoteDuMoisRouteImport } from './routes/vote-du-mois'
 import { Route as ReserverRouteImport } from './routes/reserver'
+import { Route as ReservationRouteImport } from './routes/reservation'
+import { Route as ObjetsRouteImport } from './routes/objets'
+import { Route as LivreDorRouteImport } from './routes/livre-dor'
+import { Route as GuideRouteImport } from './routes/guide'
+import { Route as DechargeSignatureRouteImport } from './routes/decharge-signature'
+import { Route as CreationsRouteImport } from './routes/creations'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as CarteRouteImport } from './routes/carte'
+import { Route as CadeauRouteImport } from './routes/cadeau'
+import { Route as BrunchRouteImport } from './routes/brunch'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as IndexRouteImport } from './routes/index'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const VoteDuMoisRoute = VoteDuMoisRouteImport.update({
+  id: '/vote-du-mois',
+  path: '/vote-du-mois',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BrunchRoute = BrunchRouteImport.update({
-  id: '/brunch',
-  path: '/brunch',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CadeauRoute = CadeauRouteImport.update({
-  id: '/cadeau',
-  path: '/cadeau',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CarteRoute = CarteRouteImport.update({
-  id: '/carte',
-  path: '/carte',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContactRoute = ContactRouteImport.update({
-  id: '/contact',
-  path: '/contact',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CreationsRoute = CreationsRouteImport.update({
-  id: '/creations',
-  path: '/creations',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DechargeSignatureRoute = DechargeSignatureRouteImport.update({
-  id: '/decharge-signature',
-  path: '/decharge-signature',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GuideRoute = GuideRouteImport.update({
-  id: '/guide',
-  path: '/guide',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ObjetsRoute = ObjetsRouteImport.update({
-  id: '/objets',
-  path: '/objets',
+const ReserverRoute = ReserverRouteImport.update({
+  id: '/reserver',
+  path: '/reserver',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReservationRoute = ReservationRouteImport.update({
@@ -77,9 +39,59 @@ const ReservationRoute = ReservationRouteImport.update({
   path: '/reservation',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ReserverRoute = ReserverRouteImport.update({
-  id: '/reserver',
-  path: '/reserver',
+const ObjetsRoute = ObjetsRouteImport.update({
+  id: '/objets',
+  path: '/objets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LivreDorRoute = LivreDorRouteImport.update({
+  id: '/livre-dor',
+  path: '/livre-dor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuideRoute = GuideRouteImport.update({
+  id: '/guide',
+  path: '/guide',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DechargeSignatureRoute = DechargeSignatureRouteImport.update({
+  id: '/decharge-signature',
+  path: '/decharge-signature',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreationsRoute = CreationsRouteImport.update({
+  id: '/creations',
+  path: '/creations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CarteRoute = CarteRouteImport.update({
+  id: '/carte',
+  path: '/carte',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CadeauRoute = CadeauRouteImport.update({
+  id: '/cadeau',
+  path: '/cadeau',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrunchRoute = BrunchRouteImport.update({
+  id: '/brunch',
+  path: '/brunch',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -93,9 +105,11 @@ export interface FileRoutesByFullPath {
   '/creations': typeof CreationsRoute
   '/decharge-signature': typeof DechargeSignatureRoute
   '/guide': typeof GuideRoute
+  '/livre-dor': typeof LivreDorRoute
   '/objets': typeof ObjetsRoute
   '/reservation': typeof ReservationRoute
   '/reserver': typeof ReserverRoute
+  '/vote-du-mois': typeof VoteDuMoisRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -107,9 +121,11 @@ export interface FileRoutesByTo {
   '/creations': typeof CreationsRoute
   '/decharge-signature': typeof DechargeSignatureRoute
   '/guide': typeof GuideRoute
+  '/livre-dor': typeof LivreDorRoute
   '/objets': typeof ObjetsRoute
   '/reservation': typeof ReservationRoute
   '/reserver': typeof ReserverRoute
+  '/vote-du-mois': typeof VoteDuMoisRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,9 +138,11 @@ export interface FileRoutesById {
   '/creations': typeof CreationsRoute
   '/decharge-signature': typeof DechargeSignatureRoute
   '/guide': typeof GuideRoute
+  '/livre-dor': typeof LivreDorRoute
   '/objets': typeof ObjetsRoute
   '/reservation': typeof ReservationRoute
   '/reserver': typeof ReserverRoute
+  '/vote-du-mois': typeof VoteDuMoisRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -138,9 +156,11 @@ export interface FileRouteTypes {
     | '/creations'
     | '/decharge-signature'
     | '/guide'
+    | '/livre-dor'
     | '/objets'
     | '/reservation'
     | '/reserver'
+    | '/vote-du-mois'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -152,9 +172,11 @@ export interface FileRouteTypes {
     | '/creations'
     | '/decharge-signature'
     | '/guide'
+    | '/livre-dor'
     | '/objets'
     | '/reservation'
     | '/reserver'
+    | '/vote-du-mois'
   id:
     | '__root__'
     | '/'
@@ -166,9 +188,11 @@ export interface FileRouteTypes {
     | '/creations'
     | '/decharge-signature'
     | '/guide'
+    | '/livre-dor'
     | '/objets'
     | '/reservation'
     | '/reserver'
+    | '/vote-du-mois'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -181,81 +205,27 @@ export interface RootRouteChildren {
   CreationsRoute: typeof CreationsRoute
   DechargeSignatureRoute: typeof DechargeSignatureRoute
   GuideRoute: typeof GuideRoute
+  LivreDorRoute: typeof LivreDorRoute
   ObjetsRoute: typeof ObjetsRoute
   ReservationRoute: typeof ReservationRoute
   ReserverRoute: typeof ReserverRoute
+  VoteDuMoisRoute: typeof VoteDuMoisRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/vote-du-mois': {
+      id: '/vote-du-mois'
+      path: '/vote-du-mois'
+      fullPath: '/vote-du-mois'
+      preLoaderRoute: typeof VoteDuMoisRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/brunch': {
-      id: '/brunch'
-      path: '/brunch'
-      fullPath: '/brunch'
-      preLoaderRoute: typeof BrunchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cadeau': {
-      id: '/cadeau'
-      path: '/cadeau'
-      fullPath: '/cadeau'
-      preLoaderRoute: typeof CadeauRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/carte': {
-      id: '/carte'
-      path: '/carte'
-      fullPath: '/carte'
-      preLoaderRoute: typeof CarteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contact': {
-      id: '/contact'
-      path: '/contact'
-      fullPath: '/contact'
-      preLoaderRoute: typeof ContactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/creations': {
-      id: '/creations'
-      path: '/creations'
-      fullPath: '/creations'
-      preLoaderRoute: typeof CreationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/decharge-signature': {
-      id: '/decharge-signature'
-      path: '/decharge-signature'
-      fullPath: '/decharge-signature'
-      preLoaderRoute: typeof DechargeSignatureRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/guide': {
-      id: '/guide'
-      path: '/guide'
-      fullPath: '/guide'
-      preLoaderRoute: typeof GuideRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/objets': {
-      id: '/objets'
-      path: '/objets'
-      fullPath: '/objets'
-      preLoaderRoute: typeof ObjetsRouteImport
+    '/reserver': {
+      id: '/reserver'
+      path: '/reserver'
+      fullPath: '/reserver'
+      preLoaderRoute: typeof ReserverRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reservation': {
@@ -265,11 +235,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReservationRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/reserver': {
-      id: '/reserver'
-      path: '/reserver'
-      fullPath: '/reserver'
-      preLoaderRoute: typeof ReserverRouteImport
+    '/objets': {
+      id: '/objets'
+      path: '/objets'
+      fullPath: '/objets'
+      preLoaderRoute: typeof ObjetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/livre-dor': {
+      id: '/livre-dor'
+      path: '/livre-dor'
+      fullPath: '/livre-dor'
+      preLoaderRoute: typeof LivreDorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guide': {
+      id: '/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof GuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/decharge-signature': {
+      id: '/decharge-signature'
+      path: '/decharge-signature'
+      fullPath: '/decharge-signature'
+      preLoaderRoute: typeof DechargeSignatureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creations': {
+      id: '/creations'
+      path: '/creations'
+      fullPath: '/creations'
+      preLoaderRoute: typeof CreationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/carte': {
+      id: '/carte'
+      path: '/carte'
+      fullPath: '/carte'
+      preLoaderRoute: typeof CarteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cadeau': {
+      id: '/cadeau'
+      path: '/cadeau'
+      fullPath: '/cadeau'
+      preLoaderRoute: typeof CadeauRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/brunch': {
+      id: '/brunch'
+      path: '/brunch'
+      fullPath: '/brunch'
+      preLoaderRoute: typeof BrunchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -285,10 +325,22 @@ const rootRouteChildren: RootRouteChildren = {
   CreationsRoute: CreationsRoute,
   DechargeSignatureRoute: DechargeSignatureRoute,
   GuideRoute: GuideRoute,
+  LivreDorRoute: LivreDorRoute,
   ObjetsRoute: ObjetsRoute,
   ReservationRoute: ReservationRoute,
   ReserverRoute: ReserverRoute,
+  VoteDuMoisRoute: VoteDuMoisRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

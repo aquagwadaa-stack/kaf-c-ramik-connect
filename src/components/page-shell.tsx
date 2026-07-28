@@ -1,13 +1,22 @@
 import type { ReactNode } from "react";
 import { useRouterState } from "@tanstack/react-router";
+import { Coffee } from "lucide-react";
+import { useKafeSettings } from "@/lib/admin-data";
 import { SiteFooter, SiteHeader } from "./site-header";
 import { OrganicShapes } from "./organic-shapes";
 
 export function PageShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [settings] = useKafeSettings();
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
+      <div className="border-b border-border bg-[#fff8ef] px-4 py-2.5 text-center text-xs font-medium text-foreground sm:text-sm">
+        <span className="inline-flex items-center justify-center gap-2">
+          <Coffee className="h-4 w-4 shrink-0 text-primary" />
+          {settings.consumptionMandatoryNotice} Réserve ta venue pour garantir ta place.
+        </span>
+      </div>
       <main key={pathname} className="page-enter flex-1">
         {children}
       </main>
@@ -19,11 +28,7 @@ export function PageShell({ children }: { children: ReactNode }) {
 // Little hand-drawn sun doodle
 function SunDoodle({ className = "" }: { className?: string }) {
   return (
-    <svg
-      aria-hidden
-      viewBox="0 0 100 100"
-      className={className}
-    >
+    <svg aria-hidden viewBox="0 0 100 100" className={className}>
       <g stroke="var(--color-ink)" strokeWidth="4" strokeLinecap="round" fill="none">
         <circle cx="50" cy="50" r="18" fill="var(--color-mustard)" />
         <path d="M50 12v10M50 78v10M12 50h10M78 50h10M22 22l7 7M71 71l7 7M78 22l-7 7M22 78l7-7" />
@@ -75,8 +80,7 @@ export function PageHeader({
           </div>
         )}
         <h1 className="max-w-3xl text-4xl leading-[1.02] text-ink sm:text-6xl">
-          {head}{" "}
-          <span className="marker marker-rose whitespace-nowrap">{last}</span>
+          {head} <span className="marker marker-rose whitespace-nowrap">{last}</span>
         </h1>
         {description && (
           <p className="mt-6 max-w-2xl text-base text-ink/80 sm:text-lg">{description}</p>

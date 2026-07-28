@@ -6,7 +6,7 @@ import { useKafeSettings } from "@/lib/admin-data";
 import { getPublicSchedule } from "@/lib/opening-hours";
 import { useAdminAccess } from "@/lib/supabase-rest";
 
-const links = [
+const baseLinks = [
   { to: "/brunch", label: "Déroulement" },
   { to: "/creations", label: "Créations" },
   { to: "/guide", label: "Guide" },
@@ -22,6 +22,16 @@ export function SiteHeader() {
   const [installedApp, setInstalledApp] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const admin = useAdminAccess();
+  const [settings] = useKafeSettings();
+  const links = [
+    ...baseLinks.slice(0, 2),
+    ...(settings.voteOfMonth.enabled
+      ? [{ to: "/vote-du-mois" as const, label: "Vote du mois" }]
+      : []),
+    ...baseLinks.slice(2, -1),
+    ...(settings.guestbookEnabled ? [{ to: "/livre-dor" as const, label: "Livre d'or" }] : []),
+    baseLinks[baseLinks.length - 1],
+  ];
   const showAdminLink = admin.configured && admin.signedIn && admin.allowed && !admin.checking;
   const showTeamEntry = showAdminLink || installedApp;
 

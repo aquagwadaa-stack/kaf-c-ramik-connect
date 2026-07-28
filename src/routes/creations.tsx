@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Brush, Camera, Palette, Sparkles } from "lucide-react";
+import { ArrowRight, Brush, Camera, ExternalLink, Palette, Sparkles } from "lucide-react";
 import { PageShell, PageHeader } from "@/components/page-shell";
 import { creationInspirationsSeed, useKafeSettings } from "@/lib/admin-data";
 
@@ -103,6 +103,27 @@ function CreationsPage() {
           })}
         </div>
       </section>
+
+      {settings.pinterestUrl && (
+        <section className="mx-auto max-w-6xl px-4 py-6">
+          <a
+            href={settings.pinterestUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="flex flex-col gap-4 rounded-3xl border border-border bg-[#f5cdd7] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+          >
+            <div>
+              <div className="text-sm font-semibold text-primary">Encore plus d'idées</div>
+              <h2 className="mt-2 font-display text-3xl">
+                Explore le Pinterest du Kafé avant de te lancer.
+              </h2>
+            </div>
+            <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground">
+              Voir Pinterest <ExternalLink className="h-4 w-4" />
+            </span>
+          </a>
+        </section>
+      )}
 
       <section className="mx-auto max-w-6xl px-4 py-8">
         <div className="flex flex-col gap-4 rounded-3xl border border-border bg-ink p-6 text-cream sm:flex-row sm:items-center sm:justify-between">

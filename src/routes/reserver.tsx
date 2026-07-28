@@ -340,7 +340,7 @@ function ReserverPage() {
       <PageHeader
         eyebrow="Réservation"
         title="Réserve ton moment au Kafé"
-        description="Choisis entre un atelier céramique avec consommation sur place ou une réservation brunch sans atelier. Pour un café, un bagel ou une déjeunette, tu peux aussi passer librement selon les places."
+        description="Choisis entre un atelier céramique avec consommation obligatoire sur place ou une réservation brunch sans atelier. Sans réservation, l'accueil reste possible selon les places, sans garantie."
       />
       <section className="mx-auto max-w-5xl px-4 py-10">
         {settings.walkInCafeEnabled && (
@@ -587,6 +587,12 @@ function ReserverPage() {
                 <p className="mt-2 text-muted-foreground">
                   La cuisine ferme à {formatPublicTime(settings.kitchenClosingTime)}.
                 </p>
+                <p className="mt-2 text-muted-foreground">
+                  Le temps sur place est limité à {settings.maximumVisitHours} h pour accueillir les
+                  artistes suivants.
+                </p>
+                <p className="mt-2 text-muted-foreground">{settings.sharedTableNotice}</p>
+                <p className="mt-2 text-muted-foreground">{settings.takeawayNotice}</p>
                 {requiresManualReview && (
                   <p className="mt-2 font-medium text-foreground">
                     {settings.groupOutsideFoodNotice}
@@ -607,7 +613,7 @@ function ReserverPage() {
                 <div className="mt-4 border-l-4 border-primary bg-secondary/45 px-4 py-4 text-sm">
                   <div className="font-medium">À savoir avant de confirmer</div>
                   <ul className="mt-2 grid gap-1.5 text-muted-foreground sm:grid-cols-2">
-                    <li>• Consommation sur place obligatoire pour peindre</li>
+                    <li>• {settings.consumptionMandatoryNotice}</li>
                     <li>• Cuisson et finition réalisées après ton départ</li>
                     <li>• Création prête habituellement sous 7 à 10 jours</li>
                     <li>• Photo et initiales indispensables pour la récupérer</li>

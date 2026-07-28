@@ -233,7 +233,7 @@ export interface GuideSection {
   visible?: boolean;
 }
 
-export type ContentResourceCategory = "guide" | "nuancier" | "prevention" | "waiver";
+export type ContentResourceCategory = "guide" | "nuancier" | "prevention" | "waiver" | "menu";
 
 export interface ContentResource {
   id: string;
@@ -250,7 +250,7 @@ export interface ContentResource {
 }
 
 export interface ContentDocument {
-  id: "guide" | "waiver";
+  id: "guide" | "waiver" | "menu";
   title: string;
   version: string;
   updatedAt: string;
@@ -392,6 +392,22 @@ export const contentDocumentsSeed: ContentDocument[] = [
     resources: guideResourcesSeed,
   },
   {
+    id: "menu",
+    title: "Carte du Kafé",
+    version: "À publier",
+    updatedAt: new Date().toISOString(),
+    body: "La carte officielle du Kafé sera affichée ici dès son import depuis l'administration.",
+    resources: [
+      {
+        id: "menu-officiel",
+        title: "Carte officielle",
+        description: "La carte café, brunch et boissons mise à jour par Mala Madre.",
+        category: "menu",
+        visible: true,
+      },
+    ],
+  },
+  {
     id: "waiver",
     title: "Décharge de responsabilité",
     version: "2026-07-officielle",
@@ -433,6 +449,27 @@ export function getWaiverDocument(documents: ContentDocument[]) {
     ...seed,
     ...waiver,
     resources: waiverResourcesSeed,
+  };
+}
+
+export function getMenuDocument(documents: ContentDocument[]) {
+  const seed = contentDocumentsSeed.find((document) => document.id === "menu")!;
+  const menu = documents.find((document) => document.id === "menu") ?? seed;
+  const seedResources = seed.resources ?? [];
+  const storedResources = menu.resources ?? [];
+  return {
+    ...seed,
+    ...menu,
+    resources: [
+      ...seedResources.map((seedResource) => ({
+        ...seedResource,
+        ...(storedResources.find((resource) => resource.id === seedResource.id) ?? {}),
+        category: "menu" as const,
+      })),
+      ...storedResources.filter(
+        (resource) => !seedResources.some((seedResource) => seedResource.id === resource.id),
+      ),
+    ],
   };
 }
 
@@ -522,6 +559,40 @@ export interface ReservationFieldRequirements {
   messageRequired: boolean;
 }
 
+export type GiftCardVisual = "rose" | "tropical" | "confetti";
+
+export interface GiftCardOption {
+  id: string;
+  title: string;
+  amount: number;
+  description: string;
+  visible: boolean;
+  visual: GiftCardVisual;
+  paymentUrl?: string;
+}
+
+export interface VoteEntry {
+  id: string;
+  title: string;
+  artistName: string;
+  description: string;
+  imageUrl?: string;
+  imageDataUrl?: string;
+  imageName?: string;
+  visible: boolean;
+}
+
+export interface VoteOfMonthSettings {
+  enabled: boolean;
+  campaignId: string;
+  title: string;
+  introduction: string;
+  startsAt: string;
+  endsAt: string;
+  showResults: boolean;
+  entries: VoteEntry[];
+}
+
 export interface KafeSettings {
   configurationVersion: number;
   reservationsEnabled: boolean;
@@ -558,7 +629,20 @@ export interface KafeSettings {
   contactAddress: string;
   contactMapUrl: string;
   adminNotificationEmail: string;
+  pinterestUrl: string;
+  guestbookEnabled: boolean;
+  googleReviewUrl: string;
   giftCardPaymentUrl: string;
+  giftCardContactEmail: string;
+  giftCardCustomEnabled: boolean;
+  giftCardCustomMin: number;
+  giftCardCustomMax: number;
+  giftCardOptions: GiftCardOption[];
+  maximumVisitHours: number;
+  sharedTableNotice: string;
+  takeawayNotice: string;
+  consumptionMandatoryNotice: string;
+  voteOfMonth: VoteOfMonthSettings;
   groupCeramicRateMin: number;
   groupCeramicRateMax: number;
   groupMealRateMin: number;
@@ -568,7 +652,7 @@ export interface KafeSettings {
 }
 
 export const settingsSeed: KafeSettings = {
-  configurationVersion: 8,
+  configurationVersion: 9,
   reservationsEnabled: true,
   reservationPauseMessage: "",
   depositThreshold: 8,
@@ -612,7 +696,7 @@ export const settingsSeed: KafeSettings = {
   signatureRequiredOnArrival: true,
   walkInCafeEnabled: true,
   walkInNoticeText:
-    "Pour manger un bagel, bruncher ou boire un café, tu peux passer sans réserver selon les places. Pour peindre sur céramique, la réservation te donne la priorité.",
+    "La réservation est recommandée pour toute venue. Sans réservation, l'accueil reste possible uniquement selon les places disponibles, sans garantie.",
   reservationConditionsText:
     "Annulation possible jusqu'à 48 h avant. Au-delà, merci d'appeler le Kafé. Une réservation est libérée après plus de 35 minutes de retard. Pour les groupes, l'acompte est conservé si l'annulation intervient moins de 24 h avant.",
   guideAcceptanceText:
@@ -627,7 +711,57 @@ export const settingsSeed: KafeSettings = {
   contactAddress: "Lieu dit Loyette, 97118 Saint-François, Guadeloupe",
   contactMapUrl: "https://www.google.com/maps?q=16.286364%2C-61.288357",
   adminNotificationEmail: "ceramikkafe@gmail.com",
+  pinterestUrl: "",
+  guestbookEnabled: true,
+  googleReviewUrl: "",
   giftCardPaymentUrl: "",
+  giftCardContactEmail: "ceramikkafe@gmail.com",
+  giftCardCustomEnabled: true,
+  giftCardCustomMin: 20,
+  giftCardCustomMax: 200,
+  giftCardOptions: [
+    {
+      id: "petit-plaisir",
+      title: "Un petit plaisir",
+      amount: 25,
+      description: "Une attention pour participer à une pause gourmande ou à une petite création.",
+      visible: true,
+      visual: "rose",
+    },
+    {
+      id: "brunch-creation",
+      title: "Brunch + belle pièce",
+      amount: 40,
+      description: "Un joli budget à utiliser entre gourmandise et céramique.",
+      visible: true,
+      visual: "tropical",
+    },
+    {
+      id: "grand-moment",
+      title: "Grand moment créatif",
+      amount: 60,
+      description: "Pour choisir une pièce plus importante et profiter pleinement du Kafé.",
+      visible: true,
+      visual: "confetti",
+    },
+  ],
+  maximumVisitHours: 4,
+  sharedTableNotice:
+    "Le Kafé est un lieu convivial : selon l'affluence, votre groupe peut partager une grande table avec d'autres artistes.",
+  takeawayNotice: "Pour une commande à emporter, appelle directement le Kafé.",
+  consumptionMandatoryNotice:
+    "Une consommation sur place est obligatoire pour chaque personne participant à l'atelier.",
+  voteOfMonth: {
+    enabled: false,
+    campaignId: "vote-2026-07",
+    title: "Vote du mois",
+    introduction:
+      "Découvre les créations sélectionnées par le Kafé et vote pour celle qui te fait le plus vibrer.",
+    startsAt: "2026-07-01",
+    endsAt: "2026-07-31",
+    showResults: false,
+    entries: [],
+  },
   groupCeramicRateMin: 18,
   groupCeramicRateMax: 80,
   groupMealRateMin: 15,
@@ -672,6 +806,12 @@ function normalizeKafeSettings(value?: Partial<KafeSettings> | null): KafeSettin
       ...settingsSeed.reservationFieldRequirements,
       ...value?.reservationFieldRequirements,
     },
+    voteOfMonth: {
+      ...settingsSeed.voteOfMonth,
+      ...value?.voteOfMonth,
+      entries: value?.voteOfMonth?.entries ?? settingsSeed.voteOfMonth.entries,
+    },
+    giftCardOptions: value?.giftCardOptions ?? settingsSeed.giftCardOptions,
   };
 
   if ((value?.configurationVersion ?? 0) >= settingsSeed.configurationVersion) {

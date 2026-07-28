@@ -28,13 +28,13 @@ export const Route = createFileRoute("/brunch")({
 const flow = [
   {
     icon: Coffee,
-    title: "Venir au Kafé",
-    body: "Pour un café, un jus, un bagel ou une déjeunette, tu peux passer sans réserver selon les places disponibles.",
+    title: "Réserver sa venue",
+    body: "Réserve aussi pour un café, un bagel ou une déjeunette. Sans réservation, l'équipe peut t'accueillir seulement s'il reste une place adaptée.",
   },
   {
     icon: CalendarHeart,
     title: "Réserver pour peindre",
-    body: "La réservation te donne la priorité sur les places atelier. Sans réservation, c'est possible uniquement s'il reste de la place.",
+    body: "Choisis ton créneau pour profiter jusqu'à 4 heures de l'atelier. Selon l'affluence, une grande table peut être partagée avec d'autres artistes.",
   },
   {
     icon: Utensils,
@@ -64,7 +64,7 @@ function BrunchPage() {
       <PageHeader
         eyebrow="Déroulement"
         title="Comment se passe un atelier ?"
-        description="L’idée est simple : profite du Kafé, réserve si tu veux peindre, crée ta pièce, puis récupère-la après cuisson."
+        description="L’idée est simple : réserve ta venue, profite du Kafé, crée ta pièce, puis récupère-la après cuisson."
       />
 
       <section className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
