@@ -77,6 +77,7 @@ import {
   type KafeSettings,
   type ScheduleRule,
   type SeatingArea,
+  type SeatingZone,
   type VoteEntry,
   type WaiverSignature,
 } from "@/lib/admin-data";
@@ -1705,6 +1706,12 @@ function ReservationCard({
   settings: KafeSettings;
 }) {
   const location = seatingAllocationLabel(reservation, settings);
+  const preferenceLabels = {
+    indifferent: "Peu importe",
+    interieur: "Intérieur",
+    exterieur: "Extérieur",
+    carbet: "Carbet",
+  } as const;
   const groupRequest = Boolean(reservation.isGroupRequest);
   const pendingGroup =
     groupRequest && (reservation.status === "pending" || reservation.status === "deposit_paid");
@@ -1738,6 +1745,9 @@ function ReservationCard({
         <InfoPill tone={location ? "success" : "warning"}>
           {location ? `Emplacement · ${location}` : "Emplacement à attribuer"}
         </InfoPill>
+        {reservation.seatingPreference && (
+          <InfoPill>Zone souhaitée · {preferenceLabels[reservation.seatingPreference]}</InfoPill>
+        )}
         {reservation.depositRequired ? (
           <InfoPill tone={reservation.depositPaid ? "success" : "warning"}>
             {reservation.depositPaid
@@ -3950,8 +3960,9 @@ function SeatingAreasEditor({
         <div>
           <div className="font-display text-xl">Espaces et capacité</div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Un groupe doit tenir entièrement dans un même espace. Capacité totale actuelle : {total}
-            places.
+            Le client choisit une zone, puis le système remplit les tables adaptées. Les groupes
+            importants peuvent être répartis sur plusieurs tables de la même zone. Capacité totale
+            actuelle : {total} places.
           </p>
         </div>
         <button
@@ -3964,6 +3975,7 @@ function SeatingAreasEditor({
                 label: "Nouvel espace",
                 capacity: 2,
                 quantity: 1,
+                zone: "interieur",
               },
             ])
           }
@@ -3977,7 +3989,7 @@ function SeatingAreasEditor({
         {areas.map((area) => (
           <div
             key={area.id}
-            className="grid gap-3 rounded-2xl border border-border bg-card p-4 md:grid-cols-[1fr_11rem_11rem_auto] md:items-end"
+            className="grid gap-3 rounded-2xl border border-border bg-card p-4 md:grid-cols-[1fr_10rem_10rem_10rem_auto] md:items-end"
           >
             <Field
               label="Nom"
@@ -3990,6 +4002,20 @@ function SeatingAreasEditor({
               suffix=""
               onChange={(quantity) => updateArea(area.id, { quantity })}
             />
+            <label>
+              <span className="mb-1.5 block text-sm font-medium">Zone client</span>
+              <select
+                value={area.zone ?? "interieur"}
+                onChange={(event) =>
+                  updateArea(area.id, { zone: event.target.value as SeatingZone })
+                }
+                className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="interieur">Intérieur</option>
+                <option value="exterieur">Extérieur</option>
+                <option value="carbet">Carbet</option>
+              </select>
+            </label>
             <NumberField
               label="Places par espace"
               value={area.capacity}

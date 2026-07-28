@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { settingsSeed, type KafeSettings } from "./admin-data";
+import { settingsSeed, type KafeSettings, type SeatingZone } from "./admin-data";
 import {
   callRpc,
   deleteRow,
@@ -18,6 +18,8 @@ export type SeatingAllocation = {
   unitId: string;
   people: number;
 };
+
+export type SeatingPreference = SeatingZone | "indifferent";
 
 export interface Reservation {
   id: string;
@@ -47,6 +49,7 @@ export interface Reservation {
   budget?: string;
   seatingUnitId?: string;
   seatingAllocations?: SeatingAllocation[];
+  seatingPreference?: SeatingPreference;
   source?: "online" | "walk_in";
   walkInLabel?: string;
   decisionMessage?: string;
@@ -123,7 +126,7 @@ const seed: Reservation[] = [
     id: "r3",
     createdAt: new Date().toISOString(),
     experience: "groupe",
-    people: 8,
+    people: 10,
     date: nextWeekday(6, 14),
     slot: "16:30",
     firstName: "Laura",
@@ -139,7 +142,7 @@ const seed: Reservation[] = [
     isGroupRequest: true,
     eventType: "Groupe",
     budget: "300-500 EUR",
-    message: "Table de 8 personnes, besoin de confirmer l'organisation.",
+    message: "Groupe de 10 personnes, besoin de confirmer l'organisation.",
     seatingUnitId: "carbet-1",
   },
 ];
@@ -601,6 +604,7 @@ export interface SeatingUnitAvailability {
   label: string;
   capacity: number;
   remaining: number;
+  zone: SeatingZone;
 }
 
 export interface SlotPlacement {
@@ -621,7 +625,15 @@ export interface SeatingAvailability {
 function expandSeatingUnits(settings: KafeSettings): SeatingUnitAvailability[] {
   const areas = settings.seatingAreas?.length
     ? settings.seatingAreas
-    : [{ id: "atelier", label: "Atelier", capacity: settings.defaultCapacity, quantity: 1 }];
+    : [
+        {
+          id: "atelier",
+          label: "Atelier",
+          capacity: settings.defaultCapacity,
+          quantity: 1,
+          zone: "interieur" as const,
+        },
+      ];
 
   return areas.flatMap((area) =>
     Array.from({ length: Math.max(0, area.quantity) }, (_, index) => ({
@@ -629,6 +641,7 @@ function expandSeatingUnits(settings: KafeSettings): SeatingUnitAvailability[] {
       label: area.quantity > 1 ? `${area.label} n°${index + 1}` : area.label,
       capacity: Math.max(0, area.capacity),
       remaining: Math.max(0, area.capacity),
+      zone: area.zone ?? "interieur",
     })),
   );
 }
@@ -672,8 +685,16 @@ export function getSlotPlacement(
   slot: string,
   people: number,
   settings: KafeSettings,
+  seatingPreference: SeatingPreference = "indifferent",
 ): SlotPlacement {
-  const availability = getSeatingAvailability(reservations, occupancies, date, slot, settings);
+  const availability = getSeatingAvailability(
+    reservations,
+    occupancies,
+    date,
+    slot,
+    settings,
+    seatingPreference,
+  );
   if (availability.hasUnassignedOverflow) {
     return {
       unitId: null,
@@ -736,6 +757,7 @@ export function getSeatingAvailability(
   date: string,
   slot: string,
   settings: KafeSettings,
+  seatingPreference: SeatingPreference = "indifferent",
 ): SeatingAvailability {
   const units = expandSeatingUnits(settings);
   const duration = Math.max(15, settings.slotDurationMinutes || 120);
@@ -803,10 +825,15 @@ export function getSeatingAvailability(
     assigned.remaining -= reservation.people;
   }
 
+  const eligibleUnits =
+    seatingPreference === "indifferent"
+      ? units
+      : units.filter((unit) => unit.zone === seatingPreference);
+
   return {
-    units,
-    maxGroupSize: Math.max(0, ...units.map((unit) => unit.remaining)),
-    totalRemaining: units.reduce((total, unit) => total + unit.remaining, 0),
+    units: eligibleUnits,
+    maxGroupSize: Math.max(0, ...eligibleUnits.map((unit) => unit.remaining)),
+    totalRemaining: eligibleUnits.reduce((total, unit) => total + unit.remaining, 0),
     hasUnassignedOverflow: false,
   };
 }

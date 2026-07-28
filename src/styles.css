@@ -48,17 +48,17 @@
 :root {
   --radius: 1.25rem;
 
-  /* Kafe Ceramik palette: blush first, sage as a brand accent */
-  --blush: oklch(0.89 0.055 10);
-  --rose: oklch(0.82 0.08 8);
-  --cream: oklch(0.97 0.025 82);
-  --sage: oklch(0.54 0.075 145);
-  --brick: oklch(0.47 0.11 32);
-  --lavender: oklch(0.68 0.12 282);
-  --mustard: oklch(0.66 0.11 92);
+  /* Palette issue des supports officiels du Kafé : rose, olive, bleu et jaune franc. */
+  --blush: oklch(0.88 0.075 8);
+  --rose: oklch(0.76 0.145 4);
+  --cream: oklch(0.97 0.035 85);
+  --sage: oklch(0.56 0.105 145);
+  --brick: oklch(0.48 0.13 31);
+  --lavender: oklch(0.67 0.145 282);
+  --mustard: oklch(0.74 0.15 88);
   --ink: oklch(0.16 0.01 30);
 
-  --background: oklch(0.9 0.045 10);
+  --background: oklch(0.92 0.055 8);
   --foreground: oklch(0.16 0.01 30);
 
   --card: oklch(0.98 0.02 70);
@@ -66,7 +66,7 @@
   --popover: oklch(0.98 0.02 70);
   --popover-foreground: oklch(0.16 0.01 30);
 
-  --primary: oklch(0.47 0.11 32);
+  --primary: oklch(0.47 0.13 31);
   --primary-foreground: oklch(0.98 0.02 70);
 
   --secondary: oklch(0.93 0.035 12);
@@ -119,13 +119,17 @@
   * {
     border-color: var(--color-border);
   }
-  html, body {
+  html,
+  body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     font-family: var(--font-display);
     letter-spacing: 0;
     font-weight: 400;
@@ -144,12 +148,59 @@
   .checker-pink {
     background-color: var(--color-cream);
     background-image:
-      linear-gradient(45deg, color-mix(in oklab, var(--color-rose) 42%, transparent) 25%, transparent 25%),
-      linear-gradient(-45deg, color-mix(in oklab, var(--color-rose) 42%, transparent) 25%, transparent 25%),
-      linear-gradient(45deg, transparent 75%, color-mix(in oklab, var(--color-rose) 42%, transparent) 75%),
-      linear-gradient(-45deg, transparent 75%, color-mix(in oklab, var(--color-rose) 42%, transparent) 75%);
-    background-position: 0 0, 0 32px, 32px -32px, -32px 0;
+      linear-gradient(
+        45deg,
+        color-mix(in oklab, var(--color-rose) 42%, transparent) 25%,
+        transparent 25%
+      ),
+      linear-gradient(
+        -45deg,
+        color-mix(in oklab, var(--color-rose) 42%, transparent) 25%,
+        transparent 25%
+      ),
+      linear-gradient(
+        45deg,
+        transparent 75%,
+        color-mix(in oklab, var(--color-rose) 42%, transparent) 75%
+      ),
+      linear-gradient(
+        -45deg,
+        transparent 75%,
+        color-mix(in oklab, var(--color-rose) 42%, transparent) 75%
+      );
+    background-position:
+      0 0,
+      0 32px,
+      32px -32px,
+      -32px 0;
     background-size: 64px 64px;
+  }
+  .checker-strong {
+    background-color: #fff0c7;
+    background-image:
+      linear-gradient(45deg, #f08bab 25%, transparent 25%),
+      linear-gradient(-45deg, #f08bab 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #f08bab 75%),
+      linear-gradient(-45deg, transparent 75%, #f08bab 75%);
+    background-position:
+      0 0,
+      0 24px,
+      24px -24px,
+      -24px 0;
+    background-size: 48px 48px;
+  }
+  .brand-stripes {
+    background: repeating-linear-gradient(
+      -12deg,
+      #f5c4d2 0 34px,
+      #fff0c7 34px 68px,
+      #7b9c69 68px 102px,
+      #7f82ea 102px 136px
+    );
+  }
+  .poster-border {
+    border: 3px solid var(--color-ink);
+    box-shadow: 7px 7px 0 color-mix(in oklab, var(--color-brick) 85%, transparent);
   }
 
   /* Animated nav link underline */
@@ -183,8 +234,12 @@
       background-color 0.2s ease,
       opacity 0.2s ease;
   }
-  .press:hover { transform: translateY(-1.5px); }
-  .press:active { transform: translateY(0) scale(0.98); }
+  .press:hover {
+    transform: translateY(-1.5px);
+  }
+  .press:active {
+    transform: translateY(0) scale(0.98);
+  }
 
   /* Shine sweep on primary CTAs */
   .shine {
@@ -206,45 +261,94 @@
     transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
     pointer-events: none;
   }
-  .shine:hover::before { transform: translateX(120%); }
+  .shine:hover::before {
+    transform: translateX(120%);
+  }
 }
 
 @layer utilities {
   @keyframes float-y {
-    0%, 100% { transform: translateY(0) rotate(var(--rot, 0deg)); }
-    50% { transform: translateY(-8px) rotate(var(--rot, 0deg)); }
+    0%,
+    100% {
+      transform: translateY(0) rotate(var(--rot, 0deg));
+    }
+    50% {
+      transform: translateY(-8px) rotate(var(--rot, 0deg));
+    }
   }
-  .float-slow { animation: float-y 6s ease-in-out infinite; }
-  .float-med { animation: float-y 4.5s ease-in-out infinite; }
-  .float-fast { animation: float-y 3.8s ease-in-out infinite; }
+  .float-slow {
+    animation: float-y 6s ease-in-out infinite;
+  }
+  .float-med {
+    animation: float-y 4.5s ease-in-out infinite;
+  }
+  .float-fast {
+    animation: float-y 3.8s ease-in-out infinite;
+  }
 
   @keyframes soft-pulse {
-    0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 color-mix(in oklab, var(--sage) 60%, transparent); }
-    50% { transform: scale(1.15); opacity: 0.85; box-shadow: 0 0 0 6px color-mix(in oklab, var(--sage) 0%, transparent); }
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--sage) 60%, transparent);
+    }
+    50% {
+      transform: scale(1.15);
+      opacity: 0.85;
+      box-shadow: 0 0 0 6px color-mix(in oklab, var(--sage) 0%, transparent);
+    }
   }
-  .pulse-dot { animation: soft-pulse 2.2s ease-in-out infinite; }
+  .pulse-dot {
+    animation: soft-pulse 2.2s ease-in-out infinite;
+  }
 
   @keyframes page-in {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
-  .page-enter { animation: page-in 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  .page-enter {
+    animation: page-in 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
 
   @keyframes rise-in {
-    from { opacity: 0; transform: translateY(14px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
-  .rise { animation: rise-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  .rise {
+    animation: rise-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
 
   @media (prefers-reduced-motion: reduce) {
-    .float-slow, .float-med, .float-fast,
-    .pulse-dot, .page-enter, .rise,
-    .shine::before { animation: none !important; transition: none !important; }
+    .float-slow,
+    .float-med,
+    .float-fast,
+    .pulse-dot,
+    .page-enter,
+    .rise,
+    .shine::before {
+      animation: none !important;
+      transition: none !important;
+    }
   }
 
   /* ---------- Handmade / DA Kafé Céramik ---------- */
 
-  .grain { position: relative; }
+  .grain {
+    position: relative;
+  }
   .grain::before {
     content: "";
     position: absolute;
@@ -256,9 +360,15 @@
     background-size: 220px 220px;
   }
 
-  .sticker-shadow { box-shadow: 6px 6px 0 0 var(--color-ink); }
-  .sticker-shadow-sm { box-shadow: 3px 3px 0 0 var(--color-ink); }
-  .sticker-shadow-rose { box-shadow: 6px 6px 0 0 var(--color-brick); }
+  .sticker-shadow {
+    box-shadow: 6px 6px 0 0 var(--color-ink);
+  }
+  .sticker-shadow-sm {
+    box-shadow: 3px 3px 0 0 var(--color-ink);
+  }
+  .sticker-shadow-rose {
+    box-shadow: 6px 6px 0 0 var(--color-brick);
+  }
 
   .marker {
     background-image: linear-gradient(
@@ -296,19 +406,27 @@
 
   .wavy-bottom {
     -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'><path d='M0 0h1200v40c-100 20-200 20-300 0s-200-20-300 0-200 20-300 0S100 20 0 40z' fill='%23000'/></svg>");
-            mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'><path d='M0 0h1200v40c-100 20-200 20-300 0s-200-20-300 0-200 20-300 0S100 20 0 40z' fill='%23000'/></svg>");
-    -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
-    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'><path d='M0 0h1200v40c-100 20-200 20-300 0s-200-20-300 0-200 20-300 0S100 20 0 40z' fill='%23000'/></svg>");
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
   }
   .wavy-top {
     -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'><path d='M0 60h1200V20c-100-20-200-20-300 0s-200 20-300 0-200-20-300 0S100 40 0 20z' fill='%23000'/></svg>");
-            mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'><path d='M0 60h1200V20c-100-20-200-20-300 0s-200 20-300 0-200-20-300 0S100 40 0 20z' fill='%23000'/></svg>");
-    -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
-    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'><path d='M0 60h1200V20c-100-20-200-20-300 0s-200 20-300 0-200-20-300 0S100 40 0 20z' fill='%23000'/></svg>");
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
   }
 
-  .wobble { transition: transform 0.35s cubic-bezier(0.3, 1.5, 0.6, 1); }
-  .wobble:hover { transform: rotate(-2deg) translateY(-2px) scale(1.02); }
+  .wobble {
+    transition: transform 0.35s cubic-bezier(0.3, 1.5, 0.6, 1);
+  }
+  .wobble:hover {
+    transform: rotate(-2deg) translateY(-2px) scale(1.02);
+  }
 
   .stamp {
     display: inline-flex;
@@ -333,18 +451,34 @@
     border-radius: inherit;
   }
 
-  @keyframes spin-slow { to { transform: rotate(360deg); } }
-  .spin-slow { animation: spin-slow 22s linear infinite; }
+  @keyframes spin-slow {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .spin-slow {
+    animation: spin-slow 22s linear infinite;
+  }
 
   @keyframes wiggle {
-    0%, 100% { transform: rotate(-2deg); }
-    50% { transform: rotate(2deg); }
+    0%,
+    100% {
+      transform: rotate(-2deg);
+    }
+    50% {
+      transform: rotate(2deg);
+    }
   }
-  .wiggle-slow { animation: wiggle 5s ease-in-out infinite; }
+  .wiggle-slow {
+    animation: wiggle 5s ease-in-out infinite;
+  }
 
   @media (prefers-reduced-motion: reduce) {
-    .wobble, .spin-slow, .wiggle-slow { animation: none !important; transition: none !important; }
+    .wobble,
+    .spin-slow,
+    .wiggle-slow {
+      animation: none !important;
+      transition: none !important;
+    }
   }
 }
-
-

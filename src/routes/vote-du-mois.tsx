@@ -110,9 +110,7 @@ function VoteDuMoisPage() {
       <PageHeader eyebrow="Vote du mois" title={vote.title} description={vote.introduction} />
 
       <section className="mx-auto max-w-6xl px-4 py-12">
-        {!vote.enabled ? (
-          <EmptyVote text="La prochaine sélection arrive bientôt." />
-        ) : entries.length === 0 ? (
+        {entries.length === 0 ? (
           <EmptyVote text="Les créations du mois seront bientôt dévoilées." />
         ) : (
           <>
@@ -122,7 +120,9 @@ function VoteDuMoisPage() {
                 Du {formatDate(vote.startsAt)} au {formatDate(vote.endsAt)}
               </div>
               <div className="text-sm text-muted-foreground">
-                Un vote par appareil pour cette édition
+                {vote.enabled
+                  ? "Un vote par appareil pour cette édition"
+                  : "Aperçu de la prochaine sélection. Le vote n'est pas encore ouvert."}
               </div>
             </div>
 
@@ -212,6 +212,62 @@ function VoteDuMoisPage() {
               )}
               {message && <p className="text-center text-sm text-muted-foreground">{message}</p>}
             </div>
+
+            {vote.showResults && (
+              <section className="mt-12 border-t border-border pt-8">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-primary">Résultats</div>
+                    <h2 className="mt-1 font-display text-3xl">Le classement du mois</h2>
+                  </div>
+                  <div className="rounded-full bg-secondary px-4 py-2 text-sm font-medium">
+                    {totalVotes} vote{totalVotes > 1 ? "s" : ""}
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-3">
+                  {[...entries]
+                    .sort((a, b) => {
+                      const aVotes =
+                        Number(results.find((result) => result.entry_id === a.id)?.vote_count) || 0;
+                      const bVotes =
+                        Number(results.find((result) => result.entry_id === b.id)?.vote_count) || 0;
+                      return bVotes - aVotes;
+                    })
+                    .map((entry, index) => {
+                      const count =
+                        Number(
+                          results.find((result) => result.entry_id === entry.id)?.vote_count,
+                        ) || 0;
+                      const percent = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                      return (
+                        <div
+                          key={entry.id}
+                          className="grid grid-cols-[2.5rem_3.25rem_1fr_auto] items-center gap-3 rounded-2xl border border-border bg-card p-3"
+                        >
+                          <span className="font-display text-2xl text-primary">#{index + 1}</span>
+                          <img
+                            src={entry.imageDataUrl || entry.imageUrl}
+                            alt=""
+                            className="h-12 w-12 rounded-xl object-cover"
+                          />
+                          <div className="min-w-0">
+                            <div className="truncate font-medium">{entry.title}</div>
+                            <div className="mt-1 h-2 overflow-hidden rounded-full bg-secondary">
+                              <div
+                                className="h-full rounded-full bg-primary"
+                                style={{ width: `${percent}%` }}
+                              />
+                            </div>
+                          </div>
+                          <span className="text-sm font-semibold">
+                            {count} vote{count > 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+              </section>
+            )}
           </>
         )}
       </section>

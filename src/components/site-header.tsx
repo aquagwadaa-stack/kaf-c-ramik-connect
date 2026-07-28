@@ -1,14 +1,16 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Facebook, Instagram, Menu, Music2, X, Coffee, ShieldCheck } from "lucide-react";
+import { ChevronDown, Facebook, Instagram, Menu, Music2, X, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useKafeSettings } from "@/lib/admin-data";
 import { getPublicSchedule } from "@/lib/opening-hours";
 import { useAdminAccess } from "@/lib/supabase-rest";
 
 const baseLinks = [
+  { to: "/histoire", label: "Le Kafé" },
   { to: "/brunch", label: "Déroulement" },
   { to: "/creations", label: "Créations" },
+  { to: "/vote-du-mois", label: "Vote du mois" },
   { to: "/guide", label: "Guide" },
   { to: "/carte", label: "Carte" },
   { to: "/objets", label: "Objets" },
@@ -24,16 +26,14 @@ export function SiteHeader() {
   const admin = useAdminAccess();
   const [settings] = useKafeSettings();
   const links = [
-    ...baseLinks.slice(0, 2),
-    ...(settings.voteOfMonth.enabled
-      ? [{ to: "/vote-du-mois" as const, label: "Vote du mois" }]
-      : []),
-    ...baseLinks.slice(2, -1),
+    ...baseLinks.slice(0, -1),
     ...(settings.guestbookEnabled ? [{ to: "/livre-dor" as const, label: "Livre d'or" }] : []),
     baseLinks[baseLinks.length - 1],
   ];
   const showAdminLink = admin.configured && admin.signedIn && admin.allowed && !admin.checking;
   const showTeamEntry = showAdminLink || installedApp;
+  const primaryLinks = links.slice(0, 5);
+  const moreLinks = links.slice(5);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -72,14 +72,14 @@ export function SiteHeader() {
         }`}
       >
         <Link to="/" className="group flex min-w-0 items-center gap-2 press">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-transform duration-300 group-hover:rotate-[-8deg] group-hover:scale-105">
-            <Coffee className="h-4 w-4" />
+          <span className="h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-ink bg-card transition-transform duration-300 group-hover:rotate-[-6deg] group-hover:scale-105">
+            <img src="/brand/kafe-ceramik-logo.jpg" alt="" className="h-full w-full object-cover" />
           </span>
-          <span className="truncate font-display text-lg sm:text-xl">Kafé Céramik</span>
+          <span className="whitespace-nowrap font-display text-base sm:text-lg">Kafé Céramik</span>
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex">
-          {links.map((l) => (
+          {primaryLinks.map((l) => (
             <Link
               key={l.to}
               to={l.to}
@@ -91,6 +91,26 @@ export function SiteHeader() {
               {l.label}
             </Link>
           ))}
+          <div className="group relative">
+            <button
+              type="button"
+              className="nav-link inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm text-foreground/70 hover:text-foreground"
+            >
+              Plus <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+            <div className="invisible absolute right-0 top-full z-50 mt-2 w-48 translate-y-1 rounded-2xl border border-border bg-card p-2 opacity-0 shadow-xl shadow-ink/15 transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+              {moreLinks.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className="block rounded-xl px-3 py-2.5 text-sm hover:bg-secondary"
+                  activeProps={{ className: "block rounded-xl bg-secondary px-3 py-2.5 text-sm" }}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </div>
           {showTeamEntry && (
             <Link
               to="/admin"
@@ -196,7 +216,7 @@ export function SiteFooter() {
         <div>
           <div className="font-display text-xl">Kafé Céramik</div>
           <p className="mt-2 text-sm text-muted-foreground">
-            Déjeunette &amp; Création. Saint-François, Guadeloupe.
+            Kafé, création et gourmandises à Saint-François.
           </p>
         </div>
         <div className="text-sm">

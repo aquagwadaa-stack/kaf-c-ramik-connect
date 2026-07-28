@@ -69,7 +69,7 @@ function HomePage() {
     <PageShell>
       <section className="relative min-h-[72svh] overflow-hidden bg-ink text-cream">
         <img
-          src="/photos/atelier-mains.webp"
+          src="/photos/manika/atelier-table.jpg"
           alt="Peinture sur céramique au Kafé Céramik"
           className="absolute inset-0 h-full w-full object-cover object-center"
         />
@@ -84,7 +84,7 @@ function HomePage() {
             <h1 className="mt-6 text-5xl leading-[0.98] text-cream sm:text-7xl lg:text-8xl">
               Kafé Céramik.
               <br />
-              <span className="text-[#f5bdc9]">Déjeunette</span> &amp; création.
+              <span className="text-[#f5bdc9]">Gourmandise</span> &amp; création.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-7 text-cream/90 sm:text-lg">
               Viens boire un café, manger un morceau ou peindre ta propre pièce. Réserve ta venue
@@ -147,7 +147,7 @@ function HomePage() {
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <figure className="overflow-hidden rounded-[2rem] border-4 border-cream bg-cream shadow-lg shadow-ink/10">
                 <img
-                  src="/photos/atelier-portrait.webp"
+                  src="/photos/manika/artiste-peinture.jpg"
                   alt="Une participante peint sa céramique"
                   loading="lazy"
                   className="aspect-[4/5] h-full w-full object-cover"
@@ -156,7 +156,7 @@ function HomePage() {
               <div className="grid gap-3 sm:gap-4">
                 <figure className="overflow-hidden rounded-[2rem] border-4 border-cream bg-cream shadow-lg shadow-ink/10">
                   <img
-                    src="/photos/brunch-bowl.webp"
+                    src="/photos/manika/brunch-bowl.jpg"
                     alt="Une assiette gourmande servie au Kafé"
                     loading="lazy"
                     className="aspect-[4/3] h-full w-full object-cover"
@@ -164,7 +164,7 @@ function HomePage() {
                 </figure>
                 <figure className="overflow-hidden rounded-[2rem] border-4 border-cream bg-cream shadow-lg shadow-ink/10">
                   <img
-                    src="/photos/comptoir-gourmand.webp"
+                    src="/photos/manika/comptoir-desserts.jpg"
                     alt="Le comptoir et les pâtisseries maison"
                     loading="lazy"
                     className="aspect-[4/3] h-full w-full object-cover"
@@ -183,7 +183,7 @@ function HomePage() {
             className="group relative min-h-[430px] overflow-hidden rounded-[2rem] bg-ink text-cream"
           >
             <img
-              src="/photos/atelier-mains.webp"
+              src="/photos/manika/detail-peinture.jpg"
               alt="Une pièce en train d’être peinte"
               loading="lazy"
               className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"

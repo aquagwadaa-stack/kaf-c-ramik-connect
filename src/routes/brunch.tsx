@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import brunchAtelier from "@/assets/brunch-atelier.png.asset.json";
 import {
   ArrowRight,
   CalendarHeart,
@@ -27,34 +26,34 @@ export const Route = createFileRoute("/brunch")({
 
 const flow = [
   {
-    icon: Coffee,
-    title: "Réserver sa venue",
-    body: "Réserve aussi pour un café, un bagel ou une déjeunette. Sans réservation, l'équipe peut t'accueillir seulement s'il reste une place adaptée.",
-  },
-  {
     icon: CalendarHeart,
     title: "Réserver pour peindre",
-    body: "Choisis ton créneau pour profiter jusqu'à 4 heures de l'atelier. Selon l'affluence, une grande table peut être partagée avec d'autres artistes.",
+    body: "Réserve ta table pour garantir ta place. Sans réservation, tu peux tenter ta chance, mais l'accueil dépendra des places réellement disponibles.",
+  },
+  {
+    icon: Coffee,
+    title: "Arriver au Kafé",
+    body: "Installe-toi pour peindre autour d'une douceur salée ou sucrée. Une consommation sur place accompagne chaque atelier.",
   },
   {
     icon: Utensils,
-    title: "Prévoir une consommation",
-    body: "L'atelier céramique se fait avec une consommation sur place : café, boisson, bagel, douceur ou brunch selon ton envie.",
+    title: "Prendre le temps",
+    body: "Prévois au minimum 2 heures et jusqu'à 4 heures selon ton projet. Le Kafé est convivial : une grande table peut être partagée avec d'autres artistes.",
   },
   {
     icon: Palette,
-    title: "Choisir et peindre",
-    body: "Sur place, tu choisis ta pièce et tes couleurs, puis tu suis les consignes pour un rendu propre après cuisson.",
+    title: "Choisir ta céramique",
+    body: "Tu choisis TA CÉRAMIQUE et tes couleurs, puis tu suis toutes les consignes DU GUIDE pour obtenir le meilleur résultat après cuisson.",
   },
   {
     icon: Flame,
     title: "Cuisson par l'équipe",
-    body: "La pièce reste au Kafé pour séchage, émaillage et cuisson. Elle ne repart pas avec toi le jour même.",
+    body: "Ta création reste au Kafé environ 5 à 10 jours pour la cuisson. Tu ne repartiras pas avec le jour même.",
   },
   {
     icon: PackageCheck,
     title: "Récupération",
-    body: "Une fois prête, tu récupères ta création au Kafé selon le délai indiqué par l'équipe.",
+    body: "Une fois prête, nous gardons ta céramique maximum 2 mois avant d'en faire profiter des associations. Si tu ne peux pas la récupérer avant, préviens la team du Kafé.",
   },
 ] as const;
 
@@ -64,13 +63,13 @@ function BrunchPage() {
       <PageHeader
         eyebrow="Déroulement"
         title="Comment se passe un atelier ?"
-        description="L’idée est simple : réserve ta venue, profite du Kafé, crée ta pièce, puis récupère-la après cuisson."
+        description="Réserve ta table au Kafé, peins ta pièce autour d'une douceur salée ou sucrée, puis récupère ta création après cuisson."
       />
 
       <section className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
         <figure className="overflow-hidden rounded-[2rem] border border-border bg-cream">
           <img
-            src={brunchAtelier.url}
+            src="/photos/manika/atelier-table.jpg"
             alt="Atelier de peinture sur céramique au Kafé Céramik"
             className="h-[260px] w-full object-cover sm:h-[380px]"
           />
@@ -111,12 +110,10 @@ function BrunchPage() {
       <section className="mx-auto max-w-6xl px-4 py-6">
         <div className="grid gap-4 rounded-[2rem] border border-border bg-card p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">
           <div>
-            <div className="font-display text-3xl leading-none">
-              Les consignes détaillées sont dans le guide.
-            </div>
+            <div className="font-display text-3xl leading-none">Chaque étape du guide compte.</div>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              Il sert à responsabiliser les participants et à éviter les erreurs qui peuvent abîmer
-              le rendu final.
+              Lis-le avant de venir et garde-le sous la main pendant l'atelier : ses consignes
+              protègent ta pièce à chaque étape.
             </p>
           </div>
           <Link

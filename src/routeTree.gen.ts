@@ -14,6 +14,7 @@ import { Route as ReserverRouteImport } from './routes/reserver'
 import { Route as ReservationRouteImport } from './routes/reservation'
 import { Route as ObjetsRouteImport } from './routes/objets'
 import { Route as LivreDorRouteImport } from './routes/livre-dor'
+import { Route as HistoireRouteImport } from './routes/histoire'
 import { Route as GuideRouteImport } from './routes/guide'
 import { Route as DechargeSignatureRouteImport } from './routes/decharge-signature'
 import { Route as CreationsRouteImport } from './routes/creations'
@@ -47,6 +48,11 @@ const ObjetsRoute = ObjetsRouteImport.update({
 const LivreDorRoute = LivreDorRouteImport.update({
   id: '/livre-dor',
   path: '/livre-dor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoireRoute = HistoireRouteImport.update({
+  id: '/histoire',
+  path: '/histoire',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GuideRoute = GuideRouteImport.update({
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/creations': typeof CreationsRoute
   '/decharge-signature': typeof DechargeSignatureRoute
   '/guide': typeof GuideRoute
+  '/histoire': typeof HistoireRoute
   '/livre-dor': typeof LivreDorRoute
   '/objets': typeof ObjetsRoute
   '/reservation': typeof ReservationRoute
@@ -121,6 +128,7 @@ export interface FileRoutesByTo {
   '/creations': typeof CreationsRoute
   '/decharge-signature': typeof DechargeSignatureRoute
   '/guide': typeof GuideRoute
+  '/histoire': typeof HistoireRoute
   '/livre-dor': typeof LivreDorRoute
   '/objets': typeof ObjetsRoute
   '/reservation': typeof ReservationRoute
@@ -138,6 +146,7 @@ export interface FileRoutesById {
   '/creations': typeof CreationsRoute
   '/decharge-signature': typeof DechargeSignatureRoute
   '/guide': typeof GuideRoute
+  '/histoire': typeof HistoireRoute
   '/livre-dor': typeof LivreDorRoute
   '/objets': typeof ObjetsRoute
   '/reservation': typeof ReservationRoute
@@ -156,6 +165,7 @@ export interface FileRouteTypes {
     | '/creations'
     | '/decharge-signature'
     | '/guide'
+    | '/histoire'
     | '/livre-dor'
     | '/objets'
     | '/reservation'
@@ -172,6 +182,7 @@ export interface FileRouteTypes {
     | '/creations'
     | '/decharge-signature'
     | '/guide'
+    | '/histoire'
     | '/livre-dor'
     | '/objets'
     | '/reservation'
@@ -188,6 +199,7 @@ export interface FileRouteTypes {
     | '/creations'
     | '/decharge-signature'
     | '/guide'
+    | '/histoire'
     | '/livre-dor'
     | '/objets'
     | '/reservation'
@@ -205,6 +217,7 @@ export interface RootRouteChildren {
   CreationsRoute: typeof CreationsRoute
   DechargeSignatureRoute: typeof DechargeSignatureRoute
   GuideRoute: typeof GuideRoute
+  HistoireRoute: typeof HistoireRoute
   LivreDorRoute: typeof LivreDorRoute
   ObjetsRoute: typeof ObjetsRoute
   ReservationRoute: typeof ReservationRoute
@@ -247,6 +260,13 @@ declare module '@tanstack/react-router' {
       path: '/livre-dor'
       fullPath: '/livre-dor'
       preLoaderRoute: typeof LivreDorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/histoire': {
+      id: '/histoire'
+      path: '/histoire'
+      fullPath: '/histoire'
+      preLoaderRoute: typeof HistoireRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/guide': {
@@ -325,6 +345,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreationsRoute: CreationsRoute,
   DechargeSignatureRoute: DechargeSignatureRoute,
   GuideRoute: GuideRoute,
+  HistoireRoute: HistoireRoute,
   LivreDorRoute: LivreDorRoute,
   ObjetsRoute: ObjetsRoute,
   ReservationRoute: ReservationRoute,

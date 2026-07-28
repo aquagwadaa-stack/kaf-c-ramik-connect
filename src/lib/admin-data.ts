@@ -551,7 +551,10 @@ export interface SeatingArea {
   label: string;
   capacity: number;
   quantity: number;
+  zone?: SeatingZone;
 }
+
+export type SeatingZone = "interieur" | "exterieur" | "carbet";
 
 export interface ReservationFieldRequirements {
   emailRequired: boolean;
@@ -652,12 +655,12 @@ export interface KafeSettings {
 }
 
 export const settingsSeed: KafeSettings = {
-  configurationVersion: 9,
+  configurationVersion: 10,
   reservationsEnabled: true,
   reservationPauseMessage: "",
-  depositThreshold: 8,
+  depositThreshold: 10,
   depositFixedAmount: 100,
-  defaultCapacity: 63,
+  defaultCapacity: 60,
   slotDurationMinutes: 120,
   slotIntervalMinutes: 60,
   slots: ["09:30", "10:30", "11:30", "12:30", "13:30", "14:30", "15:30", "16:30"],
@@ -673,14 +676,20 @@ export const settingsSeed: KafeSettings = {
     },
   ],
   seatingAreas: [
-    { id: "carbet", label: "Carbet", capacity: 15, quantity: 1 },
-    { id: "pique-nique", label: "Table de pique-nique", capacity: 5, quantity: 8 },
-    { id: "table-2", label: "Table de 2", capacity: 2, quantity: 2 },
-    { id: "salon-2", label: "Espace salon", capacity: 2, quantity: 2 },
+    { id: "carbet", label: "Carbet", capacity: 12, quantity: 1, zone: "carbet" },
+    {
+      id: "pique-nique",
+      label: "Table de pique-nique",
+      capacity: 5,
+      quantity: 8,
+      zone: "exterieur",
+    },
+    { id: "table-2", label: "Table de 2", capacity: 2, quantity: 2, zone: "interieur" },
+    { id: "salon-2", label: "Espace salon", capacity: 2, quantity: 2, zone: "interieur" },
   ],
   closedWeekdays: [1],
   kitchenClosingTime: "17:30",
-  lateArrivalGraceMinutes: 35,
+  lateArrivalGraceMinutes: 30,
   cancellationNoticeHours: 48,
   groupDepositForfeitHours: 24,
   minimumBookingLeadDays: 1,
@@ -690,15 +699,15 @@ export const settingsSeed: KafeSettings = {
     childrenAgesRequired: false,
     messageRequired: false,
   },
-  manualConfirmationThreshold: 8,
+  manualConfirmationThreshold: 10,
   groupOutsideFoodNotice:
     "Pour les groupes, les boissons et la nourriture provenant de l'extérieur ne peuvent pas être consommées au Kafé.",
   signatureRequiredOnArrival: true,
   walkInCafeEnabled: true,
   walkInNoticeText:
-    "La réservation est recommandée pour toute venue. Sans réservation, l'accueil reste possible uniquement selon les places disponibles, sans garantie.",
+    "Réserve ta venue pour garantir ta place. Sans réservation, l'accueil reste possible uniquement selon les places disponibles, sans aucune garantie.",
   reservationConditionsText:
-    "Annulation possible jusqu'à 48 h avant. Au-delà, merci d'appeler le Kafé. Une réservation est libérée après plus de 35 minutes de retard. Pour les groupes, l'acompte est conservé si l'annulation intervient moins de 24 h avant.",
+    "Annulation possible jusqu'à 48 h avant. Au-delà, merci d'appeler le Kafé. Une réservation est libérée après plus de 30 minutes de retard. Pour les groupes, l'acompte est conservé si l'annulation intervient moins de 24 h avant.",
   guideAcceptanceText:
     "J'ai pris connaissance du guide. Le Kafé ne pourra en aucun cas être tenu responsable des suites malheureuses d'un non-respect de ses consignes.",
   confirmationEmailText:
@@ -759,8 +768,33 @@ export const settingsSeed: KafeSettings = {
       "Découvre les créations sélectionnées par le Kafé et vote pour celle qui te fait le plus vibrer.",
     startsAt: "2026-07-01",
     endsAt: "2026-07-31",
-    showResults: false,
-    entries: [],
+    showResults: true,
+    entries: [
+      {
+        id: "vote-demo-tortue",
+        title: "Évasion tropicale",
+        artistName: "Artiste du Kafé",
+        description: "Une assiette fleurie inspirée de la Guadeloupe.",
+        imageUrl: "/creations/assiette-tortue.webp",
+        visible: true,
+      },
+      {
+        id: "vote-demo-feuillage",
+        title: "Feuillage bleu",
+        artistName: "Artiste du Kafé",
+        description: "Une tasse délicate peinte feuille après feuille.",
+        imageUrl: "/creations/tasse-feuillage.webp",
+        visible: true,
+      },
+      {
+        id: "vote-demo-bateau",
+        title: "Au large",
+        artistName: "Artiste du Kafé",
+        description: "Une grande pièce marine travaillée dans les bleus.",
+        imageUrl: "/creations/assiette-bateau.webp",
+        visible: true,
+      },
+    ],
   },
   groupCeramicRateMin: 18,
   groupCeramicRateMax: 80,

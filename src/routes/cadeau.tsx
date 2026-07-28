@@ -30,6 +30,7 @@ function CadeauPage() {
   const [customAmount, setCustomAmount] = useState(settings.giftCardCustomMin);
   const [visual, setVisual] = useState<GiftCardVisual>(options[0]?.visual ?? "rose");
   const [recipient, setRecipient] = useState("");
+  const [recipientEmail, setRecipientEmail] = useState("");
   const [sender, setSender] = useState("");
   const [message, setMessage] = useState("");
   const selected = options.find((option) => option.id === selectedId);
@@ -43,6 +44,7 @@ function CadeauPage() {
         "",
         `Je souhaite une carte cadeau de ${amount} €.`,
         `Pour : ${recipient || "à préciser"}`,
+        `Email du bénéficiaire : ${recipientEmail || "à préciser"}`,
         `De la part de : ${sender || "à préciser"}`,
         `Visuel : ${visualLabels[visual]}`,
         `Message : ${message || "aucun message"}`,
@@ -51,7 +53,7 @@ function CadeauPage() {
       ].join("\n"),
     );
     return `mailto:${settings.giftCardContactEmail}?subject=${subject}&body=${body}`;
-  }, [amount, message, recipient, sender, settings.giftCardContactEmail, visual]);
+  }, [amount, message, recipient, recipientEmail, sender, settings.giftCardContactEmail, visual]);
 
   return (
     <PageShell>
@@ -85,7 +87,8 @@ function CadeauPage() {
             <h2 className="mt-2 font-display text-4xl">Une suggestion ou un montant libre.</h2>
             <p className="mt-3 leading-7 text-muted-foreground">
               Les exemples donnent une idée du budget. Le bénéficiaire reste libre de choisir sa
-              consommation et sa céramique sur place.
+              consommation et sa céramique sur place. La carte peut aussi être dépensée chez Mala
+              Madre.
             </p>
           </div>
 
@@ -159,6 +162,17 @@ function CadeauPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <GiftField label="Pour" value={recipient} onChange={setRecipient} />
               <GiftField label="De la part de" value={sender} onChange={setSender} />
+              <div className="sm:col-span-2">
+                <GiftField
+                  label="Email du bénéficiaire"
+                  value={recipientEmail}
+                  onChange={setRecipientEmail}
+                  type="email"
+                />
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  La carte cadeau PDF sera envoyée à cette adresse après validation du paiement.
+                </p>
+              </div>
             </div>
             <label className="mt-4 block">
               <span className="mb-1.5 block text-sm font-medium">Petit mot (facultatif)</span>
@@ -318,15 +332,18 @@ function GiftField({
   label,
   value,
   onChange,
+  type = "text",
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  type?: "text" | "email";
 }) {
   return (
     <label>
       <span className="mb-1.5 block text-sm font-medium">{label}</span>
       <input
+        type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="w-full rounded-xl border border-input bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-ring"

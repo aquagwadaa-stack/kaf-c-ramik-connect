@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ArrowUpRight, Clock3, Coffee, Instagram, Mail, MapPin, Phone } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { useKafeSettings } from "@/lib/admin-data";
-import { formatPublicTime, getPublicSchedule } from "@/lib/opening-hours";
+import { formatPublicTime } from "@/lib/opening-hours";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -19,7 +19,6 @@ export const Route = createFileRoute("/contact")({
 
 function ContactPage() {
   const [settings] = useKafeSettings();
-  const schedule = getPublicSchedule(settings);
   const phoneHref = settings.contactPhone.replace(/[^+\d]/g, "");
 
   return (
@@ -99,7 +98,9 @@ function ContactPage() {
               <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
               <div>
                 <div className="font-medium">Horaires de l'atelier</div>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">{schedule.inline}</p>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  Du mardi au dimanche · 9h30–16h30
+                </p>
                 <p className="text-sm leading-6 text-muted-foreground">
                   Cuisine jusqu'à {formatPublicTime(settings.kitchenClosingTime)}.
                 </p>

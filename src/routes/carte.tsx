@@ -20,16 +20,28 @@ export const Route = createFileRoute("/carte")({
 
 const foodPhotos = [
   {
-    src: "/photos/brunch-bowl.webp",
+    src: "/photos/manika/brunch-bowl.jpg",
     alt: "Brunch gourmand servi au Kafé Céramik",
   },
   {
-    src: "/photos/comptoir-gourmand.webp",
+    src: "/photos/manika/brunch-plateau.jpg",
+    alt: "Plateau gourmand du Kafé Céramik",
+  },
+  {
+    src: "/photos/manika/tarte.jpg",
+    alt: "Tarte maison servie au Kafé Céramik",
+  },
+  {
+    src: "/photos/manika/comptoir-desserts.jpg",
     alt: "Comptoir gourmand du Kafé Céramik",
   },
   {
-    src: "/photos/atelier-mains.webp",
-    alt: "Moment créatif autour d'une consommation au Kafé",
+    src: "/photos/manika/gateau.jpg",
+    alt: "Gâteau maison du Kafé Céramik",
+  },
+  {
+    src: "/photos/manika/equipe-service.jpg",
+    alt: "Service au Kafé Céramik",
   },
 ] as const;
 
@@ -47,8 +59,8 @@ function CartePage() {
     <PageShell>
       <PageHeader
         eyebrow="Carte officielle"
-        title="Kafé ou déjeunette"
-        description="Réserve ta venue pour profiter sereinement du Kafé. Sans réservation, l'accueil reste possible selon les places, sans garantie."
+        title="La carte du Kafé"
+        description={`Le Kafé t'accueille du mardi au dimanche. Service continu jusqu'à ${settings.kitchenClosingTime.replace(":", "h")}. Réserve ta table pour garantir ta place.`}
       />
 
       <section className="mx-auto max-w-6xl px-4 py-10">
@@ -76,7 +88,7 @@ function CartePage() {
           <InfoCard
             icon={Coffee}
             title="Sur place"
-            body="La réservation est recommandée pour le café, le brunch comme pour l'atelier."
+            body="Café, bagel, pâtisseries et brunch nécessitent une réservation en période scolaire et le week-end. Sans réservation, tu peux tenter ta chance selon les tables disponibles."
           />
           <InfoCard
             icon={ShoppingBag}
@@ -105,7 +117,7 @@ function CartePage() {
             À savourer entre deux coups de pinceau.
           </h2>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {foodPhotos.map((photo, index) => (
             <img
               key={photo.src}

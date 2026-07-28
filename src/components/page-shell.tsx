@@ -1,22 +1,13 @@
 import type { ReactNode } from "react";
 import { useRouterState } from "@tanstack/react-router";
-import { Coffee } from "lucide-react";
-import { useKafeSettings } from "@/lib/admin-data";
 import { SiteFooter, SiteHeader } from "./site-header";
 import { OrganicShapes } from "./organic-shapes";
 
 export function PageShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const [settings] = useKafeSettings();
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
-      <div className="border-b border-border bg-[#fff8ef] px-4 py-2.5 text-center text-xs font-medium text-foreground sm:text-sm">
-        <span className="inline-flex items-center justify-center gap-2">
-          <Coffee className="h-4 w-4 shrink-0 text-primary" />
-          {settings.consumptionMandatoryNotice} Réserve ta venue pour garantir ta place.
-        </span>
-      </div>
       <main key={pathname} className="page-enter flex-1">
         {children}
       </main>
@@ -66,8 +57,12 @@ export function PageHeader({
   const head = words.join(" ");
 
   return (
-    <section className="relative overflow-hidden bg-[#f5cdd7] grain">
+    <section className="relative overflow-hidden border-b border-ink/15 bg-[#f5c4d2] grain">
       <OrganicShapes />
+      <div
+        aria-hidden
+        className="checker-pink absolute inset-y-0 right-0 hidden w-32 opacity-55 sm:block"
+      />
 
       {/* Floating doodles */}
       <SunDoodle className="absolute right-6 top-6 h-16 w-16 spin-slow opacity-90 sm:right-12 sm:top-10 sm:h-20 sm:w-20" />
@@ -87,8 +82,7 @@ export function PageHeader({
         )}
       </div>
 
-      {/* Wavy bottom edge instead of the checker strip */}
-      <div className="relative -mb-px h-6 w-full wavy-bottom bg-background" />
+      <div className="checker-pink relative h-3 w-full border-t border-ink/15" />
     </section>
   );
 }
