@@ -181,6 +181,78 @@ export type Database = {
         }
         Relationships: []
       }
+      kafe_gift_card_orders: {
+        Row: {
+          amount: number
+          code: string
+          created_at: string
+          currency: string
+          expires_at: string | null
+          hosted_checkout_url: string | null
+          id: string
+          management_token: string
+          paid_at: string | null
+          pdf_email_sent_at: string | null
+          provider_checkout_id: string | null
+          status: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          amount: number
+          code: string
+          created_at?: string
+          currency?: string
+          expires_at?: string | null
+          hosted_checkout_url?: string | null
+          id: string
+          management_token: string
+          paid_at?: string | null
+          pdf_email_sent_at?: string | null
+          provider_checkout_id?: string | null
+          status?: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          amount?: number
+          code?: string
+          created_at?: string
+          currency?: string
+          expires_at?: string | null
+          hosted_checkout_url?: string | null
+          id?: string
+          management_token?: string
+          paid_at?: string | null
+          pdf_email_sent_at?: string | null
+          provider_checkout_id?: string | null
+          status?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      kafe_guestbook_entries: {
+        Row: {
+          id: string
+          sort_order: number | null
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          id: string
+          sort_order?: number | null
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          id?: string
+          sort_order?: number | null
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       kafe_payments: {
         Row: {
           amount: number
