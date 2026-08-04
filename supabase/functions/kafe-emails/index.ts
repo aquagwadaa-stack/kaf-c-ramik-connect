@@ -55,6 +55,26 @@ type SettingsValue = {
   depositFixedAmount?: number;
   manualConfirmationThreshold?: number;
   kitchenClosingTime?: string;
+  giftCardValidityMonths?: number;
+};
+
+type GiftOrderValue = {
+  recipientName: string;
+  recipientEmail: string;
+  senderName: string;
+  message?: string;
+  visual?: "rose" | "tropical" | "confetti";
+};
+
+type GiftOrderRow = {
+  id: string;
+  code: string;
+  value: GiftOrderValue;
+  amount: number;
+  status: "pending" | "paid" | "failed" | "expired";
+  paid_at: string | null;
+  expires_at: string | null;
+  pdf_email_sent_at: string | null;
 };
 
 type EmailAttachment = {
@@ -128,6 +148,13 @@ async function readSettings() {
     "/rest/v1/kafe_settings?select=value&id=eq.main",
   );
   return rows[0]?.value ?? {};
+}
+
+async function readGiftOrder(id: string) {
+  const rows = await api<GiftOrderRow[]>(
+    `/rest/v1/kafe_gift_card_orders?select=id,code,value,amount,status,paid_at,expires_at,pdf_email_sent_at&id=eq.${encodeURIComponent(id)}&limit=1`,
+  );
+  return rows[0] ?? null;
 }
 
 async function adminRecipients(settings: SettingsValue) {
@@ -406,6 +433,180 @@ async function createGroupQuote(row: ReservationRow) {
   };
 }
 
+function drawRoundedPanel(
+  page: ReturnType<PDFDocument["addPage"]>,
+  options: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    radius: number;
+    color: ReturnType<typeof rgb>;
+  },
+) {
+  const { x, y, width, height, radius, color } = options;
+  page.drawRectangle({ x: x + radius, y, width: width - radius * 2, height, color });
+  page.drawRectangle({ x, y: y + radius, width, height: height - radius * 2, color });
+  page.drawCircle({ x: x + radius, y: y + radius, size: radius, color });
+  page.drawCircle({ x: x + width - radius, y: y + radius, size: radius, color });
+  page.drawCircle({ x: x + radius, y: y + height - radius, size: radius, color });
+  page.drawCircle({ x: x + width - radius, y: y + height - radius, size: radius, color });
+}
+
+async function createGiftCardPdf(order: GiftOrderRow) {
+  const pdf = await PDFDocument.create();
+  const page = pdf.addPage([841.89, 595.28]);
+  const regular = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const serif = await pdf.embedFont(StandardFonts.TimesRomanBold);
+  const ink = rgb(0.19, 0.12, 0.11);
+  const brown = rgb(0.56, 0.27, 0.21);
+  const pink = rgb(0.95, 0.78, 0.82);
+  const palePink = rgb(0.98, 0.9, 0.91);
+  const cream = rgb(1, 0.97, 0.91);
+  const green = rgb(0.37, 0.52, 0.35);
+  const blue = rgb(0.49, 0.51, 0.91);
+  const mustard = rgb(0.68, 0.52, 0.22);
+
+  page.drawRectangle({ x: 0, y: 0, width: 841.89, height: 595.28, color: palePink });
+
+  if (order.value.visual === "tropical") {
+    page.drawCircle({ x: 76, y: 526, size: 108, color: green });
+    page.drawCircle({ x: 786, y: 68, size: 102, color: mustard });
+    page.drawCircle({ x: 820, y: 520, size: 70, color: blue });
+  } else if (order.value.visual === "confetti") {
+    const confetti = [brown, green, blue, mustard, pink];
+    for (let index = 0; index < 34; index += 1) {
+      const x = 22 + ((index * 97) % 790);
+      const y = 20 + ((index * 61) % 550);
+      page.drawCircle({ x, y, size: 4 + (index % 3), color: confetti[index % confetti.length] });
+    }
+  } else {
+    const tile = 56;
+    for (let row = 0; row < 11; row += 1) {
+      for (let column = 0; column < 16; column += 1) {
+        if ((row + column) % 2 === 0) {
+          page.drawRectangle({
+            x: column * tile,
+            y: row * tile,
+            width: tile,
+            height: tile,
+            color: pink,
+            opacity: 0.52,
+          });
+        }
+      }
+    }
+  }
+
+  drawRoundedPanel(page, {
+    x: 75,
+    y: 64,
+    width: 692,
+    height: 468,
+    radius: 25,
+    color: cream,
+  });
+
+  page.drawText("KAFE CERAMIK", { x: 110, y: 482, size: 18, font: bold, color: brown });
+  page.drawText("DEJEUNETTE & CREATION", {
+    x: 110,
+    y: 463,
+    size: 8,
+    font: regular,
+    color: green,
+  });
+  page.drawText("CARTE CADEAU", { x: 110, y: 398, size: 42, font: serif, color: ink });
+  page.drawText(`${Math.round(order.amount)} EUR`, {
+    x: 585,
+    y: 400,
+    size: 34,
+    font: serif,
+    color: brown,
+  });
+
+  page.drawText("POUR", { x: 112, y: 345, size: 9, font: bold, color: green });
+  page.drawText(order.value.recipientName, { x: 112, y: 315, size: 22, font: bold, color: ink });
+  page.drawText("DE LA PART DE", { x: 112, y: 270, size: 9, font: bold, color: green });
+  page.drawText(order.value.senderName, { x: 112, y: 240, size: 18, font: regular, color: ink });
+
+  if (order.value.message?.trim()) {
+    const compactMessage = order.value.message.trim().slice(0, 170);
+    const words = compactMessage.split(/\s+/);
+    const lines = words.reduce<string[]>((result, word) => {
+      const currentLine = result.at(-1) ?? "";
+      const candidate = currentLine ? `${currentLine} ${word}` : word;
+
+      if (regular.widthOfTextAtSize(candidate, 11) <= 590) {
+        if (result.length === 0) result.push(candidate);
+        else result[result.length - 1] = candidate;
+      } else {
+        result.push(word);
+      }
+
+      return result;
+    }, []);
+
+    lines.slice(0, 3).forEach((line, index) => {
+      page.drawText(line, {
+        x: 112,
+        y: 192 - index * 15,
+        size: 11,
+        font: regular,
+        color: ink,
+      });
+    });
+  }
+
+  page.drawLine({ start: { x: 112, y: 145 }, end: { x: 728, y: 145 }, color: pink, thickness: 2 });
+  page.drawText(`Code : ${order.code}`, { x: 112, y: 116, size: 11, font: bold, color: brown });
+  page.drawText(
+    `Valable jusqu'au ${new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(order.expires_at ?? Date.now()))}`,
+    { x: 485, y: 116, size: 10, font: regular, color: ink },
+  );
+  page.drawText("Montant utilisable librement sur l'ensemble des prestations du Kafe Ceramik.", {
+    x: 112,
+    y: 91,
+    size: 8,
+    font: regular,
+    color: ink,
+  });
+
+  const bytes = await pdf.save();
+  return {
+    filename: `carte-cadeau-${order.code}.pdf`,
+    content: bytesToBase64(bytes),
+  } satisfies EmailAttachment;
+}
+
+async function sendGiftCard(order: GiftOrderRow, force = false) {
+  if (order.status !== "paid") return { delivered: false, reason: "Paiement non confirme." };
+  if (order.pdf_email_sent_at && !force) return { delivered: true, alreadySent: true };
+
+  const attachment = await createGiftCardPdf(order);
+  const delivered = await sendEmail(
+    [order.value.recipientEmail],
+    `Ta carte cadeau Kafe Ceramik - ${Math.round(order.amount)} EUR`,
+    shell(
+      "Une parenthese creative t'attend",
+      `<p>Bonjour ${escapeHtml(order.value.recipientName)},</p><p><strong>${escapeHtml(order.value.senderName)}</strong> t'offre une carte cadeau Kafe Ceramik d'une valeur de <strong>${escapeHtml(formatMoney(order.amount))}</strong>.</p>${order.value.message?.trim() ? `<div style="margin:18px 0;padding:16px;background:#f4dddd;border-radius:14px">${escapeHtml(order.value.message)}</div>` : ""}<p>Ta carte personnalisee est jointe a cet e-mail au format PDF. Elle est valable jusqu'au <strong>${escapeHtml(new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "long", year: "numeric" }).format(new Date(order.expires_at ?? Date.now())))}</strong> et son montant peut etre utilise librement sur l'ensemble des prestations du Kafe Ceramik.</p><p>Code de la carte : <strong>${escapeHtml(order.code)}</strong></p>`,
+    ),
+    [attachment],
+  );
+
+  if (delivered) {
+    await api<void>(`/rest/v1/kafe_gift_card_orders?id=eq.${encodeURIComponent(order.id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ pdf_email_sent_at: new Date().toISOString() }),
+    });
+  }
+  return {
+    delivered,
+    reason: delivered ? undefined : "Le fournisseur email reste a configurer.",
+  };
+}
+
 function shell(title: string, content: string) {
   return `<!doctype html>
   <html lang="fr"><body style="margin:0;background:#f6e7e7;font-family:Arial,sans-serif;color:#302525">
@@ -639,6 +840,7 @@ Deno.serve(async (request) => {
     const body = (await request.json()) as {
       action?: string;
       reservationId?: string;
+      giftOrderId?: string;
       managementToken?: string;
       message?: string;
       siteUrl?: string;
@@ -646,6 +848,18 @@ Deno.serve(async (request) => {
     const action = body.action ?? "";
     const siteUrl = (body.siteUrl ?? "https://demo-kafe-ceramik.lovable.app").replace(/\/$/, "");
     const settings = await readSettings();
+
+    if (action === "gift-card-paid") {
+      if (!body.giftOrderId) return json({ error: "Missing giftOrderId" }, 400);
+      const authorization = request.headers.get("Authorization") ?? "";
+      const internalCall = authorization === `Bearer ${serviceRoleKey}`;
+      if (!internalCall && !(await requireAdmin(request)))
+        return json({ error: "Unauthorized" }, 401);
+      const order = await readGiftOrder(body.giftOrderId);
+      if (!order) return json({ error: "Gift card order not found" }, 404);
+      const result = await sendGiftCard(order, !internalCall);
+      return json({ ok: true, ...result });
+    }
 
     if (action === "process-reminders") {
       const cronAllowed =

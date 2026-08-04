@@ -84,5 +84,9 @@ Chaque membre utilise son propre email et son propre mot de passe. Les comptes a
   - `SUMUP_MERCHANT_CODE` : code marchand du compte qui encaisse les acomptes.
   - declarer l'URL de la fonction `sumup-checkout` comme webhook SumUp.
   - activer ensuite `sumupPaymentsEnabled` dans les reglages uniquement apres un paiement test reussi.
+  - le meme compte SumUp gere les cartes cadeaux : apres le test du paiement, activer
+    `giftCardPaymentsEnabled` dans l'onglet Cartes cadeaux.
+  - un achat de carte cadeau cree un code unique, une validite de six mois et envoie le PDF
+    personnalise au beneficiaire. Les achats et les renvois du PDF sont disponibles dans l'admin.
 - Le manifeste, le service worker et `kafe-push` permettent d'installer le site comme une application
   et d'abonner individuellement les telephones de l'equipe aux notifications de reservations.

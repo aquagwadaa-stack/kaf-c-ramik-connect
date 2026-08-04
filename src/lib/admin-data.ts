@@ -571,29 +571,6 @@ export interface GiftCardOption {
   description: string;
   visible: boolean;
   visual: GiftCardVisual;
-  paymentUrl?: string;
-}
-
-export interface VoteEntry {
-  id: string;
-  title: string;
-  artistName: string;
-  description: string;
-  imageUrl?: string;
-  imageDataUrl?: string;
-  imageName?: string;
-  visible: boolean;
-}
-
-export interface VoteOfMonthSettings {
-  enabled: boolean;
-  campaignId: string;
-  title: string;
-  introduction: string;
-  startsAt: string;
-  endsAt: string;
-  showResults: boolean;
-  entries: VoteEntry[];
 }
 
 export interface KafeSettings {
@@ -635,17 +612,16 @@ export interface KafeSettings {
   pinterestUrl: string;
   guestbookEnabled: boolean;
   googleReviewUrl: string;
-  giftCardPaymentUrl: string;
   giftCardContactEmail: string;
+  giftCardPaymentsEnabled: boolean;
+  giftCardValidityMonths: number;
   giftCardCustomEnabled: boolean;
   giftCardCustomMin: number;
-  giftCardCustomMax: number;
   giftCardOptions: GiftCardOption[];
   maximumVisitHours: number;
   sharedTableNotice: string;
   takeawayNotice: string;
   consumptionMandatoryNotice: string;
-  voteOfMonth: VoteOfMonthSettings;
   groupCeramicRateMin: number;
   groupCeramicRateMax: number;
   groupMealRateMin: number;
@@ -655,7 +631,7 @@ export interface KafeSettings {
 }
 
 export const settingsSeed: KafeSettings = {
-  configurationVersion: 10,
+  configurationVersion: 11,
   reservationsEnabled: true,
   reservationPauseMessage: "",
   depositThreshold: 10,
@@ -722,34 +698,35 @@ export const settingsSeed: KafeSettings = {
   adminNotificationEmail: "ceramikkafe@gmail.com",
   pinterestUrl: "",
   guestbookEnabled: true,
-  googleReviewUrl: "",
-  giftCardPaymentUrl: "",
+  googleReviewUrl: "https://share.google/s8MOPkUla7xtu7zQL",
   giftCardContactEmail: "ceramikkafe@gmail.com",
+  giftCardPaymentsEnabled: false,
+  giftCardValidityMonths: 6,
   giftCardCustomEnabled: true,
   giftCardCustomMin: 20,
-  giftCardCustomMax: 200,
   giftCardOptions: [
     {
       id: "petit-plaisir",
-      title: "Un petit plaisir",
-      amount: 25,
-      description: "Une attention pour participer à une pause gourmande ou à une petite création.",
+      title: "Le Petit Plaisir",
+      amount: 35,
+      description:
+        "Une boisson signature, chaude ou fraîche, et une céramique à peindre jusqu'à 25 €.",
       visible: true,
       visual: "rose",
     },
     {
-      id: "brunch-creation",
-      title: "Brunch + belle pièce",
-      amount: 40,
-      description: "Un joli budget à utiliser entre gourmandise et céramique.",
+      id: "joli-moment",
+      title: "Le Joli Moment",
+      amount: 60,
+      description: "Une boisson signature, un brunch et une céramique à peindre jusqu'à 35 €.",
       visible: true,
       visual: "tropical",
     },
     {
-      id: "grand-moment",
-      title: "Grand moment créatif",
-      amount: 60,
-      description: "Pour choisir une pièce plus importante et profiter pleinement du Kafé.",
+      id: "parenthese-parfaite",
+      title: "La Parenthèse Parfaite",
+      amount: 80,
+      description: "Une boisson signature, un brunch et une céramique à peindre jusqu'à 55 €.",
       visible: true,
       visual: "confetti",
     },
@@ -760,42 +737,6 @@ export const settingsSeed: KafeSettings = {
   takeawayNotice: "Pour une commande à emporter, appelle directement le Kafé.",
   consumptionMandatoryNotice:
     "Une consommation sur place est obligatoire pour chaque personne participant à l'atelier.",
-  voteOfMonth: {
-    enabled: false,
-    campaignId: "vote-2026-07",
-    title: "Vote du mois",
-    introduction:
-      "Découvre les créations sélectionnées par le Kafé et vote pour celle qui te fait le plus vibrer.",
-    startsAt: "2026-07-01",
-    endsAt: "2026-07-31",
-    showResults: true,
-    entries: [
-      {
-        id: "vote-demo-tortue",
-        title: "Évasion tropicale",
-        artistName: "Artiste du Kafé",
-        description: "Une assiette fleurie inspirée de la Guadeloupe.",
-        imageUrl: "/creations/assiette-tortue.webp",
-        visible: true,
-      },
-      {
-        id: "vote-demo-feuillage",
-        title: "Feuillage bleu",
-        artistName: "Artiste du Kafé",
-        description: "Une tasse délicate peinte feuille après feuille.",
-        imageUrl: "/creations/tasse-feuillage.webp",
-        visible: true,
-      },
-      {
-        id: "vote-demo-bateau",
-        title: "Au large",
-        artistName: "Artiste du Kafé",
-        description: "Une grande pièce marine travaillée dans les bleus.",
-        imageUrl: "/creations/assiette-bateau.webp",
-        visible: true,
-      },
-    ],
-  },
   groupCeramicRateMin: 18,
   groupCeramicRateMax: 80,
   groupMealRateMin: 15,
@@ -840,11 +781,6 @@ function normalizeKafeSettings(value?: Partial<KafeSettings> | null): KafeSettin
       ...settingsSeed.reservationFieldRequirements,
       ...value?.reservationFieldRequirements,
     },
-    voteOfMonth: {
-      ...settingsSeed.voteOfMonth,
-      ...value?.voteOfMonth,
-      entries: value?.voteOfMonth?.entries ?? settingsSeed.voteOfMonth.entries,
-    },
     giftCardOptions: value?.giftCardOptions ?? settingsSeed.giftCardOptions,
   };
 
@@ -859,6 +795,10 @@ function normalizeKafeSettings(value?: Partial<KafeSettings> | null): KafeSettin
       depositFixedAmount: settingsSeed.depositFixedAmount,
       reservationFieldRequirements: settingsSeed.reservationFieldRequirements,
       reservationConditionsText: settingsSeed.reservationConditionsText,
+      giftCardOptions: settingsSeed.giftCardOptions,
+      giftCardCustomMin: settingsSeed.giftCardCustomMin,
+      giftCardValidityMonths: settingsSeed.giftCardValidityMonths,
+      googleReviewUrl: value?.googleReviewUrl || settingsSeed.googleReviewUrl,
       contactPhone: value?.contactPhone ?? settingsSeed.contactPhone,
       contactAddress: value?.contactAddress ?? settingsSeed.contactAddress,
       contactMapUrl: value?.contactMapUrl ?? settingsSeed.contactMapUrl,

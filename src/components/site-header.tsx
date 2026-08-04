@@ -10,7 +10,6 @@ const baseLinks = [
   { to: "/histoire", label: "Le Kafé" },
   { to: "/brunch", label: "Déroulement" },
   { to: "/creations", label: "Créations" },
-  { to: "/vote-du-mois", label: "Vote du mois" },
   { to: "/guide", label: "Guide" },
   { to: "/carte", label: "Carte" },
   { to: "/objets", label: "Objets" },

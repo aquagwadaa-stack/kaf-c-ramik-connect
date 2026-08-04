@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as VoteDuMoisRouteImport } from './routes/vote-du-mois'
 import { Route as ReserverRouteImport } from './routes/reserver'
 import { Route as ReservationRouteImport } from './routes/reservation'
 import { Route as ObjetsRouteImport } from './routes/objets'
@@ -25,11 +24,6 @@ import { Route as BrunchRouteImport } from './routes/brunch'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 
-const VoteDuMoisRoute = VoteDuMoisRouteImport.update({
-  id: '/vote-du-mois',
-  path: '/vote-du-mois',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ReserverRoute = ReserverRouteImport.update({
   id: '/reserver',
   path: '/reserver',
@@ -116,7 +110,6 @@ export interface FileRoutesByFullPath {
   '/objets': typeof ObjetsRoute
   '/reservation': typeof ReservationRoute
   '/reserver': typeof ReserverRoute
-  '/vote-du-mois': typeof VoteDuMoisRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -133,7 +126,6 @@ export interface FileRoutesByTo {
   '/objets': typeof ObjetsRoute
   '/reservation': typeof ReservationRoute
   '/reserver': typeof ReserverRoute
-  '/vote-du-mois': typeof VoteDuMoisRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -151,7 +143,6 @@ export interface FileRoutesById {
   '/objets': typeof ObjetsRoute
   '/reservation': typeof ReservationRoute
   '/reserver': typeof ReserverRoute
-  '/vote-du-mois': typeof VoteDuMoisRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -170,7 +161,6 @@ export interface FileRouteTypes {
     | '/objets'
     | '/reservation'
     | '/reserver'
-    | '/vote-du-mois'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -187,7 +177,6 @@ export interface FileRouteTypes {
     | '/objets'
     | '/reservation'
     | '/reserver'
-    | '/vote-du-mois'
   id:
     | '__root__'
     | '/'
@@ -204,7 +193,6 @@ export interface FileRouteTypes {
     | '/objets'
     | '/reservation'
     | '/reserver'
-    | '/vote-du-mois'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -222,18 +210,10 @@ export interface RootRouteChildren {
   ObjetsRoute: typeof ObjetsRoute
   ReservationRoute: typeof ReservationRoute
   ReserverRoute: typeof ReserverRoute
-  VoteDuMoisRoute: typeof VoteDuMoisRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/vote-du-mois': {
-      id: '/vote-du-mois'
-      path: '/vote-du-mois'
-      fullPath: '/vote-du-mois'
-      preLoaderRoute: typeof VoteDuMoisRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/reserver': {
       id: '/reserver'
       path: '/reserver'
@@ -350,7 +330,6 @@ const rootRouteChildren: RootRouteChildren = {
   ObjetsRoute: ObjetsRoute,
   ReservationRoute: ReservationRoute,
   ReserverRoute: ReserverRoute,
-  VoteDuMoisRoute: VoteDuMoisRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -83,21 +83,6 @@ function CreationsPage() {
         )}
       </section>
 
-      <section className="border-y border-ink/15 bg-[#fff0c7] px-4 py-10">
-        <div className="mx-auto flex max-w-6xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-sm font-semibold text-primary">Concours du mois</div>
-            <h2 className="mt-2 font-display text-3xl">Quelle création mérite ton vote ?</h2>
-          </div>
-          <Link
-            to="/vote-du-mois"
-            className="inline-flex w-fit items-center gap-2 rounded-full bg-primary px-5 py-3 font-semibold text-primary-foreground"
-          >
-            Découvrir le vote <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-      </section>
-
       <section className="mx-auto max-w-6xl px-4 py-6">
         <div className="grid gap-4 rounded-3xl border border-border bg-card p-5 sm:grid-cols-3 sm:p-6">
           {ideas.map((item) => {

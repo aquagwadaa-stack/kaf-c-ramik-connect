@@ -25,6 +25,7 @@ import {
   LayoutDashboard,
   LockKeyhole,
   LogOut,
+  Mail,
   MessageSquareHeart,
   PackageOpen,
   Plus,
@@ -34,7 +35,6 @@ import {
   ShieldCheck,
   Smartphone,
   Trash2,
-  Trophy,
   UploadCloud,
   UserCog,
   UserPlus,
@@ -78,10 +78,10 @@ import {
   type ScheduleRule,
   type SeatingArea,
   type SeatingZone,
-  type VoteEntry,
   type WaiverSignature,
 } from "@/lib/admin-data";
 import { useAdminGuestbookEntries, type GuestbookEntry } from "@/lib/guestbook";
+import { resendGiftCardPdf, useAdminGiftCardOrders, type GiftCardOrder } from "@/lib/gift-cards";
 import { storeDocumentFile } from "@/lib/document-files";
 import {
   deleteRow,
@@ -116,7 +116,6 @@ type AdminTab =
   | "waivers"
   | "objects"
   | "creations"
-  | "vote"
   | "guestbook"
   | "giftcards"
   | "documents"
@@ -139,7 +138,6 @@ const tabs: { id: AdminTab; label: string; icon: LucideIcon }[] = [
   { id: "waivers", label: "Décharges", icon: ClipboardSignature },
   { id: "objects", label: "Objets", icon: PackageOpen },
   { id: "creations", label: "Créations", icon: ImageIcon },
-  { id: "vote", label: "Vote du mois", icon: Trophy },
   { id: "guestbook", label: "Livre d'or", icon: MessageSquareHeart },
   { id: "giftcards", label: "Cartes cadeaux", icon: Gift },
   { id: "documents", label: "Documents", icon: BookOpenText },
@@ -610,7 +608,6 @@ function AdminWorkspace({
         {tab === "creations" && (
           <CreationsPanel creations={creations} saveCreations={saveCreations} />
         )}
-        {tab === "vote" && <VotePanel settings={settings} saveSettings={saveSettings} />}
         {tab === "guestbook" && (
           <GuestbookPanel
             entries={guestbookEntries}
@@ -2778,6 +2775,9 @@ function GiftCardsPanel({
   settings: KafeSettings;
   saveSettings: (next: KafeSettings) => void;
 }) {
+  const { orders, loading, refresh } = useAdminGiftCardOrders();
+  const [resendingId, setResendingId] = useState("");
+
   function update(patch: Partial<KafeSettings>) {
     saveSettings({ ...settings, ...patch });
   }
@@ -2801,7 +2801,6 @@ function GiftCardsPanel({
           description: "Décrivez ce que ce budget permet d'imaginer au Kafé.",
           visible: true,
           visual: "rose",
-          paymentUrl: "",
         },
       ],
     });
@@ -2810,45 +2809,47 @@ function GiftCardsPanel({
   return (
     <Panel
       title="Cartes cadeaux"
-      desc="Configurez les montants suggérés, les textes, les visuels et les liens de paiement SumUp."
+      desc="Configurez l'offre publique et retrouvez les cartes achetées après leur paiement SumUp."
     >
       <div className="grid gap-4 md:grid-cols-2">
         <Field
-          label="Email qui reçoit les détails de personnalisation"
+          label="Email de contact affiché si le paiement est indisponible"
           value={settings.giftCardContactEmail}
           onChange={(giftCardContactEmail) => update({ giftCardContactEmail })}
         />
-        <Field
-          label="Lien SumUp général ou montant libre"
-          value={settings.giftCardPaymentUrl}
-          onChange={(giftCardPaymentUrl) => update({ giftCardPaymentUrl })}
+        <NumberField
+          label="Durée de validité"
+          value={settings.giftCardValidityMonths}
+          suffix="mois"
+          onChange={(giftCardValidityMonths) =>
+            update({ giftCardValidityMonths: Math.max(1, giftCardValidityMonths) })
+          }
         />
         <ToggleRow
           label="Proposer un montant libre"
           checked={settings.giftCardCustomEnabled}
           onChange={(giftCardCustomEnabled) => update({ giftCardCustomEnabled })}
         />
-        <div className="grid grid-cols-2 gap-3">
-          <NumberField
-            label="Minimum libre"
-            value={settings.giftCardCustomMin}
-            suffix="EUR"
-            onChange={(giftCardCustomMin) => update({ giftCardCustomMin })}
-          />
-          <NumberField
-            label="Maximum libre"
-            value={settings.giftCardCustomMax}
-            suffix="EUR"
-            onChange={(giftCardCustomMax) => update({ giftCardCustomMax })}
-          />
-        </div>
+        <NumberField
+          label="Montant libre minimum"
+          value={settings.giftCardCustomMin}
+          suffix="EUR"
+          onChange={(giftCardCustomMin) =>
+            update({ giftCardCustomMin: Math.max(1, giftCardCustomMin) })
+          }
+        />
+        <ToggleRow
+          label="Activer le paiement SumUp et l'envoi automatique du PDF"
+          checked={settings.giftCardPaymentsEnabled}
+          onChange={(giftCardPaymentsEnabled) => update({ giftCardPaymentsEnabled })}
+        />
       </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
         <div>
           <h3 className="font-display text-xl">Suggestions proposées</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Chaque formule peut avoir son propre lien SumUp à montant fixe.
+            Les exemples restent indicatifs : le montant est utilisable librement au Kafé.
           </p>
         </div>
         <div className="flex gap-2">
@@ -2889,7 +2890,7 @@ function GiftCardsPanel({
               value={option.description}
               onChange={(description) => updateOption(option.id, { description })}
             />
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div className="mt-3">
               <label>
                 <span className="mb-1.5 block text-sm font-medium">Visuel par défaut</span>
                 <select
@@ -2903,14 +2904,9 @@ function GiftCardsPanel({
                 >
                   <option value="rose">Rose Kafé</option>
                   <option value="tropical">Tropical</option>
-                  <option value="confetti">Confettis</option>
+                  <option value="confetti">Fête colorée</option>
                 </select>
               </label>
-              <Field
-                label="Lien SumUp de cette formule"
-                value={option.paymentUrl ?? ""}
-                onChange={(paymentUrl) => updateOption(option.id, { paymentUrl })}
-              />
             </div>
             <div className="mt-4 flex items-center justify-between gap-3">
               <ToggleRow
@@ -2937,220 +2933,107 @@ function GiftCardsPanel({
         ))}
       </div>
 
+      <div className="mt-6 border-t border-border pt-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-xl">Cartes achetées</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Le code, la validité et l'envoi du PDF sont enregistrés après paiement.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            className="rounded-full border border-border bg-background px-4 py-2 text-sm hover:bg-secondary"
+          >
+            Actualiser
+          </button>
+        </div>
+
+        <div className="mt-4 grid gap-3">
+          {loading && <EmptyState text="Chargement des cartes cadeaux..." />}
+          {!loading && orders.length === 0 && (
+            <EmptyState text="Aucune carte cadeau achetée pour le moment." />
+          )}
+          {orders.map((order) => (
+            <GiftCardOrderCard
+              key={order.id}
+              order={order}
+              resending={resendingId === order.id}
+              onResend={async () => {
+                setResendingId(order.id);
+                try {
+                  await resendGiftCardPdf(order.id);
+                  await refresh();
+                } finally {
+                  setResendingId("");
+                }
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
       <div className="mt-5 rounded-2xl border border-mustard/40 bg-mustard/10 p-4 text-sm leading-6">
-        L'envoi automatique du PDF après paiement sera finalisé pendant la connexion technique à
-        SumUp. Les montants, textes et visuels sont déjà prêts côté site.
+        N'activez le paiement qu'après le test du compte SumUp du Kafé. Une fois activé, chaque
+        paiement génère une carte personnalisée valable {settings.giftCardValidityMonths} mois et
+        l'envoie automatiquement par email.
       </div>
     </Panel>
   );
 }
 
-function VotePanel({
-  settings,
-  saveSettings,
+function GiftCardOrderCard({
+  order,
+  resending,
+  onResend,
 }: {
-  settings: KafeSettings;
-  saveSettings: (next: KafeSettings) => void;
+  order: GiftCardOrder;
+  resending: boolean;
+  onResend: () => Promise<void>;
 }) {
-  const vote = settings.voteOfMonth;
-  const [results, setResults] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    if (!isSupabaseConfigured() || !vote.campaignId) {
-      setResults({});
-      return;
-    }
-    callRpc<{ entry_id: string; vote_count: number }[]>(
-      "get_admin_kafe_vote_results",
-      { p_campaign_id: vote.campaignId },
-      true,
-    )
-      .then((rows) =>
-        setResults(
-          Object.fromEntries(rows.map((row) => [row.entry_id, Number(row.vote_count) || 0])),
-        ),
-      )
-      .catch(() => setResults({}));
-  }, [vote.campaignId, vote.entries.length]);
-
-  function updateVote(patch: Partial<KafeSettings["voteOfMonth"]>) {
-    saveSettings({ ...settings, voteOfMonth: { ...vote, ...patch } });
-  }
-
-  function updateEntry(id: string, patch: Partial<VoteEntry>) {
-    updateVote({
-      entries: vote.entries.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)),
-    });
-  }
-
-  function addEntry() {
-    updateVote({
-      entries: [
-        ...vote.entries,
-        {
-          id: `vote-entry-${Date.now()}`,
-          title: "Nouvelle création",
-          artistName: "Prénom de l'artiste",
-          description: "",
-          visible: true,
-        },
-      ],
-    });
-  }
-
-  async function uploadEntryImage(id: string, file?: File) {
-    if (!file) return;
-    const stored = await storeDocumentFile(`vote-du-mois/${vote.campaignId}/${id}`, file);
-    updateEntry(id, {
-      imageUrl: stored.attachmentUrl,
-      imageDataUrl: stored.attachmentDataUrl,
-      imageName: stored.attachmentName,
-    });
-  }
-
-  const totalVotes = Object.values(results).reduce((total, count) => total + count, 0);
-
+  const labels: Record<GiftCardOrder["status"], string> = {
+    pending: "Paiement en attente",
+    paid: "Payée",
+    failed: "Échec du paiement",
+    expired: "Paiement expiré",
+  };
   return (
-    <Panel
-      title="Vote du mois"
-      desc="Préparez la sélection, ouvrez le vote pendant une période précise et suivez les résultats."
-    >
-      <div className="grid gap-4 md:grid-cols-2">
-        <ToggleRow
-          label="Afficher et ouvrir la page de vote"
-          checked={vote.enabled}
-          onChange={(enabled) => updateVote({ enabled })}
-        />
-        <ToggleRow
-          label="Afficher les résultats après le vote"
-          checked={vote.showResults}
-          onChange={(showResults) => updateVote({ showResults })}
-        />
-        <Field
-          label="Titre de l'édition"
-          value={vote.title}
-          onChange={(title) => updateVote({ title })}
-        />
-        <Field
-          label="Identifiant interne de l'édition"
-          value={vote.campaignId}
-          onChange={(campaignId) => updateVote({ campaignId })}
-        />
-        <DateField
-          label="Ouverture"
-          value={vote.startsAt}
-          onChange={(startsAt) => updateVote({ startsAt })}
-        />
-        <DateField
-          label="Clôture"
-          value={vote.endsAt}
-          onChange={(endsAt) => updateVote({ endsAt })}
-        />
-      </div>
-      <TextareaField
-        label="Introduction de la page"
-        value={vote.introduction}
-        onChange={(introduction) => updateVote({ introduction })}
-      />
-
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
+    <article className="rounded-2xl border border-border bg-background p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="font-display text-xl">Créations en compétition</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {vote.entries.length} création{vote.entries.length > 1 ? "s" : ""} · {totalVotes} vote
-            {totalVotes > 1 ? "s" : ""}
-          </p>
+          <div className="font-medium">
+            {order.code} · {order.amount} €
+          </div>
+          <div className="mt-1 text-sm text-muted-foreground">
+            Pour {order.recipientName} · {order.recipientEmail}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            Achetée le {new Date(order.createdAt).toLocaleDateString("fr-FR")}
+            {order.expiresAt &&
+              ` · valable jusqu'au ${new Date(order.expiresAt).toLocaleDateString("fr-FR")}`}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            to="/vote-du-mois"
-            className="rounded-full border border-border bg-background px-4 py-2 text-sm hover:bg-secondary"
-          >
-            Voir la page
-          </Link>
+        <InfoPill tone={order.status === "paid" ? "success" : undefined}>
+          {labels[order.status]}
+        </InfoPill>
+      </div>
+      {order.status === "paid" && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <span className="text-xs text-muted-foreground">
+            {order.pdfEmailSentAt ? "PDF envoyé" : "PDF à envoyer"}
+          </span>
           <button
             type="button"
-            onClick={addEntry}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground"
+            disabled={resending}
+            onClick={() => void onResend()}
+            className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-xs hover:bg-secondary disabled:opacity-45"
           >
-            <Plus className="h-4 w-4" /> Ajouter une création
+            <Mail className="h-3.5 w-3.5" /> {resending ? "Envoi..." : "Renvoyer le PDF"}
           </button>
         </div>
-      </div>
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        {vote.entries.map((entry) => (
-          <div key={entry.id} className="rounded-2xl border border-border bg-background p-4">
-            <div className="grid gap-4 sm:grid-cols-[130px_1fr]">
-              <div>
-                {entry.imageDataUrl || entry.imageUrl ? (
-                  <img
-                    src={entry.imageDataUrl || entry.imageUrl}
-                    alt={entry.title}
-                    className="aspect-[4/5] w-full rounded-xl object-cover"
-                  />
-                ) : (
-                  <div className="grid aspect-[4/5] place-items-center rounded-xl bg-secondary">
-                    <ImageIcon className="h-7 w-7 text-muted-foreground" />
-                  </div>
-                )}
-                <label className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-full border border-border px-3 py-2 text-xs hover:bg-secondary">
-                  <UploadCloud className="h-3.5 w-3.5" /> Photo
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="sr-only"
-                    onChange={async (event) => {
-                      await uploadEntryImage(entry.id, event.currentTarget.files?.[0]);
-                      event.currentTarget.value = "";
-                    }}
-                  />
-                </label>
-              </div>
-              <div className="grid gap-3">
-                <Field
-                  label="Nom de la création"
-                  value={entry.title}
-                  onChange={(title) => updateEntry(entry.id, { title })}
-                />
-                <Field
-                  label="Artiste"
-                  value={entry.artistName}
-                  onChange={(artistName) => updateEntry(entry.id, { artistName })}
-                />
-                <TextareaField
-                  label="Description (facultatif)"
-                  value={entry.description}
-                  onChange={(description) => updateEntry(entry.id, { description })}
-                />
-              </div>
-            </div>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="rounded-full bg-secondary px-3 py-1 text-sm font-medium">
-                {results[entry.id] ?? 0} vote{(results[entry.id] ?? 0) > 1 ? "s" : ""}
-              </div>
-              <div className="flex items-center gap-2">
-                <ToggleRow
-                  label="Visible"
-                  checked={entry.visible}
-                  onChange={(visible) => updateEntry(entry.id, { visible })}
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateVote({ entries: vote.entries.filter((item) => item.id !== entry.id) })
-                  }
-                  className="grid h-10 w-10 place-items-center rounded-full border border-destructive/30 text-destructive hover:bg-destructive/10"
-                  title="Supprimer"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </Panel>
+      )}
+    </article>
   );
 }
 
