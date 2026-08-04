@@ -564,7 +564,7 @@ async function createGiftCardPdf(order: GiftOrderRow) {
     `Valable jusqu'au ${new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(order.expires_at ?? Date.now()))}`,
     { x: 485, y: 116, size: 10, font: regular, color: ink },
   );
-  page.drawText("Montant utilisable librement sur l'ensemble des prestations du Kafe Ceramik.", {
+  page.drawText("Montant utilisable librement au Kafe Ceramik ou chez Mala Madre.", {
     x: 112,
     y: 91,
     size: 8,
@@ -589,7 +589,7 @@ async function sendGiftCard(order: GiftOrderRow, force = false) {
     `Ta carte cadeau Kafe Ceramik - ${Math.round(order.amount)} EUR`,
     shell(
       "Une parenthese creative t'attend",
-      `<p>Bonjour ${escapeHtml(order.value.recipientName)},</p><p><strong>${escapeHtml(order.value.senderName)}</strong> t'offre une carte cadeau Kafe Ceramik d'une valeur de <strong>${escapeHtml(formatMoney(order.amount))}</strong>.</p>${order.value.message?.trim() ? `<div style="margin:18px 0;padding:16px;background:#f4dddd;border-radius:14px">${escapeHtml(order.value.message)}</div>` : ""}<p>Ta carte personnalisee est jointe a cet e-mail au format PDF. Elle est valable jusqu'au <strong>${escapeHtml(new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "long", year: "numeric" }).format(new Date(order.expires_at ?? Date.now())))}</strong> et son montant peut etre utilise librement sur l'ensemble des prestations du Kafe Ceramik.</p><p>Code de la carte : <strong>${escapeHtml(order.code)}</strong></p>`,
+      `<p>Bonjour ${escapeHtml(order.value.recipientName)},</p><p><strong>${escapeHtml(order.value.senderName)}</strong> t'offre une carte cadeau Kafe Ceramik d'une valeur de <strong>${escapeHtml(formatMoney(order.amount))}</strong>.</p>${order.value.message?.trim() ? `<div style="margin:18px 0;padding:16px;background:#f4dddd;border-radius:14px">${escapeHtml(order.value.message)}</div>` : ""}<p>Ta carte personnalisee est jointe a cet e-mail au format PDF. Elle est valable jusqu'au <strong>${escapeHtml(new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "long", year: "numeric" }).format(new Date(order.expires_at ?? Date.now())))}</strong> et son montant peut etre utilise librement au Kafe Ceramik ou chez Mala Madre.</p><p>Code de la carte : <strong>${escapeHtml(order.code)}</strong></p>`,
     ),
     [attachment],
   );

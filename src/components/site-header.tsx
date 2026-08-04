@@ -59,22 +59,31 @@ export function SiteHeader() {
 
   return (
     <header
-      className={`sticky top-0 z-40 border-b transition-all duration-300 ${
+      className={`sticky top-0 z-40 border-b-2 border-ink transition-all duration-300 ${
         scrolled
-          ? "border-border/70 bg-background/90 shadow-sm shadow-ink/5 backdrop-blur-md"
-          : "border-transparent bg-background/60 backdrop-blur"
+          ? "bg-[#fffbd6]/95 shadow-[0_4px_0_rgba(47,22,32,0.12)] backdrop-blur-md"
+          : "bg-[#fffbd6]/92 backdrop-blur"
       }`}
     >
+      <div className="grid h-1.5 grid-cols-5" aria-hidden>
+        <span className="bg-[#cf2c86]" />
+        <span className="bg-[#f4da45]" />
+        <span className="bg-[#79c6e8]" />
+        <span className="bg-[#dbea4c]" />
+        <span className="bg-[#ee7832]" />
+      </div>
       <div
         className={`mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 transition-all duration-300 ${
           scrolled ? "py-2 sm:py-2.5" : "py-3 sm:py-4"
         }`}
       >
         <Link to="/" className="group flex min-w-0 items-center gap-2 press">
-          <span className="h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-ink bg-card transition-transform duration-300 group-hover:rotate-[-6deg] group-hover:scale-105">
+          <span className="h-11 w-11 shrink-0 overflow-hidden rounded-full border-2 border-ink bg-card shadow-[2px_2px_0_#2f1620] transition-transform duration-300 group-hover:rotate-[-6deg] group-hover:scale-105">
             <img src="/brand/kafe-ceramik-logo.jpg" alt="" className="h-full w-full object-cover" />
           </span>
-          <span className="whitespace-nowrap font-display text-base sm:text-lg">Kafé Céramik</span>
+          <span className="whitespace-nowrap font-display text-base text-ink sm:text-xl">
+            Kafé Céramik
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex">
@@ -97,7 +106,7 @@ export function SiteHeader() {
             >
               Plus <ChevronDown className="h-3.5 w-3.5" />
             </button>
-            <div className="invisible absolute right-0 top-full z-50 mt-2 w-48 translate-y-1 rounded-2xl border border-border bg-card p-2 opacity-0 shadow-xl shadow-ink/15 transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+            <div className="invisible absolute right-0 top-full z-50 mt-2 w-48 translate-y-1 rounded-xl border-2 border-ink bg-[#fffdf0] p-2 opacity-0 shadow-[5px_5px_0_#2f1620] transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
               {moreLinks.map((link) => (
                 <Link
                   key={link.to}
@@ -125,7 +134,7 @@ export function SiteHeader() {
           )}
           <Link
             to="/reserver"
-            className="press shine ml-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm shadow-ink/10 hover:shadow-md hover:shadow-ink/15"
+            className="press ml-2 rounded-xl border-2 border-ink bg-[#cf2c86] px-4 py-2 text-sm font-bold text-[#fffbd6] shadow-[3px_3px_0_#2f1620]"
           >
             Réserver un atelier
           </Link>
@@ -133,7 +142,7 @@ export function SiteHeader() {
 
         <button
           onClick={() => setOpen((v) => !v)}
-          className="press grid h-10 w-10 place-items-center rounded-full border border-border bg-card/70 lg:hidden"
+          className="press grid h-10 w-10 place-items-center rounded-xl border-2 border-ink bg-[#f4da45] shadow-[2px_2px_0_#2f1620] lg:hidden"
           aria-label="Menu"
           aria-expanded={open}
         >
@@ -153,7 +162,7 @@ export function SiteHeader() {
       </div>
 
       <div
-        className={`absolute right-4 top-[calc(100%+0.5rem)] w-[min(92vw,330px)] overflow-hidden rounded-2xl border border-border bg-card shadow-xl shadow-ink/15 lg:hidden transition-all duration-200 ease-out ${
+        className={`absolute right-4 top-[calc(100%+0.5rem)] w-[min(92vw,330px)] overflow-hidden rounded-xl border-2 border-ink bg-[#fffdf0] shadow-[6px_6px_0_#2f1620] lg:hidden transition-all duration-200 ease-out ${
           open
             ? "translate-y-0 scale-100 opacity-100"
             : "pointer-events-none -translate-y-2 scale-95 opacity-0"
@@ -186,7 +195,7 @@ export function SiteHeader() {
           <Link
             to="/reserver"
             onClick={() => setOpen(false)}
-            className="press shine mt-1 rounded-xl bg-primary px-3 py-3 text-center text-sm font-medium text-primary-foreground"
+            className="press mt-1 rounded-lg border-2 border-ink bg-[#cf2c86] px-3 py-3 text-center text-sm font-bold text-[#fffbd6]"
           >
             Réserver un atelier
           </Link>
@@ -209,50 +218,66 @@ export function SiteFooter() {
   ].filter(Boolean) as { label: string; href: string; icon: LucideIcon }[];
 
   return (
-    <footer className="relative mt-20 bg-cream grain">
-      <div aria-hidden className="absolute inset-x-0 -top-5 h-6 wavy-top bg-cream" />
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:grid-cols-3">
+    <footer className="relative mt-20 border-t-2 border-ink bg-[#8d194a] text-[#fffbd6]">
+      <div className="grid h-4 grid-cols-5 border-b-2 border-ink" aria-hidden>
+        <span className="bg-[#f4da45]" />
+        <span className="bg-[#79c6e8]" />
+        <span className="bg-[#cf2c86]" />
+        <span className="bg-[#dbea4c]" />
+        <span className="bg-[#ee7832]" />
+      </div>
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-[1.2fr_0.8fr_1fr]">
         <div>
-          <div className="font-display text-xl">Kafé Céramik</div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Kafé, création et gourmandises à Saint-François.
+          <div className="flex items-center gap-3">
+            <img
+              src="/brand/kafe-ceramik-logo.jpg"
+              alt=""
+              className="h-16 w-16 rounded-full border-2 border-[#fffbd6] object-cover"
+            />
+            <div className="font-display text-2xl">Kafé Céramik</div>
+          </div>
+          <p className="mt-4 max-w-sm text-sm leading-6 text-[#fffbd6]/80">
+            Café, création et gourmandises à Saint-François.
           </p>
         </div>
-        <div className="text-sm">
-          <div className="font-medium">Nous trouver</div>
-          <p className="mt-2 text-muted-foreground">{settings.contactAddress}</p>
+        <div className="border-l-2 border-[#fffbd6]/25 pl-5 text-sm">
+          <div className="font-poster text-xl font-extrabold uppercase">Nous trouver</div>
+          <p className="mt-2 leading-6 text-[#fffbd6]/80">{settings.contactAddress}</p>
         </div>
         <div className="text-sm">
-          <div className="font-medium">Horaires</div>
-          <p className="mt-2 text-muted-foreground">
+          <div className="font-poster text-xl font-extrabold uppercase">Horaires</div>
+          <p className="mt-2 leading-6 text-[#fffbd6]/80">
             {schedule.days}
             <br />
             {schedule.hours}
           </p>
-          <a
-            href={`tel:${phoneHref}`}
-            className="nav-link mt-3 inline-block px-0 py-1 font-medium text-primary"
-          >
+          <a href={`tel:${phoneHref}`} className="mt-3 inline-block font-bold text-[#f4da45]">
             {settings.contactPhone}
           </a>
           {settings.contactEmail && (
             <a
               href={`mailto:${settings.contactEmail}`}
-              className="nav-link mt-1 block px-0 py-1 font-medium text-primary"
+              className="mt-1 block font-bold text-[#f4da45]"
             >
               {settings.contactEmail}
             </a>
           )}
           {socials.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {socials.map(({ label, href, icon: Icon }) => (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {socials.map(({ label, href, icon: Icon }, index) => (
                 <a
                   key={label}
                   href={href}
                   target="_blank"
                   rel="noreferrer"
                   aria-label={label}
-                  className="grid h-9 w-9 place-items-center rounded-full border border-border bg-background text-primary transition hover:bg-secondary"
+                  className={`grid h-10 w-10 place-items-center rounded-full border-2 border-ink text-ink shadow-[2px_2px_0_#2f1620] ${
+                    index % 3 === 0
+                      ? "bg-[#f4da45]"
+                      : index % 3 === 1
+                        ? "bg-[#79c6e8]"
+                        : "bg-[#dbea4c]"
+                  }`}
                 >
                   <Icon className="h-4 w-4" />
                 </a>
@@ -261,8 +286,8 @@ export function SiteFooter() {
           )}
         </div>
       </div>
-      <div className="border-t border-border/60 py-4 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Kafé Céramik — Démo Lovable
+      <div className="border-t border-[#fffbd6]/20 py-4 text-center text-xs text-[#fffbd6]/65">
+        © {new Date().getFullYear()} Kafé Céramik · Saint-François
       </div>
     </footer>
   );

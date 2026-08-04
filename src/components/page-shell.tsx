@@ -6,7 +6,7 @@ import { OrganicShapes } from "./organic-shapes";
 export function PageShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="kafe-site flex min-h-screen flex-col">
       <SiteHeader />
       <main key={pathname} className="page-enter flex-1">
         {children}
@@ -57,32 +57,40 @@ export function PageHeader({
   const head = words.join(" ");
 
   return (
-    <section className="relative overflow-hidden border-b border-ink/15 bg-[#f5c4d2] grain">
+    <section className="kafe-page-header relative overflow-hidden border-b-2 border-ink bg-[#cf2c86] text-[#fffbd6]">
       <OrganicShapes />
       <div
         aria-hidden
-        className="checker-pink absolute inset-y-0 right-0 hidden w-32 opacity-55 sm:block"
+        className="checker-strong absolute inset-y-0 right-0 hidden w-[24%] border-l-2 border-ink sm:block"
       />
+      <div
+        aria-hidden
+        className="absolute -right-5 bottom-1 h-36 w-36 rounded-full border-2 border-ink bg-[#79c6e8] sm:right-[16%] sm:h-44 sm:w-44"
+      />
+      <SunDoodle className="absolute right-5 top-6 h-16 w-16 rotate-6 sm:right-[10%] sm:top-9 sm:h-20 sm:w-20" />
+      <SquiggleDoodle className="absolute bottom-8 right-[28%] hidden h-8 w-32 rotate-[-8deg] opacity-90 md:block" />
 
-      {/* Floating doodles */}
-      <SunDoodle className="absolute right-6 top-6 h-16 w-16 spin-slow opacity-90 sm:right-12 sm:top-10 sm:h-20 sm:w-20" />
-      <SquiggleDoodle className="absolute left-6 bottom-16 hidden h-8 w-32 opacity-70 sm:block" />
-
-      <div className="relative mx-auto max-w-6xl px-4 py-14 sm:py-20">
+      <div className="relative mx-auto max-w-6xl px-4 py-12 sm:py-16">
         {eyebrow && (
           <div className="mb-6 inline-flex">
-            <span className="stamp">{eyebrow}</span>
+            <span className="kafe-poster-label -rotate-2 bg-[#f4db45] text-ink">{eyebrow}</span>
           </div>
         )}
-        <h1 className="max-w-3xl text-4xl leading-[1.02] text-ink sm:text-6xl">
-          {head} <span className="marker marker-rose whitespace-nowrap">{last}</span>
+        <h1 className="max-w-3xl text-4xl leading-[1.02] text-[#fffbd6] sm:text-6xl">
+          {head} <span className="text-[#f4db45]">{last}</span>
         </h1>
         {description && (
-          <p className="mt-6 max-w-2xl text-base text-ink/80 sm:text-lg">{description}</p>
+          <p className="mt-6 max-w-2xl text-base leading-7 text-[#fffbd6]/90 sm:text-lg">
+            {description}
+          </p>
         )}
       </div>
-
-      <div className="checker-pink relative h-3 w-full border-t border-ink/15" />
+      <div className="relative grid h-4 grid-cols-4 border-t-2 border-ink" aria-hidden>
+        <span className="bg-[#f4db45]" />
+        <span className="bg-[#7fcbe7]" />
+        <span className="bg-[#dbea4c]" />
+        <span className="bg-[#ee7832]" />
+      </div>
     </section>
   );
 }

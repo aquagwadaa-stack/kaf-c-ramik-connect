@@ -87,7 +87,8 @@ export function useStoredList<T extends { id: string }>(
   seed: T[],
   remote?: RemoteListOptions<T>,
 ) {
-  const [list, setList] = useState<T[]>(() => (typeof window === "undefined" ? seed : []));
+  // Keep the first client render identical to SSR, then hydrate persisted/remote data in the effect.
+  const [list, setList] = useState<T[]>(() => seed);
   const remoteTable = remote?.table;
   const remoteAuthLoad = remote?.authLoad;
   const remoteHasSortOrder = remote?.hasSortOrder;

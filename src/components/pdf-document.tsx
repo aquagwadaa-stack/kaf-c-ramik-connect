@@ -18,8 +18,8 @@ export function PdfDocument({
   priority,
 }: PdfDocumentProps) {
   return (
-    <article className="overflow-hidden rounded-[1.75rem] border border-border bg-card shadow-sm shadow-ink/5">
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-4 py-5 sm:px-6">
+    <article className="kafe-block-link overflow-hidden bg-card">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-ink bg-[#f4b6cd] px-4 py-5 sm:px-6">
         <div className="max-w-2xl">
           <h3 className="font-display text-2xl leading-tight">{title}</h3>
           {description && (
@@ -31,7 +31,7 @@ export function PdfDocument({
             href={href}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-secondary"
+            className="kafe-block-link inline-flex items-center gap-2 bg-[#fffbd6] px-4 py-2 text-sm font-bold"
           >
             Ouvrir <ExternalLink className="h-4 w-4" />
           </a>
@@ -39,27 +39,27 @@ export function PdfDocument({
       </div>
 
       {previewUrls.length > 0 ? (
-        <div className="grid gap-3 bg-[#f1ece6] p-2 sm:gap-5 sm:p-5">
+        <div className="grid gap-3 bg-[#eea83a] p-2 sm:gap-5 sm:p-5">
           {previewUrls.map((preview, index) => (
             <img
               key={`${title}-${index}`}
               src={preview}
               alt={`${title}${previewUrls.length > 1 ? ` - page ${index + 1}` : ""}`}
               loading={priority && index === 0 ? "eager" : "lazy"}
-              className="mx-auto h-auto w-full max-w-5xl rounded-xl bg-white object-contain shadow-md shadow-ink/10"
+              className="mx-auto h-auto w-full max-w-5xl rounded-lg border-2 border-ink bg-white object-contain shadow-[4px_4px_0_#2f1620]"
             />
           ))}
         </div>
       ) : href ? (
-        <div className="bg-[#f1ece6] p-2 sm:p-5">
+        <div className="bg-[#eea83a] p-2 sm:p-5">
           <iframe
             src={`${href}#view=FitH`}
             title={title}
-            className="h-[72vh] min-h-[560px] w-full rounded-xl border-0 bg-white"
+            className="h-[72vh] min-h-[560px] w-full rounded-lg border-2 border-ink bg-white"
           />
         </div>
       ) : (
-        <div className="grid min-h-72 place-items-center bg-[#f1ece6] p-8 text-center">
+        <div className="grid min-h-72 place-items-center bg-[#eea83a] p-8 text-center">
           <div>
             <FileText className="mx-auto h-9 w-9 text-primary" />
             <p className="mt-3 font-medium">Le PDF officiel sera ajouté prochainement.</p>
@@ -68,11 +68,11 @@ export function PdfDocument({
       )}
 
       {href && (
-        <div className="flex justify-center border-t border-border px-4 py-5">
+        <div className="flex justify-center border-t-2 border-ink bg-[#fffbd6] px-4 py-5">
           <a
             href={href}
             download={fileName}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground hover:opacity-90"
+            className="kafe-block-link inline-flex items-center gap-2 bg-primary px-5 py-3 text-sm font-bold text-primary-foreground"
           >
             <Download className="h-4 w-4" /> Télécharger le PDF
           </a>

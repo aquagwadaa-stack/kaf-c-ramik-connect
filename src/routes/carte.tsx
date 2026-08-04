@@ -63,70 +63,74 @@ function CartePage() {
         description={`Le Kafé t'accueille du mardi au dimanche. Service continu jusqu'à ${settings.kitchenClosingTime.replace(":", "h")}. Réserve ta table pour garantir ta place.`}
       />
 
-      <section className="mx-auto max-w-6xl px-4 py-10">
-        <PdfDocument
-          title={resource?.title || menu.title}
-          description={resource?.description || menu.body}
-          href={
-            resource?.attachmentDataUrl ||
-            resource?.attachmentUrl ||
-            menu.attachmentDataUrl ||
-            menu.attachmentUrl
-          }
-          fileName={resource?.attachmentName || menu.attachmentName}
-          previewUrls={
-            previews.length
-              ? previews
-              : menu.previewImageDataUrls?.length
-                ? menu.previewImageDataUrls
-                : (menu.previewImageUrls ?? [])
-          }
-          priority
-        />
+      <section className="border-b-2 border-ink bg-[#eea83a] px-4 py-10">
+        <div className="mx-auto max-w-6xl">
+          <PdfDocument
+            title={resource?.title || menu.title}
+            description={resource?.description || menu.body}
+            href={
+              resource?.attachmentDataUrl ||
+              resource?.attachmentUrl ||
+              menu.attachmentDataUrl ||
+              menu.attachmentUrl
+            }
+            fileName={resource?.attachmentName || menu.attachmentName}
+            previewUrls={
+              previews.length
+                ? previews
+                : menu.previewImageDataUrls?.length
+                  ? menu.previewImageDataUrls
+                  : (menu.previewImageUrls ?? [])
+            }
+            priority
+          />
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          <InfoCard
-            icon={Coffee}
-            title="Sur place"
-            body="Café, bagel, pâtisseries et brunch nécessitent une réservation en période scolaire et le week-end. Sans réservation, tu peux tenter ta chance selon les tables disponibles."
-          />
-          <InfoCard
-            icon={ShoppingBag}
-            title="À emporter"
-            body="Passe ta commande directement par téléphone auprès de l'équipe."
-          />
-          <a
-            href={`tel:${phoneHref}`}
-            className="flex items-start gap-3 rounded-2xl border border-border bg-primary p-4 text-primary-foreground"
-          >
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/15">
-              <Phone className="h-5 w-5" />
-            </span>
-            <span>
-              <span className="block font-medium">Appeler le Kafé</span>
-              <span className="mt-1 block text-sm opacity-85">{settings.contactPhone}</span>
-            </span>
-          </a>
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <InfoCard
+              icon={Coffee}
+              title="Sur place"
+              body="Café, bagel, pâtisseries et brunch nécessitent une réservation en période scolaire et le week-end. Sans réservation, tu peux tenter ta chance selon les tables disponibles."
+            />
+            <InfoCard
+              icon={ShoppingBag}
+              title="À emporter"
+              body="Passe ta commande directement par téléphone auprès de l'équipe."
+            />
+            <a
+              href={`tel:${phoneHref}`}
+              className="kafe-block-link flex items-start gap-3 bg-[#8d194a] p-4 text-[#fffbd6]"
+            >
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/15">
+                <Phone className="h-5 w-5" />
+              </span>
+              <span>
+                <span className="block font-medium">Appeler le Kafé</span>
+                <span className="mt-1 block text-sm opacity-85">{settings.contactPhone}</span>
+              </span>
+            </a>
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
-        <div className="mb-5 max-w-2xl">
-          <div className="text-sm font-semibold text-primary">Un aperçu du Kafé</div>
-          <h2 className="mt-2 font-display text-3xl sm:text-4xl">
-            À savourer entre deux coups de pinceau.
-          </h2>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {foodPhotos.map((photo, index) => (
-            <img
-              key={photo.src}
-              src={photo.src}
-              alt={photo.alt}
-              loading={index === 0 ? "eager" : "lazy"}
-              className="aspect-[4/3] w-full rounded-2xl object-cover"
-            />
-          ))}
+      <section className="checker-strong border-b-2 border-ink px-4 py-10 sm:py-14">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-5 max-w-2xl">
+            <div className="kafe-poster-label bg-[#dbea4c] text-ink">Un aperçu du Kafé</div>
+            <h2 className="mt-2 font-display text-3xl sm:text-4xl">
+              À savourer entre deux coups de pinceau.
+            </h2>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {foodPhotos.map((photo, index) => (
+              <img
+                key={photo.src}
+                src={photo.src}
+                alt={photo.alt}
+                loading={index === 0 ? "eager" : "lazy"}
+                className={`kafe-photo-frame aspect-[4/3] w-full object-cover ${index % 2 ? "rotate-[0.6deg]" : "rotate-[-0.6deg]"}`}
+              />
+            ))}
+          </div>
         </div>
       </section>
     </PageShell>
@@ -143,8 +147,8 @@ function InfoCard({
   body: string;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary">
+    <div className="kafe-block-link flex items-start gap-3 bg-[#fffbd6] p-4">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#79c6e8]">
         <Icon className="h-5 w-5" />
       </span>
       <span>

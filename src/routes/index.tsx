@@ -67,24 +67,25 @@ function HomePage() {
 
   return (
     <PageShell>
-      <section className="relative min-h-[72svh] overflow-hidden bg-ink text-cream">
+      <section className="relative min-h-[72svh] overflow-hidden border-b-2 border-ink bg-ink text-cream">
         <img
           src="/photos/manika/atelier-table.jpg"
           alt="Peinture sur céramique au Kafé Céramik"
           className="absolute inset-0 h-full w-full object-cover object-center"
         />
-        <div className="absolute inset-0 bg-ink/60" />
-        <div className="absolute inset-y-0 left-0 w-3 bg-[#e90061] sm:w-5" />
+        <div className="absolute inset-0 bg-ink/54" />
+        <div className="absolute inset-y-0 left-0 w-3 bg-[#cf2c86] sm:w-5" />
         <div className="relative mx-auto flex min-h-[72svh] max-w-6xl items-end px-4 py-12 sm:items-center sm:py-16">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cream/40 bg-ink/40 px-4 py-2 text-xs font-semibold backdrop-blur-sm">
+            <div className="kafe-poster-label inline-flex rotate-[-1deg] items-center gap-2 bg-[#f4da45] text-ink">
               <span className="h-2 w-2 rounded-full bg-[#f4d44d]" /> Saint-François ·{" "}
               {schedule.inline}
             </div>
-            <h1 className="mt-6 text-5xl leading-[0.98] text-cream sm:text-7xl lg:text-8xl">
+            <h1 className="mt-6 text-4xl leading-[0.98] text-cream sm:text-7xl lg:text-8xl">
               Kafé Céramik.
               <br />
-              <span className="text-[#f5bdc9]">Gourmandise</span> &amp; création.
+              <span className="block text-[#f4da45] sm:inline">Gourmandise</span>
+              <span className="block sm:inline"> &amp; création.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-7 text-cream/90 sm:text-lg">
               Viens boire un café, manger un morceau ou peindre ta propre pièce. Réserve ta venue
@@ -93,47 +94,50 @@ function HomePage() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 to="/reserver"
-                className="inline-flex items-center gap-2 rounded-full bg-[#e90061] px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-ink/20 transition hover:-translate-y-0.5 hover:bg-[#cf0057]"
+                className="kafe-block-link inline-flex items-center gap-2 bg-[#cf2c86] px-6 py-3.5 text-sm font-bold text-[#fffbd6] transition hover:-translate-y-0.5"
               >
                 <CalendarHeart className="h-4 w-4" /> Réserver un atelier
               </Link>
               <Link
                 to="/carte"
-                className="inline-flex items-center gap-2 rounded-full border border-cream/50 bg-cream/95 px-6 py-3.5 text-sm font-semibold text-ink transition hover:-translate-y-0.5 hover:bg-white"
+                className="kafe-block-link inline-flex items-center gap-2 bg-[#fffbd6] px-6 py-3.5 text-sm font-bold text-ink transition hover:-translate-y-0.5"
               >
                 <Coffee className="h-4 w-4" /> Voir la carte
               </Link>
             </div>
           </div>
         </div>
-        <div className="checker-pink absolute inset-x-0 bottom-0 h-4" />
+        <div className="checker-strong absolute inset-x-0 bottom-0 h-5 border-t-2 border-ink" />
       </section>
 
-      <section className="border-b border-border bg-cream">
+      <section className="border-b-2 border-ink bg-[#f4da45]">
         <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:grid-cols-3 sm:py-10">
           <VisitNote
             icon={Coffee}
+            tone="bg-[#fffbd6]"
             title="Réserve aussi pour le Kafé"
             body="Café, bagel ou brunch : la réservation te garantit une place. Sans elle, l'accueil dépend des disponibilités."
           />
           <VisitNote
             icon={CalendarHeart}
+            tone="bg-[#f4b6cd]"
             title="Atelier avec consommation"
             body="Pour peindre, réserve ta table et prévois une consommation obligatoire sur place."
           />
           <VisitNote
             icon={Sparkles}
+            tone="bg-[#79c6e8]"
             title="Jusqu’à 4 heures sur place"
             body="Profite de ton moment créatif, puis laisse la place aux artistes suivants."
           />
         </div>
       </section>
 
-      <section className="bg-[#f5cdd7] py-14 sm:py-20">
+      <section className="border-b-2 border-ink bg-[#eea83a] py-14 sm:py-20">
         <div className="mx-auto max-w-6xl px-4">
           <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-cream px-3 py-1.5 text-xs font-semibold text-ink">
+              <div className="kafe-poster-label inline-flex items-center gap-2 bg-[#dbea4c] text-ink">
                 <Sparkles className="h-3.5 w-3.5 text-[#e90061]" /> Sur place
               </div>
               <h2 className="mt-5 max-w-xl text-4xl leading-[1.03] text-ink sm:text-5xl">
@@ -145,7 +149,7 @@ function HomePage() {
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              <figure className="overflow-hidden rounded-[2rem] border-4 border-cream bg-cream shadow-lg shadow-ink/10">
+              <figure className="kafe-photo-frame rotate-[-1.5deg]">
                 <img
                   src="/photos/manika/artiste-peinture.jpg"
                   alt="Une participante peint sa céramique"
@@ -154,7 +158,7 @@ function HomePage() {
                 />
               </figure>
               <div className="grid gap-3 sm:gap-4">
-                <figure className="overflow-hidden rounded-[2rem] border-4 border-cream bg-cream shadow-lg shadow-ink/10">
+                <figure className="kafe-photo-frame rotate-[1deg]">
                   <img
                     src="/photos/manika/brunch-bowl.jpg"
                     alt="Une assiette gourmande servie au Kafé"
@@ -162,7 +166,7 @@ function HomePage() {
                     className="aspect-[4/3] h-full w-full object-cover"
                   />
                 </figure>
-                <figure className="overflow-hidden rounded-[2rem] border-4 border-cream bg-cream shadow-lg shadow-ink/10">
+                <figure className="kafe-photo-frame rotate-[-1deg]">
                   <img
                     src="/photos/manika/comptoir-desserts.jpg"
                     alt="Le comptoir et les pâtisseries maison"
@@ -176,11 +180,11 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-14 sm:py-20">
-        <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+      <section className="border-b-2 border-ink bg-[#fff8dd] py-14 sm:py-20">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 lg:grid-cols-[1.2fr_0.8fr]">
           <Link
             to="/brunch"
-            className="group relative min-h-[430px] overflow-hidden rounded-[2rem] bg-ink text-cream"
+            className="kafe-photo-frame group relative min-h-[430px] bg-ink text-cream"
           >
             <img
               src="/photos/manika/detail-peinture.jpg"
@@ -190,7 +194,7 @@ function HomePage() {
             />
             <div className="absolute inset-0 bg-ink/55" />
             <div className="relative flex h-full min-h-[430px] flex-col justify-end p-6 sm:p-8">
-              <span className="w-fit rounded-full bg-[#f4d44d] px-3 py-1.5 text-xs font-bold text-ink">
+              <span className="kafe-poster-label w-fit bg-[#f4da45] text-ink">
                 Avant · pendant · après
               </span>
               <h2 className="mt-4 max-w-xl text-4xl leading-none sm:text-5xl">
@@ -217,10 +221,16 @@ function HomePage() {
                 <Link
                   key={item.to}
                   to={item.to}
-                  className="group flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 transition hover:-translate-y-0.5 hover:border-[#e90061]/40"
+                  className={`kafe-block-link group flex items-center justify-between gap-3 p-4 transition hover:-translate-y-0.5 ${
+                    item.to === "/brunch"
+                      ? "bg-[#f4b6cd]"
+                      : item.to === "/objets"
+                        ? "bg-[#79c6e8]"
+                        : "bg-[#dbea4c]"
+                  }`}
                 >
                   <span className="flex min-w-0 items-center gap-3">
-                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#f5cdd7] text-[#8b2f24]">
+                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#fffbd6] text-ink">
                       <Icon className="h-5 w-5" />
                     </span>
                     <span className="min-w-0">
@@ -236,7 +246,7 @@ function HomePage() {
               href="https://www.google.com/maps?q=16.286364%2C-61.288357"
               target="_blank"
               rel="noreferrer"
-              className="group flex items-center justify-between gap-3 rounded-2xl bg-[#376b49] p-4 text-cream transition hover:-translate-y-0.5"
+              className="kafe-block-link group flex items-center justify-between gap-3 bg-[#6f9369] p-4 text-cream transition hover:-translate-y-0.5"
             >
               <span className="flex items-center gap-3">
                 <span className="grid h-11 w-11 place-items-center rounded-xl bg-cream/15">
@@ -253,10 +263,10 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="border-y border-border bg-[#fff7e7] py-14 sm:py-20">
+      <section className="border-b-2 border-ink bg-[#dbea4c] py-14 sm:py-20">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#dce6ca] px-3 py-1.5 text-xs font-semibold text-ink">
+            <div className="kafe-poster-label inline-flex items-center gap-2 bg-[#f4b6cd] text-ink">
               <Brush className="h-3.5 w-3.5" /> Le catalogue
             </div>
             <h2 className="mt-5 text-4xl leading-[1.03] sm:text-5xl">
@@ -278,7 +288,7 @@ function HomePage() {
               <Link
                 key={piece.name}
                 to="/objets"
-                className={`group rounded-[1.75rem] border border-border p-3 transition hover:-translate-y-1 ${piece.tone}`}
+                className={`kafe-block-link group p-3 transition hover:-translate-y-1 ${piece.tone}`}
               >
                 <div className="mx-auto h-24 w-24 transition group-hover:rotate-[-3deg]">
                   <CeramicPiece kind={piece.kind} label={piece.name} />
@@ -293,53 +303,51 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-14 sm:py-20">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="text-sm font-semibold text-[#e90061]">Créations</div>
-            <h2 className="mt-2 max-w-2xl text-4xl leading-tight sm:text-5xl">
-              Des inspirations, jamais des modèles imposés.
-            </h2>
-            <p className="mt-4 max-w-xl leading-7 text-muted-foreground">
-              Motifs tropicaux, aplats colorés ou dessins fins : regarde ce qui a déjà été créé,
-              puis invente ta propre pièce.
-            </p>
-          </div>
-          <Link
-            to="/creations"
-            className="inline-flex w-fit items-center gap-2 rounded-full border border-ink/20 bg-cream px-5 py-3 text-sm font-semibold"
-          >
-            Toutes les créations <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {featuredCreations.map((photo, index) => (
-            <Link key={photo.id} to="/creations" className="group block">
-              <div
-                className={`overflow-hidden border-4 border-cream bg-cream shadow-md shadow-ink/10 ${
-                  index % 2 === 0
-                    ? "rotate-[-1deg] rounded-[2rem]"
-                    : "rotate-[1deg] rounded-[2.5rem]"
-                }`}
-              >
-                <img
-                  src={photo.imageDataUrl || photo.imageSrc || "/creations/assiette-tortue.webp"}
-                  alt={photo.title}
-                  loading="lazy"
-                  className="aspect-[4/5] h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
-                />
-              </div>
-              <div className="mt-4 px-2">
-                <div className="font-semibold">{photo.title}</div>
-                <p className="mt-1 text-sm leading-5 text-muted-foreground">{photo.body}</p>
-              </div>
+      <section className="border-b-2 border-ink bg-[#f4b6cd] px-4 py-14 sm:py-20">
+        <div className="mx-auto max-w-6xl">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="text-sm font-semibold text-[#e90061]">Créations</div>
+              <h2 className="mt-2 max-w-2xl text-4xl leading-tight sm:text-5xl">
+                Des inspirations, jamais des modèles imposés.
+              </h2>
+              <p className="mt-4 max-w-xl leading-7 text-muted-foreground">
+                Motifs tropicaux, aplats colorés ou dessins fins : regarde ce qui a déjà été créé,
+                puis invente ta propre pièce.
+              </p>
+            </div>
+            <Link
+              to="/creations"
+              className="inline-flex w-fit items-center gap-2 rounded-full border border-ink/20 bg-cream px-5 py-3 text-sm font-semibold"
+            >
+              Toutes les créations <ArrowRight className="h-4 w-4" />
             </Link>
-          ))}
+          </div>
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {featuredCreations.map((photo, index) => (
+              <Link key={photo.id} to="/creations" className="group block">
+                <div
+                  className={`kafe-photo-frame ${index % 2 === 0 ? "rotate-[-1deg]" : "rotate-[1deg]"}`}
+                >
+                  <img
+                    src={photo.imageDataUrl || photo.imageSrc || "/creations/assiette-tortue.webp"}
+                    alt={photo.title}
+                    loading="lazy"
+                    className="aspect-[4/5] h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                  />
+                </div>
+                <div className="mt-4 px-2">
+                  <div className="font-semibold">{photo.title}</div>
+                  <p className="mt-1 text-sm leading-5 text-muted-foreground">{photo.body}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 pb-6">
+      <section className="mx-auto max-w-6xl px-4 pb-6 pt-10">
         <div className="grid gap-3 sm:grid-cols-3">
           <InfoTile icon={MapPin} title="Adresse" body={settings.contactAddress} />
           <InfoTile icon={Clock} title="Horaires atelier" body={schedule.inline} />
@@ -354,14 +362,16 @@ function VisitNote({
   icon: Icon,
   title,
   body,
+  tone,
 }: {
   icon: typeof Coffee;
   title: string;
   body: string;
+  tone: string;
 }) {
   return (
-    <div className="flex items-start gap-3">
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#f5cdd7] text-[#8b2f24]">
+    <div className={`kafe-block-link flex items-start gap-3 p-4 ${tone}`}>
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#fffdf0] text-ink">
         <Icon className="h-5 w-5" />
       </span>
       <span className="min-w-0">
@@ -382,8 +392,8 @@ function InfoTile({
   body: string;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary text-secondary-foreground">
+    <div className="kafe-block-link flex items-start gap-3 bg-[#fffdf0] p-4">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#f4da45] text-ink">
         <Icon className="h-5 w-5" />
       </span>
       <div className="min-w-0">

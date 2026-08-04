@@ -6,6 +6,7 @@
 
 @theme inline {
   --font-display: "Caprasimo", "Bagel Fat One", "Fraunces", Georgia, serif;
+  --font-poster: "Barlow Condensed", "Arial Narrow", sans-serif;
   --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
 
   --radius-sm: calc(var(--radius) - 4px);
@@ -46,44 +47,44 @@
 }
 
 :root {
-  --radius: 1.25rem;
+  --radius: 0.9rem;
 
-  /* Palette issue des supports officiels du Kafé : rose, olive, bleu et jaune franc. */
-  --blush: oklch(0.88 0.075 8);
-  --rose: oklch(0.76 0.145 4);
-  --cream: oklch(0.97 0.035 85);
-  --sage: oklch(0.56 0.105 145);
-  --brick: oklch(0.48 0.13 31);
-  --lavender: oklch(0.67 0.145 282);
-  --mustard: oklch(0.74 0.15 88);
-  --ink: oklch(0.16 0.01 30);
+  /* Palette issue des affiches et stories du Kafé. */
+  --blush: #f4b6cd;
+  --rose: #e97db3;
+  --cream: #fffbd6;
+  --sage: #6f9369;
+  --brick: #8d194a;
+  --lavender: #8884ec;
+  --mustard: #f4da45;
+  --ink: #2f1620;
 
-  --background: oklch(0.92 0.055 8);
-  --foreground: oklch(0.16 0.01 30);
+  --background: #fff8dd;
+  --foreground: #2f1620;
 
-  --card: oklch(0.98 0.02 70);
-  --card-foreground: oklch(0.16 0.01 30);
-  --popover: oklch(0.98 0.02 70);
-  --popover-foreground: oklch(0.16 0.01 30);
+  --card: #fffdf0;
+  --card-foreground: #2f1620;
+  --popover: #fffdf0;
+  --popover-foreground: #2f1620;
 
-  --primary: oklch(0.47 0.13 31);
-  --primary-foreground: oklch(0.98 0.02 70);
+  --primary: #cf2c86;
+  --primary-foreground: #fffbd6;
 
-  --secondary: oklch(0.93 0.035 12);
-  --secondary-foreground: oklch(0.2 0.02 30);
+  --secondary: #f4bfd2;
+  --secondary-foreground: #2f1620;
 
-  --muted: oklch(0.94 0.025 25);
-  --muted-foreground: oklch(0.4 0.02 30);
+  --muted: #f4e9dc;
+  --muted-foreground: #6a4d57;
 
-  --accent: oklch(0.54 0.075 145);
-  --accent-foreground: oklch(0.98 0.02 70);
+  --accent: #6f9369;
+  --accent-foreground: #fffbd6;
 
   --destructive: oklch(0.55 0.2 25);
   --destructive-foreground: oklch(0.98 0 0);
 
-  --border: oklch(0.79 0.04 16);
-  --input: oklch(0.84 0.035 16);
-  --ring: oklch(0.47 0.11 32);
+  --border: #d8a8b7;
+  --input: #d8a8b7;
+  --ring: #cf2c86;
 
   --sidebar: oklch(0.9 0.045 10);
   --sidebar-foreground: oklch(0.16 0.01 30);
@@ -201,6 +202,75 @@
   .poster-border {
     border: 3px solid var(--color-ink);
     box-shadow: 7px 7px 0 color-mix(in oklab, var(--color-brick) 85%, transparent);
+  }
+
+  .kafe-poster-label {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.25rem;
+    padding: 0.45rem 1rem;
+    border: 2px solid var(--color-ink);
+    border-radius: 0.8rem;
+    box-shadow: 4px 4px 0 var(--color-ink);
+    font-family: var(--font-poster);
+    font-size: 0.95rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .kafe-photo-frame {
+    overflow: hidden;
+    border: 2px solid var(--color-ink);
+    border-radius: 1rem;
+    background: var(--color-cream);
+    box-shadow: 7px 7px 0 var(--color-ink);
+  }
+
+  .kafe-block-link {
+    border: 2px solid var(--color-ink);
+    border-radius: 0.9rem;
+    box-shadow: 4px 4px 0 var(--color-ink);
+  }
+
+  .kafe-block-link:hover {
+    box-shadow: 2px 2px 0 var(--color-ink);
+  }
+
+  .kafe-note-paper {
+    position: relative;
+    border: 2px solid var(--color-ink);
+    border-radius: 0.8rem;
+    box-shadow: 5px 5px 0 color-mix(in srgb, var(--color-ink) 90%, transparent);
+  }
+
+  .kafe-note-paper::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -0.55rem;
+    width: 3.8rem;
+    height: 1.1rem;
+    transform: translateX(-50%) rotate(-2deg);
+    background: rgb(255 251 214 / 72%);
+    border: 1px solid rgb(47 22 32 / 12%);
+  }
+
+  .kafe-site {
+    background-color: var(--color-background);
+    background-image: radial-gradient(rgb(47 22 32 / 5%) 0.7px, transparent 0.7px);
+    background-size: 9px 9px;
+  }
+
+  .kafe-site main > section:not(.kafe-page-header) {
+    isolation: isolate;
+  }
+
+  .kafe-site input,
+  .kafe-site textarea,
+  .kafe-site select {
+    background-color: #fffdf0;
   }
 
   /* Animated nav link underline */

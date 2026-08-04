@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowUpRight, Clock3, Coffee, Instagram, Mail, MapPin, Phone } from "lucide-react";
-import { PageShell } from "@/components/page-shell";
+import { ArrowUpRight, Clock3, Instagram, Mail, MapPin, Phone } from "lucide-react";
+import { PageShell, PageHeader } from "@/components/page-shell";
 import { useKafeSettings } from "@/lib/admin-data";
 import { formatPublicTime } from "@/lib/opening-hours";
 
@@ -23,107 +23,98 @@ function ContactPage() {
 
   return (
     <PageShell>
-      <section className="relative overflow-hidden border-b border-border bg-[#f5cdd7]">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 lg:grid-cols-[1fr_0.85fr] lg:items-end lg:py-16">
-          <div>
-            <div className="inline-flex items-center gap-2 text-sm font-medium text-primary">
-              <Coffee className="h-4 w-4" /> Saint-François, Guadeloupe
-            </div>
-            <h1 className="mt-4 max-w-3xl text-4xl leading-[1.05] sm:text-6xl">
-              Une question avant de venir ?
-            </h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-              Pour une demande particulière, un grand groupe ou une organisation hors du parcours
-              habituel, l'équipe te répond directement.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3 lg:justify-end">
-            <a
-              href={`tel:${phoneHref}`}
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 font-medium text-primary-foreground shadow-sm"
-            >
-              <Phone className="h-4 w-4" /> Appeler le Kafé
-            </a>
-            <a
-              href={settings.contactMapUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-3 font-medium"
-            >
-              <MapPin className="h-4 w-4" /> Itinéraire
-            </a>
-          </div>
-        </div>
-        <div className="checker-pink h-4" />
-      </section>
-
-      <section className="mx-auto grid max-w-6xl gap-4 px-4 py-10 lg:grid-cols-[0.9fr_1.1fr] lg:py-14">
-        <div className="rounded-[2rem] border border-border bg-card p-5 sm:p-7">
-          <h2 className="font-display text-2xl">Nous contacter</h2>
-          <div className="mt-6 divide-y divide-border">
-            <ContactRow
-              icon={Phone}
-              label="Téléphone"
-              value={settings.contactPhone}
-              href={`tel:${phoneHref}`}
-            />
-            {settings.contactEmail && (
-              <ContactRow
-                icon={Mail}
-                label="Email"
-                value={settings.contactEmail}
-                href={`mailto:${settings.contactEmail}`}
-              />
-            )}
-            {settings.instagramUrl && (
-              <ContactRow
-                icon={Instagram}
-                label="Instagram"
-                value="@kafeceramik_guadeloupe"
-                href={settings.instagramUrl}
-                external
-              />
-            )}
-            <ContactRow
-              icon={MapPin}
-              label="Adresse"
-              value={settings.contactAddress}
-              href={settings.contactMapUrl}
-              external
-            />
-          </div>
-
-          <div className="mt-7 border-t border-border pt-6">
-            <div className="flex items-start gap-3">
-              <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-              <div>
-                <div className="font-medium">Horaires de l'atelier</div>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  Du mardi au dimanche · 9h30–16h30
-                </p>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  Cuisine jusqu'à {formatPublicTime(settings.kitchenClosingTime)}.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative min-h-[360px] overflow-hidden rounded-[2rem] border border-border bg-[#c8d3bd]">
-          <iframe
-            title="Localisation du Kafé Céramik"
-            src="https://www.google.com/maps?q=16.286364,-61.288357&z=15&output=embed"
-            loading="lazy"
-            className="absolute inset-0 h-full w-full border-0"
-          />
+      <PageHeader
+        eyebrow="Saint-François, Guadeloupe"
+        title="Une question avant de venir ?"
+        description="Pour une demande particulière, un grand groupe ou une organisation hors du parcours habituel, l'équipe te répond directement."
+      >
+        <div className="flex flex-wrap gap-3">
+          <a
+            href={`tel:${phoneHref}`}
+            className="kafe-block-link inline-flex items-center gap-2 bg-[#f4da45] px-5 py-3 font-bold text-ink"
+          >
+            <Phone className="h-4 w-4" /> Appeler le Kafé
+          </a>
           <a
             href={settings.contactMapUrl}
             target="_blank"
             rel="noreferrer"
-            className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-sm font-medium shadow-lg"
+            className="kafe-block-link inline-flex items-center gap-2 bg-[#fffbd6] px-5 py-3 font-bold text-ink"
           >
-            Voir dans Google Maps <ArrowUpRight className="h-4 w-4" />
+            <MapPin className="h-4 w-4" /> Itinéraire
           </a>
+        </div>
+      </PageHeader>
+
+      <section className="border-b-2 border-ink bg-[#eea83a] px-4 py-10 lg:py-14">
+        <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="kafe-block-link bg-card p-5 sm:p-7">
+            <h2 className="font-display text-2xl">Nous contacter</h2>
+            <div className="mt-6 divide-y divide-border">
+              <ContactRow
+                icon={Phone}
+                label="Téléphone"
+                value={settings.contactPhone}
+                href={`tel:${phoneHref}`}
+              />
+              {settings.contactEmail && (
+                <ContactRow
+                  icon={Mail}
+                  label="Email"
+                  value={settings.contactEmail}
+                  href={`mailto:${settings.contactEmail}`}
+                />
+              )}
+              {settings.instagramUrl && (
+                <ContactRow
+                  icon={Instagram}
+                  label="Instagram"
+                  value="@kafeceramik_guadeloupe"
+                  href={settings.instagramUrl}
+                  external
+                />
+              )}
+              <ContactRow
+                icon={MapPin}
+                label="Adresse"
+                value={settings.contactAddress}
+                href={settings.contactMapUrl}
+                external
+              />
+            </div>
+
+            <div className="mt-7 border-t border-border pt-6">
+              <div className="flex items-start gap-3">
+                <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                <div>
+                  <div className="font-medium">Horaires de l'atelier</div>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    Du mardi au dimanche · 9h30–16h30
+                  </p>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Cuisine jusqu'à {formatPublicTime(settings.kitchenClosingTime)}.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="kafe-photo-frame relative min-h-[360px] bg-[#c8d3bd]">
+            <iframe
+              title="Localisation du Kafé Céramik"
+              src="https://www.google.com/maps?q=16.286364,-61.288357&z=15&output=embed"
+              loading="lazy"
+              className="absolute inset-0 h-full w-full border-0"
+            />
+            <a
+              href={settings.contactMapUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="kafe-block-link absolute bottom-4 left-4 inline-flex items-center gap-2 bg-[#fffbd6] px-4 py-2 text-sm font-bold"
+            >
+              Voir dans Google Maps <ArrowUpRight className="h-4 w-4" />
+            </a>
+          </div>
         </div>
       </section>
     </PageShell>
@@ -150,7 +141,7 @@ function ContactRow({
       rel={external ? "noreferrer" : undefined}
       className="group grid grid-cols-[2.5rem_1fr_auto] items-start gap-3 py-4 first:pt-0 last:pb-0"
     >
-      <span className="grid h-10 w-10 place-items-center rounded-xl bg-secondary text-primary">
+      <span className="grid h-10 w-10 place-items-center rounded-lg border-2 border-ink bg-[#f4b6cd] text-[#8d194a]">
         <Icon className="h-4 w-4" />
       </span>
       <span className="min-w-0">

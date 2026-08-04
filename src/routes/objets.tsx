@@ -66,41 +66,43 @@ function ObjetsPage() {
         title="Objets à peindre"
         description="Découvre les formes et les tarifs proposés au Kafé. Tu choisis ta pièce sur place avant de passer aux couleurs."
       />
-      <section className="mx-auto max-w-6xl px-4 py-10">
-        <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          <Filter className="h-4 w-4 shrink-0 text-muted-foreground" />
-          {cats.map((category) => (
-            <button
-              key={category}
-              onClick={() => setCat(category)}
-              className={`shrink-0 rounded-full border px-4 py-1.5 text-sm ${
-                cat === category
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border hover:bg-secondary"
-              }`}
+      <section className="border-b-2 border-ink bg-[#eea83a] px-4 py-10">
+        <div className="mx-auto max-w-6xl">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            <Filter className="h-4 w-4 shrink-0 text-muted-foreground" />
+            {cats.map((category) => (
+              <button
+                key={category}
+                onClick={() => setCat(category)}
+                className={`shrink-0 rounded-lg border-2 border-ink px-4 py-1.5 text-sm font-bold shadow-[3px_3px_0_#2f1620] ${
+                  cat === category
+                    ? "bg-[#cf2c86] text-primary-foreground"
+                    : "bg-[#fffbd6] hover:bg-secondary"
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {list.map((item) => (
+              <ObjectCard key={item.id} item={item} />
+            ))}
+          </div>
+
+          <div className="kafe-block-link mt-10 bg-[#dbea4c] p-6 text-center sm:p-10">
+            <h2 className="text-2xl">Prêt·e à passer aux pinceaux ?</h2>
+            <p className="mt-2 text-foreground/70">
+              Réserve un créneau et choisis ta pièce sur place.
+            </p>
+            <Link
+              to="/reserver"
+              className="kafe-block-link mt-5 inline-flex items-center gap-2 bg-primary px-5 py-3 text-sm font-bold text-primary-foreground"
             >
-              {category}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {list.map((item) => (
-            <ObjectCard key={item.id} item={item} />
-          ))}
-        </div>
-
-        <div className="mt-10 rounded-2xl bg-sage/20 p-6 text-center sm:p-10">
-          <h2 className="text-2xl">Prêt·e à passer aux pinceaux ?</h2>
-          <p className="mt-2 text-foreground/70">
-            Réserve un créneau et choisis ta pièce sur place.
-          </p>
-          <Link
-            to="/reserver"
-            className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
-          >
-            Réserver un atelier
-          </Link>
+              Réserver un atelier
+            </Link>
+          </div>
         </div>
       </section>
     </PageShell>
@@ -109,7 +111,7 @@ function ObjetsPage() {
 
 function ObjectCard({ item }: { item: CeramicObject }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card">
+    <div className="kafe-block-link overflow-hidden bg-card">
       <div
         className={`flex aspect-square items-center justify-center overflow-hidden p-5 ${categoryTones[item.category]}`}
       >
@@ -117,7 +119,7 @@ function ObjectCard({ item }: { item: CeramicObject }) {
           <img
             src={item.imageDataUrl}
             alt={item.name}
-            className="h-full w-full rounded-xl object-cover"
+            className="h-full w-full rounded-lg border-2 border-ink object-cover"
           />
         ) : (
           <CeramicPiece kind={categoryKinds[item.category]} label={item.name} />

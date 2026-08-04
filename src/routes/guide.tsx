@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { BookOpenText, Palette, ShieldCheck, type LucideIcon } from "lucide-react";
 import { PdfDocument } from "@/components/pdf-document";
-import { PageShell } from "@/components/page-shell";
+import { PageShell, PageHeader } from "@/components/page-shell";
 import { getGuideDocument, useContentDocuments } from "@/lib/admin-data";
 
 export const Route = createFileRoute("/guide")({
@@ -61,26 +61,23 @@ function GuidePage() {
 
   return (
     <PageShell>
-      <section className="border-b border-border bg-secondary/70">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
-          <div className="inline-flex items-center gap-2 text-sm font-medium text-primary">
-            <BookOpenText className="h-4 w-4" /> À consulter avant de peindre
-          </div>
-          <h1 className="mt-4 max-w-4xl text-4xl leading-[1.02] sm:text-6xl">{guide.title}</h1>
-          <p className="mt-5 max-w-3xl text-base leading-7 text-muted-foreground sm:text-lg">
-            {guide.intro}
+      <PageHeader
+        eyebrow="À consulter avant de peindre"
+        title={guide.title}
+        description={guide.intro}
+      />
+
+      <section className="border-b-2 border-ink bg-[#f4da45] px-4 py-6">
+        <div className="kafe-block-link mx-auto flex max-w-6xl items-start gap-3 bg-[#fffbd6] p-4 text-sm leading-6">
+          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#8d194a]" />
+          <p>
+            Chaque consigne compte. Avant de partir, range et sèche le matériel, laisse le lavabo
+            propre et remets ton espace en ordre pour les artistes suivants.
           </p>
-          <div className="mt-7 flex max-w-3xl items-start gap-3 rounded-2xl border border-primary/20 bg-card/75 p-4 text-sm leading-6">
-            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-            <p>
-              Chaque consigne compte. Avant de partir, range et sèche le matériel, laisse le lavabo
-              propre et remets ton espace en ordre pour les artistes suivants.
-            </p>
-          </div>
         </div>
       </section>
 
-      <section className="sticky top-[65px] z-30 border-b border-border bg-background/95 backdrop-blur">
+      <section className="sticky top-[65px] z-30 border-b-2 border-ink bg-[#fffbd6]/95 backdrop-blur">
         <div
           className="mx-auto grid max-w-6xl grid-cols-3 gap-1 px-4 py-3"
           role="tablist"
@@ -93,10 +90,14 @@ function GuidePage() {
               role="tab"
               aria-selected={activeChapter === id}
               onClick={() => setActiveChapter(id)}
-              className={`flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-full border px-2 py-2 text-sm font-medium sm:px-4 ${
+              className={`flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-lg border-2 border-ink px-2 py-2 text-sm font-bold shadow-[3px_3px_0_#2f1620] sm:px-4 ${
                 activeChapter === id
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-foreground hover:bg-secondary"
+                  ? "bg-[#cf2c86] text-[#fffbd6]"
+                  : id === "nuanciers"
+                    ? "bg-[#79c6e8] text-foreground hover:bg-[#90d1ec]"
+                    : id === "preventions"
+                      ? "bg-[#dbea4c] text-foreground hover:bg-[#e5ef75]"
+                      : "bg-card text-foreground hover:bg-secondary"
               }`}
             >
               <Icon className="h-4 w-4 shrink-0" />
@@ -106,32 +107,34 @@ function GuidePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
-        <div className="max-w-3xl">
-          <div className="text-sm font-medium text-primary">{active.label}</div>
-          <h2 className="mt-2 font-display text-3xl sm:text-4xl">Le document officiel</h2>
-          <p className="mt-3 leading-7 text-muted-foreground">{active.description}</p>
-        </div>
+      <section className="border-b-2 border-ink bg-[#eea83a] px-4 py-10 sm:py-14">
+        <div className="mx-auto max-w-6xl">
+          <div className="max-w-3xl">
+            <div className="kafe-poster-label bg-[#fffbd6] text-ink">{active.label}</div>
+            <h2 className="mt-2 font-display text-3xl sm:text-4xl">Le document officiel</h2>
+            <p className="mt-3 leading-7 text-ink/75">{active.description}</p>
+          </div>
 
-        <div
-          className={`mt-8 grid items-start gap-8 ${activeChapter === "guide" ? "" : "lg:grid-cols-2"}`}
-        >
-          {resources.map((resource, index) => {
-            const previews = resource.previewImageDataUrls?.length
-              ? resource.previewImageDataUrls
-              : (resource.previewImageUrls ?? []);
-            return (
-              <PdfDocument
-                key={resource.id}
-                title={resource.title}
-                description={resource.description}
-                href={resource.attachmentDataUrl || resource.attachmentUrl}
-                fileName={resource.attachmentName}
-                previewUrls={previews}
-                priority={activeChapter === "guide" && index === 0}
-              />
-            );
-          })}
+          <div
+            className={`mt-8 grid items-start gap-8 ${activeChapter === "guide" ? "" : "lg:grid-cols-2"}`}
+          >
+            {resources.map((resource, index) => {
+              const previews = resource.previewImageDataUrls?.length
+                ? resource.previewImageDataUrls
+                : (resource.previewImageUrls ?? []);
+              return (
+                <PdfDocument
+                  key={resource.id}
+                  title={resource.title}
+                  description={resource.description}
+                  href={resource.attachmentDataUrl || resource.attachmentUrl}
+                  fileName={resource.attachmentName}
+                  previewUrls={previews}
+                  priority={activeChapter === "guide" && index === 0}
+                />
+              );
+            })}
+          </div>
         </div>
       </section>
     </PageShell>

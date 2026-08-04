@@ -144,10 +144,11 @@ function CadeauPage() {
           alt="Peinture d'une tasse en céramique au Kafé"
           className="absolute inset-0 h-full w-full object-cover object-center"
         />
-        <div className="absolute inset-0 bg-[#301c1a]/58" />
+        <div className="absolute inset-0 bg-[#2f1620]/52" />
+        <div className="absolute inset-y-0 left-0 w-4 bg-[#cf2c86]" />
         <div className="relative mx-auto flex min-h-[560px] max-w-6xl items-end px-4 pb-16 pt-28 text-white">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#f4b6cd] px-4 py-2 text-sm font-semibold text-[#401f1c]">
+            <div className="kafe-poster-label inline-flex items-center gap-2 bg-[#f4da45] text-[#2f1620]">
               <Gift className="h-4 w-4" /> À offrir, à peindre, à savourer
             </div>
             <h1 className="mt-6 max-w-3xl font-display text-4xl leading-none sm:text-7xl sm:leading-[0.95]">
@@ -160,6 +161,14 @@ function CadeauPage() {
           </div>
         </div>
       </section>
+
+      <div className="grid h-5 grid-cols-5 border-y-2 border-ink" aria-hidden="true">
+        <span className="bg-[#cf2c86]" />
+        <span className="bg-[#f4da45]" />
+        <span className="bg-[#79c6e8]" />
+        <span className="bg-[#dbea4c]" />
+        <span className="bg-[#ee7832]" />
+      </div>
 
       {returnedOrder && (
         <section className="border-b border-border bg-[#cfe6a5] px-4 py-6">
@@ -179,7 +188,7 @@ function CadeauPage() {
         </section>
       )}
 
-      <section className="bg-[#fff8ef] px-4 py-14 sm:py-20">
+      <section className="border-b-2 border-ink bg-[#eea83a] px-4 py-14 sm:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="max-w-3xl">
             <div className="text-sm font-semibold text-primary">1. Choisis une formule</div>
@@ -188,7 +197,7 @@ function CadeauPage() {
             </h2>
             <p className="mt-3 leading-7 text-muted-foreground">
               Ces exemples sont indicatifs. Le bénéficiaire utilise librement le montant de sa carte
-              sur l'ensemble des prestations du Kafé Céramik.
+              au Kafé Céramik ou chez Mala Madre.
             </p>
           </div>
 
@@ -242,7 +251,7 @@ function CadeauPage() {
         </div>
       </section>
 
-      <section className="px-4 py-14 sm:py-20">
+      <section className="checker-strong border-b-2 border-ink px-4 py-14 sm:py-20">
         <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
           <div className="lg:sticky lg:top-28">
             <div className="text-sm font-semibold text-primary">2. Personnalise-la</div>
@@ -256,7 +265,7 @@ function CadeauPage() {
             />
           </div>
 
-          <div className="rounded-3xl border border-border bg-card p-5 sm:p-6">
+          <div className="kafe-block-link bg-card p-5 sm:p-6">
             <div className="grid gap-4 sm:grid-cols-2">
               <GiftField label="Pour" value={recipient} onChange={setRecipient} required />
               <GiftField label="De la part de" value={sender} onChange={setSender} required />
@@ -304,8 +313,9 @@ function CadeauPage() {
             </div>
 
             <div className="mt-6 rounded-2xl bg-secondary/45 p-4 text-sm leading-6 text-muted-foreground">
-              La carte est valable {settings.giftCardValidityMonths} mois à compter de son achat.
-              Son code, son montant et sa date d'expiration apparaîtront dans le PDF.
+              La carte est valable {settings.giftCardValidityMonths} mois à compter de son achat et
+              peut être utilisée au Kafé Céramik comme chez Mala Madre. Son code, son montant et sa
+              date d'expiration apparaîtront dans le PDF.
             </div>
 
             {notice && (
@@ -349,7 +359,7 @@ function CadeauPage() {
         </div>
       </section>
 
-      <section className="bg-[#cfe6a5] px-4 py-12 text-[#301c1a]">
+      <section className="bg-[#dbea4c] px-4 py-12 text-[#301c1a]">
         <div className="mx-auto flex max-w-6xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Sparkles className="h-5 w-5" />
@@ -380,7 +390,7 @@ function GiftOptionCard({
     <button
       type="button"
       onClick={onSelect}
-      className={`rounded-3xl border p-5 text-left transition ${
+      className={`kafe-block-link p-5 text-left transition ${
         selected
           ? "border-primary bg-[#f5cdd7] ring-2 ring-primary/20"
           : "border-border bg-card hover:border-primary/40"
@@ -415,7 +425,7 @@ function GiftPreview({
   };
   return (
     <div
-      className={`relative mt-5 aspect-[1.42/1] overflow-hidden rounded-3xl border-2 border-ink p-4 shadow-lg shadow-ink/10 sm:p-6 ${backgrounds[visual]}`}
+      className={`relative mt-5 aspect-[1.42/1] overflow-hidden rounded-lg border-2 border-ink p-4 shadow-[6px_6px_0_#2f1620] sm:p-6 ${backgrounds[visual]}`}
     >
       <div className="relative flex h-full flex-col justify-between rounded-2xl border border-white/70 bg-[#fff8ef]/92 p-4 sm:p-5">
         <div>

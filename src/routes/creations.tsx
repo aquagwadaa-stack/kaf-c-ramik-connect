@@ -49,47 +49,49 @@ function CreationsPage() {
         description="Quelques exemples de pièces peintes au Kafé. Chaque atelier reste libre dans l'esprit : l'idée est surtout de donner envie, pas d'imposer un modèle."
       />
 
-      <section className="mx-auto max-w-6xl px-4 py-10">
-        {creations.length > 0 ? (
-          <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 sm:mx-0 sm:px-0">
-            {creations.map((creation, index) => (
-              <article
-                key={creation.id}
-                className="group w-[82vw] max-w-[340px] shrink-0 snap-center overflow-hidden rounded-3xl border border-border bg-card shadow-sm shadow-ink/5"
-              >
-                <div className="aspect-[4/5] overflow-hidden bg-cream">
-                  <img
-                    src={
-                      creation.imageDataUrl ||
-                      creation.imageSrc ||
-                      "/creations/assiette-tortue.webp"
-                    }
-                    alt={creation.title}
-                    loading={index === 0 ? "eager" : "lazy"}
-                    className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
-                  />
-                </div>
-                <div className="p-4">
-                  <div className="font-display text-2xl leading-none">{creation.title}</div>
-                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{creation.body}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-3xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-            Les inspirations seront ajoutées prochainement.
-          </div>
-        )}
+      <section className="border-b-2 border-ink bg-[#eea83a] px-4 py-10">
+        <div className="mx-auto max-w-6xl">
+          {creations.length > 0 ? (
+            <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 sm:mx-0 sm:px-0">
+              {creations.map((creation, index) => (
+                <article
+                  key={creation.id}
+                  className={`kafe-photo-frame group w-[82vw] max-w-[340px] shrink-0 snap-center bg-card ${index % 2 ? "rotate-[0.8deg]" : "rotate-[-0.8deg]"}`}
+                >
+                  <div className="aspect-[4/5] overflow-hidden bg-cream">
+                    <img
+                      src={
+                        creation.imageDataUrl ||
+                        creation.imageSrc ||
+                        "/creations/assiette-tortue.webp"
+                      }
+                      alt={creation.title}
+                      loading={index === 0 ? "eager" : "lazy"}
+                      className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                    />
+                  </div>
+                  <div className="p-4">
+                    <div className="font-display text-2xl leading-none">{creation.title}</div>
+                    <p className="mt-3 text-sm leading-6 text-muted-foreground">{creation.body}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-3xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+              Les inspirations seront ajoutées prochainement.
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-6">
-        <div className="grid gap-4 rounded-3xl border border-border bg-card p-5 sm:grid-cols-3 sm:p-6">
+        <div className="kafe-block-link grid gap-4 bg-[#dbea4c] p-5 sm:grid-cols-3 sm:p-6">
           {ideas.map((item) => {
             const Icon = item.icon;
             return (
               <div key={item.title} className="flex items-start gap-3">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-secondary">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#fffbd6]">
                   <Icon className="h-5 w-5" />
                 </span>
                 <span>
@@ -110,7 +112,7 @@ function CreationsPage() {
             href={settings.pinterestUrl}
             target="_blank"
             rel="noreferrer"
-            className="flex flex-col gap-4 rounded-3xl border border-border bg-[#f5cdd7] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+            className="kafe-block-link flex flex-col gap-4 bg-[#f4b6cd] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
           >
             <div>
               <div className="text-sm font-semibold text-primary">Encore plus d'idées</div>
@@ -126,7 +128,7 @@ function CreationsPage() {
       )}
 
       <section className="mx-auto max-w-6xl px-4 py-8">
-        <div className="flex flex-col gap-4 rounded-3xl border border-border bg-ink p-6 text-cream sm:flex-row sm:items-center sm:justify-between">
+        <div className="kafe-block-link flex flex-col gap-4 bg-ink p-6 text-cream sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-cream/12 px-3 py-1 text-xs font-medium">
               <Sparkles className="h-3.5 w-3.5" /> À toi de jouer
