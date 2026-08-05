@@ -391,7 +391,7 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
               l’atelier
             </div>
             <h1 className="mt-6 font-display text-4xl leading-none text-[#e90061] sm:text-6xl">
-              Décharge officielle
+              Décharge de responsabilité
             </h1>
             <div className="mt-5 flex items-center justify-center gap-3 text-center text-lg font-bold uppercase leading-7 text-[#d10b50] sm:text-2xl">
               <Paintbrush className="hidden h-8 w-8 shrink-0 sm:block" /> À lire et à remplir avant

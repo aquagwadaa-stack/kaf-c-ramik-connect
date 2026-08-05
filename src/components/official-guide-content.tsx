@@ -37,7 +37,7 @@ export function OfficialGuideContent({ resource }: { resource: ContentResource }
             rel="noreferrer"
             className="inline-flex items-center gap-2 text-sm font-medium text-primary underline underline-offset-4"
           >
-            <ExternalLink className="h-4 w-4" /> Consulter le PDF officiel
+            <ExternalLink className="h-4 w-4" /> Télécharger le PDF
           </a>
         </div>
       )}

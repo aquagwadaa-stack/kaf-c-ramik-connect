@@ -132,18 +132,35 @@ const objectCategories: CeramicObject["category"][] = [
   "Petites pieces",
 ];
 
-const tabs: { id: AdminTab; label: string; icon: LucideIcon }[] = [
-  { id: "overview", label: "Vue d'ensemble", icon: LayoutDashboard },
-  { id: "reservations", label: "Réservations", icon: CalendarDays },
-  { id: "waivers", label: "Décharges", icon: ClipboardSignature },
-  { id: "objects", label: "Objets", icon: PackageOpen },
-  { id: "creations", label: "Créations", icon: ImageIcon },
-  { id: "guestbook", label: "Livre d'or", icon: MessageSquareHeart },
-  { id: "giftcards", label: "Cartes cadeaux", icon: Gift },
-  { id: "documents", label: "Documents", icon: BookOpenText },
-  { id: "settings", label: "Réglages", icon: Settings },
-  { id: "team", label: "Équipe", icon: UserCog },
+const tabGroups: { label: string; items: { id: AdminTab; label: string; icon: LucideIcon }[] }[] = [
+  {
+    label: "Au quotidien",
+    items: [
+      { id: "overview", label: "Vue d'ensemble", icon: LayoutDashboard },
+      { id: "reservations", label: "Réservations", icon: CalendarDays },
+      { id: "waivers", label: "Décharges", icon: ClipboardSignature },
+    ],
+  },
+  {
+    label: "Contenus",
+    items: [
+      { id: "objects", label: "Objets", icon: PackageOpen },
+      { id: "creations", label: "Créations", icon: ImageIcon },
+      { id: "guestbook", label: "Livre d'or", icon: MessageSquareHeart },
+      { id: "giftcards", label: "Cartes cadeaux", icon: Gift },
+      { id: "documents", label: "Guide et carte", icon: BookOpenText },
+    ],
+  },
+  {
+    label: "Configuration",
+    items: [
+      { id: "settings", label: "Réglages", icon: Settings },
+      { id: "team", label: "Équipe", icon: UserCog },
+    ],
+  },
 ];
+
+const tabs = tabGroups.flatMap((group) => group.items);
 
 function csvCell(value: unknown) {
   const text = value === undefined || value === null ? "" : String(value);
@@ -550,7 +567,7 @@ function AdminWorkspace({
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl space-y-5 px-4 py-6">
+      <main className="mx-auto max-w-7xl space-y-5 px-4 py-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="font-display text-3xl leading-tight sm:text-4xl">Tableau de bord</h1>
@@ -560,75 +577,110 @@ function AdminWorkspace({
           </div>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {tabs.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm ${
-                tab === id
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card hover:bg-secondary"
-              }`}
-            >
-              <Icon className="h-4 w-4" /> {label}
-            </button>
-          ))}
-        </div>
+        <label className="block lg:hidden">
+          <span className="sr-only">Rubrique de l'administration</span>
+          <select
+            value={tab}
+            onChange={(event) => setTab(event.target.value as AdminTab)}
+            className="h-12 w-full rounded-xl border border-input bg-card px-4 text-sm font-medium"
+          >
+            {tabGroups.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.items.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </label>
 
-        {tab === "overview" && (
-          <OverviewPanel
-            remoteMode={remoteMode}
-            reservations={reservations}
-            occupancies={occupancies}
-            signatures={signatures}
-            settings={settings}
-            notifications={notifications}
-            onReadNotification={markNotificationRead}
-            onNavigate={setTab}
-          />
-        )}
-        {tab === "reservations" && (
-          <ReservationsPanel
-            reservations={reservations}
-            signatures={signatures}
-            settings={settings}
-          />
-        )}
-        {tab === "waivers" && (
-          <WaiversPanel
-            documents={documents}
-            saveDocuments={saveDocuments}
-            signatures={signatures}
-            saveSignatures={saveSignatures}
-            reservations={reservations}
-          />
-        )}
-        {tab === "objects" && <ObjectsPanel objects={objects} saveObjects={saveObjects} />}
-        {tab === "creations" && (
-          <CreationsPanel creations={creations} saveCreations={saveCreations} />
-        )}
-        {tab === "guestbook" && (
-          <GuestbookPanel
-            entries={guestbookEntries}
-            saveEntries={saveGuestbookEntries}
-            settings={settings}
-            saveSettings={saveSettings}
-          />
-        )}
-        {tab === "giftcards" && <GiftCardsPanel settings={settings} saveSettings={saveSettings} />}
-        {tab === "documents" && (
-          <DocumentsPanel documents={documents} saveDocuments={saveDocuments} />
-        )}
-        {tab === "settings" && <SettingsPanel settings={settings} saveSettings={saveSettings} />}
-        {tab === "team" && (
-          <TeamPanel
-            remoteMode={remoteMode}
-            adminUserId={adminUserId}
-            adminEmail={adminEmail}
-            adminRole={adminRole}
-          />
-        )}
+        <div className="grid gap-5 lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start">
+          <aside className="sticky top-24 hidden rounded-2xl border border-border bg-card p-3 lg:block">
+            {tabGroups.map((group, groupIndex) => (
+              <div key={group.label} className={groupIndex ? "mt-5" : ""}>
+                <div className="px-3 pb-2 text-xs font-semibold uppercase text-muted-foreground">
+                  {group.label}
+                </div>
+                <div className="grid gap-1">
+                  {group.items.map(({ id, label, icon: Icon }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setTab(id)}
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm ${
+                        tab === id ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" /> {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </aside>
+
+          <section className="min-w-0">
+            {tab === "overview" && (
+              <OverviewPanel
+                remoteMode={remoteMode}
+                reservations={reservations}
+                occupancies={occupancies}
+                signatures={signatures}
+                settings={settings}
+                notifications={notifications}
+                onReadNotification={markNotificationRead}
+                onNavigate={setTab}
+              />
+            )}
+            {tab === "reservations" && (
+              <ReservationsPanel
+                reservations={reservations}
+                signatures={signatures}
+                settings={settings}
+              />
+            )}
+            {tab === "waivers" && (
+              <WaiversPanel
+                documents={documents}
+                saveDocuments={saveDocuments}
+                signatures={signatures}
+                saveSignatures={saveSignatures}
+                reservations={reservations}
+              />
+            )}
+            {tab === "objects" && <ObjectsPanel objects={objects} saveObjects={saveObjects} />}
+            {tab === "creations" && (
+              <CreationsPanel creations={creations} saveCreations={saveCreations} />
+            )}
+            {tab === "guestbook" && (
+              <GuestbookPanel
+                entries={guestbookEntries}
+                saveEntries={saveGuestbookEntries}
+                settings={settings}
+                saveSettings={saveSettings}
+              />
+            )}
+            {tab === "giftcards" && (
+              <GiftCardsPanel settings={settings} saveSettings={saveSettings} />
+            )}
+            {tab === "documents" && (
+              <DocumentsPanel documents={documents} saveDocuments={saveDocuments} />
+            )}
+            {tab === "settings" && (
+              <SettingsPanel settings={settings} saveSettings={saveSettings} />
+            )}
+            {tab === "team" && (
+              <TeamPanel
+                remoteMode={remoteMode}
+                adminUserId={adminUserId}
+                adminEmail={adminEmail}
+                adminRole={adminRole}
+              />
+            )}
+          </section>
+        </div>
       </main>
     </div>
   );
@@ -2030,12 +2082,12 @@ function WaiversPanel({
   }
 
   return (
-    <Panel title="Décharges" desc="Document officiel, signature sur tablette et archives.">
+    <Panel title="Décharges" desc="Document, signature sur tablette et archives.">
       <div className="grid gap-5 lg:grid-cols-[1fr_0.72fr] lg:items-start">
         <div className="border border-border bg-background p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h3 className="font-display text-xl">Document officiel</h3>
+              <h3 className="font-display text-xl">Document à signer</h3>
               <p className="mt-1 max-w-xl text-sm text-muted-foreground">
                 Ce fichier est la base affichée à la personne puis utilisée pour générer sa décharge
                 signée.
@@ -3094,7 +3146,7 @@ function DocumentsPanel({
     {
       category: "guide",
       title: "1. Guide complet",
-      description: "Le document principal, présenté fidèlement sur la page publique.",
+      description: "Le guide principal affiché sur la page publique.",
     },
     {
       category: "nuancier",
@@ -3109,10 +3161,7 @@ function DocumentsPanel({
   ];
 
   return (
-    <Panel
-      title="Documents officiels"
-      desc="Remplacez les PDF du guide et de la carte. Le site les affiche fidèlement, sans réécrire leur contenu."
-    >
+    <Panel title="Guide et carte" desc="Importez et mettez à jour les PDF visibles sur le site.">
       <div className="mb-5 rounded-[1.75rem] border border-border bg-background p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -3120,7 +3169,7 @@ function DocumentsPanel({
             <div>
               <h3 className="font-display text-xl">Carte du Kafé</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Importez ici le PDF officiel exporté depuis Canva.
+                Importez ici le PDF exporté depuis Canva.
               </p>
             </div>
           </div>
@@ -3158,7 +3207,7 @@ function DocumentsPanel({
             onChange={(value) => updateDocument({ title: value })}
           />
           <Field
-            label="Version interne"
+            label="Nom de la version"
             value={guide.version}
             onChange={(value) => updateDocument({ version: value })}
           />
@@ -3168,14 +3217,6 @@ function DocumentsPanel({
           value={guide.intro ?? ""}
           onChange={(value) => updateDocument({ intro: value })}
         />
-
-        <div className="mt-5 flex items-start gap-3 rounded-2xl border border-primary/20 bg-secondary/45 p-4 text-sm leading-6">
-          <FileText className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-          <p>
-            Lorsqu'un PDF est remplacé, le site génère ses pages d'aperçu et conserve le fichier
-            original à télécharger. Le contenu n'est ni reformulé ni adapté.
-          </p>
-        </div>
 
         <div className="mt-7">
           {groups.map((group) => (
@@ -3379,7 +3420,7 @@ function DocumentPreview({
 
       {!hasAttachment && (
         <p className={`mt-2 text-muted-foreground ${compact ? "line-clamp-3" : ""}`}>
-          {item?.body ?? "Le document officiel sera ajouté par l'équipe."}
+          {item?.body ?? "Le document sera ajouté par l'équipe."}
         </p>
       )}
     </div>
@@ -3406,10 +3447,7 @@ function SettingsPanel({
   }
 
   return (
-    <Panel
-      title="Réglages"
-      desc="Chaque paramètre modifie réellement le parcours client ou le travail de l'équipe."
-    >
+    <Panel title="Réglages" desc="Horaires, capacité, réservation et informations du Kafé.">
       <div
         className={`rounded-2xl border p-4 ${
           settings.reservationsEnabled
@@ -3455,77 +3493,138 @@ function SettingsPanel({
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <NumberField
-          label="Acompte à partir de"
-          value={settings.depositThreshold}
-          suffix="personnes"
-          onChange={(value) => update({ depositThreshold: value })}
-        />
-        <NumberField
-          label="Acompte fixe par groupe"
-          value={settings.depositFixedAmount}
-          suffix="EUR"
-          onChange={(value) => update({ depositFixedAmount: value })}
-        />
-        <NumberField
-          label="Durée d'un créneau"
-          value={settings.slotDurationMinutes}
-          suffix="minutes"
-          onChange={(value) => update({ slotDurationMinutes: value })}
-        />
-        <IntervalField
-          value={settings.slotIntervalMinutes}
-          onChange={(slotIntervalMinutes) => update({ slotIntervalMinutes })}
-        />
-        <TimeField
-          label="Fermeture de la cuisine"
-          value={settings.kitchenClosingTime}
-          onChange={(kitchenClosingTime) => update({ kitchenClosingTime })}
-        />
-        <NumberField
-          label="Libérer une réservation sans signature après"
-          value={settings.lateArrivalGraceMinutes}
-          suffix="minutes"
-          onChange={(lateArrivalGraceMinutes) => update({ lateArrivalGraceMinutes })}
-        />
-        <NumberField
-          label="Annulation classique jusqu'à"
-          value={settings.cancellationNoticeHours}
-          suffix="heures avant"
-          onChange={(cancellationNoticeHours) => update({ cancellationNoticeHours })}
-        />
-        <NumberField
-          label="Acompte groupe conservé à moins de"
-          value={settings.groupDepositForfeitHours}
-          suffix="heures avant"
-          onChange={(groupDepositForfeitHours) => update({ groupDepositForfeitHours })}
-        />
-        <TimeField
-          label="Heure limite pour réserver le lendemain"
-          value={settings.bookingCutoffTime}
-          onChange={(bookingCutoffTime) => update({ bookingCutoffTime })}
-        />
-        <NumberField
-          label="Validation équipe à partir de"
-          value={settings.manualConfirmationThreshold}
-          suffix="personnes"
-          onChange={(value) => update({ manualConfirmationThreshold: value })}
-        />
-        <ToggleRow
-          label="Accueil sans réservation possible selon les places"
-          checked={settings.walkInCafeEnabled}
-          onChange={(value) => update({ walkInCafeEnabled: value })}
-        />
-      </div>
-
-      <div className="mt-5 grid gap-4">
-        <div className="rounded-2xl border border-border bg-background p-4">
-          <div className="flex items-center gap-2">
-            <Settings className="h-5 w-5 text-primary" />
-            <h3 className="font-display text-xl">Réseaux & contact</h3>
+      <div className="mt-5 grid gap-5">
+        <SettingsSection
+          title="Règles de réservation"
+          description="Ces valeurs déterminent les créneaux proposés et les conditions appliquées aux clients."
+          icon={CalendarDays}
+        >
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <NumberField
+              label="Groupe avec acompte et validation à partir de"
+              value={settings.depositThreshold}
+              suffix="personnes"
+              onChange={(value) =>
+                update({ depositThreshold: value, manualConfirmationThreshold: value })
+              }
+            />
+            <NumberField
+              label="Acompte fixe par groupe"
+              value={settings.depositFixedAmount}
+              suffix="EUR"
+              onChange={(value) => update({ depositFixedAmount: value })}
+            />
+            <NumberField
+              label="Durée minimale d'un créneau"
+              value={settings.slotDurationMinutes}
+              suffix="minutes"
+              onChange={(value) => update({ slotDurationMinutes: value })}
+            />
+            <IntervalField
+              value={settings.slotIntervalMinutes}
+              onChange={(slotIntervalMinutes) => update({ slotIntervalMinutes })}
+            />
+            <NumberField
+              label="Durée maximale sur place"
+              value={settings.maximumVisitHours}
+              suffix="heures"
+              onChange={(maximumVisitHours) => update({ maximumVisitHours })}
+            />
+            <TimeField
+              label="Fermeture de la cuisine"
+              value={settings.kitchenClosingTime}
+              onChange={(kitchenClosingTime) => update({ kitchenClosingTime })}
+            />
+            <TimeField
+              label="Heure limite pour réserver le lendemain"
+              value={settings.bookingCutoffTime}
+              onChange={(bookingCutoffTime) => update({ bookingCutoffTime })}
+            />
+            <NumberField
+              label="Réservation libérée après une absence de"
+              value={settings.lateArrivalGraceMinutes}
+              suffix="minutes"
+              onChange={(lateArrivalGraceMinutes) => update({ lateArrivalGraceMinutes })}
+            />
+            <NumberField
+              label="Annulation en ligne jusqu'à"
+              value={settings.cancellationNoticeHours}
+              suffix="heures avant"
+              onChange={(cancellationNoticeHours) => update({ cancellationNoticeHours })}
+            />
+            <NumberField
+              label="Acompte conservé si annulation à moins de"
+              value={settings.groupDepositForfeitHours}
+              suffix="heures avant"
+              onChange={(groupDepositForfeitHours) => update({ groupDepositForfeitHours })}
+            />
           </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
+        </SettingsSection>
+
+        <SettingsSection
+          title="Planning et capacité"
+          description="Gérez les jours ouverts, les horaires proposés et les espaces disponibles."
+          icon={Clock3}
+        >
+          <div className="grid gap-4">
+            <ScheduleRulesEditor
+              rules={settings.scheduleRules ?? []}
+              onChange={(scheduleRules) => update({ scheduleRules })}
+            />
+            <SeatingAreasEditor areas={settings.seatingAreas ?? []} onChange={updateSeatingAreas} />
+          </div>
+        </SettingsSection>
+
+        <SettingsSection
+          title="Informations affichées aux clients"
+          description="Modifiez les consignes visibles pendant la réservation et sur le site."
+          icon={FileText}
+        >
+          <div className="grid gap-4 lg:grid-cols-2">
+            <TextareaField
+              label="Venir sans réservation"
+              value={settings.walkInNoticeText}
+              onChange={(value) => update({ walkInNoticeText: value })}
+            />
+            <TextareaField
+              label="Partage des tables"
+              value={settings.sharedTableNotice}
+              onChange={(sharedTableNotice) => update({ sharedTableNotice })}
+            />
+            <TextareaField
+              label="Commandes à emporter"
+              value={settings.takeawayNotice}
+              onChange={(takeawayNotice) => update({ takeawayNotice })}
+            />
+            <TextareaField
+              label="Consommation pendant l'atelier"
+              value={settings.consumptionMandatoryNotice}
+              onChange={(consumptionMandatoryNotice) => update({ consumptionMandatoryNotice })}
+            />
+            <TextareaField
+              label="Conditions avant confirmation"
+              value={settings.reservationConditionsText}
+              onChange={(value) => update({ reservationConditionsText: value })}
+            />
+            <TextareaField
+              label="Nourriture et boissons pour les groupes"
+              value={settings.groupOutsideFoodNotice}
+              onChange={(value) => update({ groupOutsideFoodNotice: value })}
+            />
+            <TextareaField
+              label="Acceptation du guide"
+              value={settings.guideAcceptanceText}
+              onChange={(value) => update({ guideAcceptanceText: value })}
+            />
+          </div>
+        </SettingsSection>
+
+        <SettingsSection
+          title="Contact et réseaux"
+          description="Coordonnées utilisées dans le site et les e-mails."
+          icon={Settings}
+        >
+          <div className="grid gap-3 md:grid-cols-2">
             <Field
               label="Instagram"
               value={settings.instagramUrl}
@@ -3572,18 +3671,14 @@ function SettingsPanel({
               onChange={(value) => update({ contactMapUrl: value })}
             />
           </div>
-        </div>
+        </SettingsSection>
 
-        <div className="rounded-2xl border border-border bg-background p-4">
-          <div className="flex items-center gap-2">
-            <Coins className="h-5 w-5 text-primary" />
-            <h3 className="font-display text-xl">Devis automatique des groupes</h3>
-          </div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Les groupes choisissent leurs montants par personne dans ces fourchettes. Le devis PDF
-            est calculé automatiquement avec le nombre de participants.
-          </p>
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <SettingsSection
+          title="Estimation automatique des groupes"
+          description="Fourchettes utilisées pour calculer le récapitulatif PDF d'une demande de groupe."
+          icon={Coins}
+        >
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <NumberField
               label="Céramique minimum"
               value={settings.groupCeramicRateMin}
@@ -3609,58 +3704,36 @@ function SettingsPanel({
               onChange={(groupMealRateMax) => update({ groupMealRateMax })}
             />
           </div>
-        </div>
-
-        <ScheduleRulesEditor
-          rules={settings.scheduleRules ?? []}
-          onChange={(scheduleRules) => update({ scheduleRules })}
-        />
-
-        <SeatingAreasEditor areas={settings.seatingAreas ?? []} onChange={updateSeatingAreas} />
-
-        <TextareaField
-          label="Texte affiché pour les clients qui viennent seulement au Kafé"
-          value={settings.walkInNoticeText}
-          onChange={(value) => update({ walkInNoticeText: value })}
-        />
-        <NumberField
-          label="Durée maximale sur place"
-          value={settings.maximumVisitHours}
-          suffix="heures"
-          onChange={(maximumVisitHours) => update({ maximumVisitHours })}
-        />
-        <TextareaField
-          label="Information sur le partage des tables"
-          value={settings.sharedTableNotice}
-          onChange={(sharedTableNotice) => update({ sharedTableNotice })}
-        />
-        <TextareaField
-          label="Information pour les commandes à emporter"
-          value={settings.takeawayNotice}
-          onChange={(takeawayNotice) => update({ takeawayNotice })}
-        />
-        <TextareaField
-          label="Rappel de consommation obligatoire"
-          value={settings.consumptionMandatoryNotice}
-          onChange={(consumptionMandatoryNotice) => update({ consumptionMandatoryNotice })}
-        />
-        <TextareaField
-          label="Conditions pratiques affichées avant confirmation"
-          value={settings.reservationConditionsText}
-          onChange={(value) => update({ reservationConditionsText: value })}
-        />
-        <TextareaField
-          label="Règle nourriture et boissons pour les groupes"
-          value={settings.groupOutsideFoodNotice}
-          onChange={(value) => update({ groupOutsideFoodNotice: value })}
-        />
-        <TextareaField
-          label="Phrase d'acceptation du guide"
-          value={settings.guideAcceptanceText}
-          onChange={(value) => update({ guideAcceptanceText: value })}
-        />
+        </SettingsSection>
       </div>
     </Panel>
+  );
+}
+
+function SettingsSection({
+  title,
+  description,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-border bg-background p-4 sm:p-5">
+      <div className="flex items-start gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary text-primary">
+          <Icon className="h-5 w-5" />
+        </span>
+        <div>
+          <h3 className="font-display text-xl">{title}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        </div>
+      </div>
+      <div className="mt-4">{children}</div>
+    </section>
   );
 }
 

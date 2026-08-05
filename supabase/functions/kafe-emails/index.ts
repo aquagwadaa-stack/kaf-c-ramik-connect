@@ -846,7 +846,7 @@ Deno.serve(async (request) => {
       siteUrl?: string;
     };
     const action = body.action ?? "";
-    const siteUrl = (body.siteUrl ?? "https://demo-kafe-ceramik.lovable.app").replace(/\/$/, "");
+    const siteUrl = (body.siteUrl ?? "https://kafeceramik.fr").replace(/\/$/, "");
     const settings = await readSettings();
 
     if (action === "gift-card-paid") {

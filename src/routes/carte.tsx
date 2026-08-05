@@ -11,7 +11,7 @@ export const Route = createFileRoute("/carte")({
       {
         name: "description",
         content:
-          "Découvre la carte officielle, les cafés, le brunch et les créations gourmandes du Kafé Céramik.",
+          "Découvre la carte, les cafés, le brunch et les créations gourmandes du Kafé Céramik.",
       },
     ],
   }),
@@ -58,7 +58,7 @@ function CartePage() {
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Carte officielle"
+        eyebrow="Café, brunch & douceurs"
         title="La carte du Kafé"
         description={`Le Kafé t'accueille du mardi au dimanche. Service continu jusqu'à ${settings.kitchenClosingTime.replace(":", "h")}. Réserve ta table pour garantir ta place.`}
       />

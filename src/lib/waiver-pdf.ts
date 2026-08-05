@@ -6,14 +6,14 @@ async function imageToPngDataUrl(source: string) {
   image.crossOrigin = "anonymous";
   await new Promise<void>((resolve, reject) => {
     image.onload = () => resolve();
-    image.onerror = () => reject(new Error("Le document officiel est inaccessible."));
+    image.onerror = () => reject(new Error("Le document est inaccessible."));
     image.src = source;
   });
   const canvas = document.createElement("canvas");
   canvas.width = image.naturalWidth;
   canvas.height = image.naturalHeight;
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("Le document officiel est inaccessible.");
+  if (!context) throw new Error("Le document est inaccessible.");
   context.drawImage(image, 0, 0);
   return canvas.toDataURL("image/png");
 }

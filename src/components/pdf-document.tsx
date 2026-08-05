@@ -62,7 +62,7 @@ export function PdfDocument({
         <div className="grid min-h-72 place-items-center bg-[#eea83a] p-8 text-center">
           <div>
             <FileText className="mx-auto h-9 w-9 text-primary" />
-            <p className="mt-3 font-medium">Le PDF officiel sera ajouté prochainement.</p>
+            <p className="mt-3 font-medium">Le document sera ajouté ici.</p>
           </div>
         </div>
       )}

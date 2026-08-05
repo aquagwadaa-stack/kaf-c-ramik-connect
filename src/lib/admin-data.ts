@@ -383,12 +383,12 @@ export const waiverResourcesSeed: ContentResource[] = [];
 export const contentDocumentsSeed: ContentDocument[] = [
   {
     id: "guide",
-    title: "Le guide de votre atelier",
-    version: "2026-07-officiel",
+    title: "Le guide de ton atelier",
+    version: "2026-07",
     updatedAt: new Date().toISOString(),
     intro:
-      "Prenez le temps de consulter chaque support avant de commencer. Toutes les étapes du guide et du nuancier choisi sont importantes pour la cuisson, l'identification et la récupération de votre création.",
-    body: "Les documents officiels sont également disponibles sur place. L'équipe reste disponible si une consigne n'est pas claire avant de commencer.",
+      "Prends le temps de consulter chaque support avant de commencer. Toutes les étapes du guide et du nuancier choisi sont importantes pour la cuisson, l'identification et la récupération de ta création.",
+    body: "Les documents sont également disponibles sur place. L'équipe reste disponible si une consigne n'est pas claire avant de commencer.",
     sections: guideSectionsSeed,
     resources: guideResourcesSeed,
   },
@@ -397,12 +397,12 @@ export const contentDocumentsSeed: ContentDocument[] = [
     title: "Carte du Kafé",
     version: "À publier",
     updatedAt: new Date().toISOString(),
-    body: "La carte officielle du Kafé sera affichée ici dès son import depuis l'administration.",
+    body: "Découvre les boissons, brunchs et gourmandises proposés au Kafé.",
     resources: [
       {
-        id: "menu-officiel",
-        title: "Carte officielle",
-        description: "La carte café, brunch et boissons mise à jour par Mala Madre.",
+        id: "menu",
+        title: "Carte du Kafé",
+        description: "Boissons, brunchs et gourmandises du Kafé.",
         category: "menu",
         visible: true,
       },
@@ -411,7 +411,7 @@ export const contentDocumentsSeed: ContentDocument[] = [
   {
     id: "waiver",
     title: "Décharge de responsabilité",
-    version: "2026-07-officielle",
+    version: "2026-07",
     updatedAt: new Date().toISOString(),
     body: "Je reconnais avoir pris connaissance du guide complet de l'atelier. En cas de non-respect de celui-ci, l'établissement ne pourra pas être tenu responsable et aucun remboursement ne pourra être exigé.",
     attachmentUrl: "/documents/decharge-officielle.pdf",
@@ -632,7 +632,7 @@ export interface KafeSettings {
 }
 
 export const settingsSeed: KafeSettings = {
-  configurationVersion: 11,
+  configurationVersion: 12,
   reservationsEnabled: true,
   reservationPauseMessage: "",
   depositThreshold: 10,

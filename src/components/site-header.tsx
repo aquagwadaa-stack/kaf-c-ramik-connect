@@ -8,7 +8,6 @@ import { useAdminAccess } from "@/lib/supabase-rest";
 
 const baseLinks = [
   { to: "/histoire", label: "Le Kafé" },
-  { to: "/brunch", label: "Déroulement" },
   { to: "/creations", label: "Créations" },
   { to: "/guide", label: "Guide" },
   { to: "/carte", label: "Carte" },

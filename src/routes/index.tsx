@@ -30,7 +30,7 @@ export const Route = createFileRoute("/")({
 
 const quickLinks = [
   {
-    to: "/brunch",
+    to: "/histoire",
     label: "Déroulement de l’atelier",
     desc: "De la réservation à la récupération",
     icon: Brush,
@@ -183,7 +183,8 @@ function HomePage() {
       <section className="border-b-2 border-ink bg-[#fff8dd] py-14 sm:py-20">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 lg:grid-cols-[1.2fr_0.8fr]">
           <Link
-            to="/brunch"
+            to="/histoire"
+            hash="deroulement"
             className="kafe-photo-frame group relative min-h-[430px] bg-ink text-cream"
           >
             <img

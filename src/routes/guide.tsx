@@ -11,8 +11,7 @@ export const Route = createFileRoute("/guide")({
       { title: "Guide de l'atelier - Kafé Céramik" },
       {
         name: "description",
-        content:
-          "Consulte le guide officiel, les nuanciers et les préventions de l'atelier Kafé Céramik.",
+        content: "Consulte le guide, les nuanciers et les préventions de l'atelier Kafé Céramik.",
       },
     ],
   }),
@@ -30,7 +29,7 @@ const chapters: {
   {
     id: "guide",
     label: "Guide complet",
-    description: "Le document officiel du Kafé, présenté sans adaptation.",
+    description: "Toutes les étapes à suivre pour profiter pleinement de ton atelier.",
     icon: BookOpenText,
   },
   {
@@ -111,7 +110,7 @@ function GuidePage() {
         <div className="mx-auto max-w-6xl">
           <div className="max-w-3xl">
             <div className="kafe-poster-label bg-[#fffbd6] text-ink">{active.label}</div>
-            <h2 className="mt-2 font-display text-3xl sm:text-4xl">Le document officiel</h2>
+            <h2 className="mt-2 font-display text-3xl sm:text-4xl">À lire avant de commencer</h2>
             <p className="mt-3 leading-7 text-ink/75">{active.description}</p>
           </div>
 
