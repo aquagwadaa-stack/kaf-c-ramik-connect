@@ -46,10 +46,12 @@ export function PageHeader({
   eyebrow,
   title,
   description,
+  children,
 }: {
   eyebrow?: string;
   title: string;
   description?: string;
+  children?: ReactNode;
 }) {
   // Highlight the last word of the title with a marker underline for a handmade feel
   const words = title.trim().split(" ");
@@ -84,6 +86,7 @@ export function PageHeader({
             {description}
           </p>
         )}
+        {children && <div className="mt-8">{children}</div>}
       </div>
       <div className="relative grid h-4 grid-cols-4 border-t-2 border-ink" aria-hidden>
         <span className="bg-[#f4db45]" />
