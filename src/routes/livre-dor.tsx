@@ -47,7 +47,7 @@ function LivreDorPage() {
       setAuthor("");
       setMessage("");
       setRating(5);
-      setNotice("Merci ! Ton message a bien été envoyé à l'équipe avant publication.");
+      setNotice("Merci ! Ton message a bien été envoyé à l'équipe après publication.");
     } catch {
       setNotice("Le message n'a pas pu être envoyé. Réessaie dans un instant.");
     } finally {
@@ -72,7 +72,7 @@ function LivreDorPage() {
             <div>
               <div className="font-display text-2xl">Vos souvenirs vivent ici.</div>
               <p className="mt-1 text-sm text-ink/70">
-                Chaque message est lu par l'équipe avant publication.
+                Chaque message est lu par l'équipe après publication.
               </p>
             </div>
           </div>
