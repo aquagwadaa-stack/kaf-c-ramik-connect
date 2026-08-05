@@ -63,14 +63,15 @@ function CadeauPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("giftToken");
-    if (!token) return;
+    if (token === null) return;
+    const giftToken = token;
     let stopped = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let attempts = 0;
 
     async function refreshStatus() {
       try {
-        const result = await readGiftCardStatus(token);
+        const result = await readGiftCardStatus(giftToken);
         if (stopped) return;
         setReturnedOrder(result.order ?? null);
         attempts += 1;
