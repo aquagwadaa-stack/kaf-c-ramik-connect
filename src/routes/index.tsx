@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { CeramicPiece, type CeramicKind } from "@/components/ceramic-piece";
-import { creationInspirationsSeed, useKafeSettings } from "@/lib/admin-data";
+import { creationInspirationsSeed, getPageImage, useKafeSettings } from "@/lib/admin-data";
 import { getPublicSchedule } from "@/lib/opening-hours";
 
 export const Route = createFileRoute("/")({
@@ -58,6 +58,11 @@ const pieces: { name: string; detail: string; kind: CeramicKind; tone: string }[
 
 function HomePage() {
   const [settings] = useKafeSettings();
+  const heroImage = getPageImage(settings, "home-hero");
+  const artistImage = getPageImage(settings, "home-artist");
+  const foodImage = getPageImage(settings, "home-food");
+  const dessertsImage = getPageImage(settings, "home-desserts");
+  const detailImage = getPageImage(settings, "home-detail");
   const schedule = getPublicSchedule(settings);
   const featuredCreations = (
     settings.creationInspirations?.length ? settings.creationInspirations : creationInspirationsSeed
@@ -69,8 +74,8 @@ function HomePage() {
     <PageShell>
       <section className="relative min-h-[72svh] overflow-hidden border-b-2 border-ink bg-ink text-cream">
         <img
-          src="/photos/manika/atelier-table.jpg"
-          alt="Peinture sur céramique au Kafé Céramik"
+          src={heroImage.imageUrl}
+          alt={heroImage.alt}
           className="absolute inset-0 h-full w-full object-cover object-center"
         />
         <div className="absolute inset-0 bg-ink/54" />
@@ -151,8 +156,8 @@ function HomePage() {
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <figure className="kafe-photo-frame rotate-[-1.5deg]">
                 <img
-                  src="/photos/manika/artiste-peinture.jpg"
-                  alt="Une participante peint sa céramique"
+                  src={artistImage.imageUrl}
+                  alt={artistImage.alt}
                   loading="lazy"
                   className="aspect-[4/5] h-full w-full object-cover"
                 />
@@ -160,16 +165,16 @@ function HomePage() {
               <div className="grid gap-3 sm:gap-4">
                 <figure className="kafe-photo-frame rotate-[1deg]">
                   <img
-                    src="/photos/manika/brunch-bowl.jpg"
-                    alt="Une assiette gourmande servie au Kafé"
+                    src={foodImage.imageUrl}
+                    alt={foodImage.alt}
                     loading="lazy"
                     className="aspect-[4/3] h-full w-full object-cover"
                   />
                 </figure>
                 <figure className="kafe-photo-frame rotate-[-1deg]">
                   <img
-                    src="/photos/manika/comptoir-desserts.jpg"
-                    alt="Le comptoir et les pâtisseries maison"
+                    src={dessertsImage.imageUrl}
+                    alt={dessertsImage.alt}
                     loading="lazy"
                     className="aspect-[4/3] h-full w-full object-cover"
                   />
@@ -188,8 +193,8 @@ function HomePage() {
             className="kafe-photo-frame group relative min-h-[430px] bg-ink text-cream"
           >
             <img
-              src="/photos/manika/detail-peinture.jpg"
-              alt="Une pièce en train d’être peinte"
+              src={detailImage.imageUrl}
+              alt={detailImage.alt}
               loading="lazy"
               className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
             />

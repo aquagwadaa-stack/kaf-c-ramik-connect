@@ -67,6 +67,7 @@ import {
   getGuideDocument,
   getMenuDocument,
   getWaiverDocument,
+  pageImagesSeed,
   useKafeSettings,
   useWaiverSignatures,
   type CreationInspiration,
@@ -75,6 +76,7 @@ import {
   type ContentResource,
   type GiftCardOption,
   type KafeSettings,
+  type PageImageSetting,
   type ScheduleRule,
   type SeatingArea,
   type SeatingZone,
@@ -117,6 +119,7 @@ type AdminTab =
   | "waivers"
   | "objects"
   | "creations"
+  | "images"
   | "guestbook"
   | "giftcards"
   | "documents"
@@ -147,6 +150,7 @@ const tabGroups: { label: string; items: { id: AdminTab; label: string; icon: Lu
     items: [
       { id: "objects", label: "Objets", icon: PackageOpen },
       { id: "creations", label: "Créations", icon: ImageIcon },
+      { id: "images", label: "Images des pages", icon: ImageIcon },
       { id: "guestbook", label: "Livre d'or", icon: MessageSquareHeart },
       { id: "giftcards", label: "Cartes cadeaux", icon: Gift },
       { id: "documents", label: "Guide et carte", icon: BookOpenText },
@@ -654,6 +658,9 @@ function AdminWorkspace({
             {tab === "objects" && <ObjectsPanel objects={objects} saveObjects={saveObjects} />}
             {tab === "creations" && (
               <CreationsPanel creations={creations} saveCreations={saveCreations} />
+            )}
+            {tab === "images" && (
+              <PageImagesPanel settings={settings} saveSettings={saveSettings} />
             )}
             {tab === "guestbook" && (
               <GuestbookPanel
@@ -2578,6 +2585,168 @@ function CreationsPanel({
               </div>
             </div>
           </div>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
+async function hashImageFile(file: File) {
+  if (!globalThis.crypto?.subtle) {
+    return `${file.name}:${file.size}:${file.lastModified}`;
+  }
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function PageImagesPanel({
+  settings,
+  saveSettings,
+}: {
+  settings: KafeSettings;
+  saveSettings: (next: KafeSettings) => void;
+}) {
+  const [notice, setNotice] = useState("");
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const images = settings.pageImages?.length ? settings.pageImages : pageImagesSeed;
+  const pages = ["Accueil", "Le Kafé", "Carte", "Carte cadeau"] as const;
+
+  function saveImages(next: PageImageSetting[]) {
+    saveSettings({ ...settings, pageImages: next });
+  }
+
+  function updateImage(id: PageImageSetting["id"], patch: Partial<PageImageSetting>) {
+    saveImages(images.map((image) => (image.id === id ? { ...image, ...patch } : image)));
+  }
+
+  async function uploadPageImage(id: PageImageSetting["id"], file?: File) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setNotice("Choisissez un fichier image.");
+      return;
+    }
+
+    setUploadingId(id);
+    setNotice("");
+    try {
+      const imageHash = await hashImageFile(file);
+      const duplicate = images.find((image) => image.id !== id && image.imageHash === imageHash);
+      if (duplicate) {
+        setNotice(
+          `Cette photo est déjà utilisée dans « ${duplicate.page} - ${duplicate.label} ». Chaque emplacement doit garder une image différente.`,
+        );
+        return;
+      }
+
+      const current = images.find((image) => image.id === id);
+      const stored = await storeDocumentFile(`pages/${id}`, file);
+      const imageUrl = stored.attachmentUrl || stored.attachmentDataUrl;
+      if (!imageUrl) throw new Error("Photo introuvable après l'import.");
+
+      if (current?.imageUrl) {
+        await deleteAdminFileByPublicUrl(current.imageUrl).catch(() => undefined);
+      }
+      updateImage(id, { imageUrl, imageName: file.name, imageHash });
+      setNotice("Photo enregistrée. Elle est déjà utilisée sur la page correspondante.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Impossible d'enregistrer la photo.");
+    } finally {
+      setUploadingId(null);
+    }
+  }
+
+  async function restoreImage(id: PageImageSetting["id"]) {
+    const current = images.find((image) => image.id === id);
+    const original = pageImagesSeed.find((image) => image.id === id);
+    if (!original) return;
+    if (current?.imageUrl) {
+      await deleteAdminFileByPublicUrl(current.imageUrl).catch(() => undefined);
+    }
+    saveImages(images.map((image) => (image.id === id ? { ...original } : image)));
+    setNotice("Photo d'origine rétablie.");
+  }
+
+  return (
+    <Panel
+      title="Images des pages"
+      desc="Remplacez les photos fixes du site. Chaque emplacement utilise une image différente."
+    >
+      <div className="mb-5 rounded-2xl border border-border bg-secondary/35 p-4 text-sm leading-6 text-muted-foreground">
+        Les photos des créations, des objets et du livre d'or se gèrent dans leurs rubriques. Ici,
+        vous pilotez uniquement les images de présentation de l'accueil, du Kafé, de la carte et de
+        la carte cadeau.
+      </div>
+
+      {notice && (
+        <div className="mb-5 rounded-2xl border border-primary/25 bg-primary/10 p-4 text-sm">
+          {notice}
+        </div>
+      )}
+
+      <div className="space-y-7">
+        {pages.map((page) => (
+          <section key={page}>
+            <h3 className="font-display text-2xl">{page}</h3>
+            <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {images
+                .filter((image) => image.page === page)
+                .map((image) => {
+                  const original = pageImagesSeed.find((item) => item.id === image.id);
+                  const isOriginal = original?.imageUrl === image.imageUrl;
+                  return (
+                    <article
+                      key={image.id}
+                      className="overflow-hidden rounded-2xl border border-border bg-background"
+                    >
+                      <img
+                        src={image.imageUrl}
+                        alt={image.alt}
+                        className="aspect-[4/3] w-full object-cover"
+                      />
+                      <div className="space-y-3 p-4">
+                        <div>
+                          <div className="font-medium">{image.label}</div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {image.imageName ||
+                              (isOriginal ? "Sélection Manika" : "Photo personnalisée")}
+                          </div>
+                        </div>
+                        <Field
+                          label="Description de l'image"
+                          value={image.alt}
+                          onChange={(alt) => updateImage(image.id, { alt })}
+                        />
+                        <div className="flex flex-wrap gap-2">
+                          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-primary px-3 py-2 text-xs font-medium text-primary-foreground">
+                            <UploadCloud className="h-3.5 w-3.5" />
+                            {uploadingId === image.id ? "Import..." : "Remplacer"}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={uploadingId !== null}
+                              className="sr-only"
+                              onChange={async (event) => {
+                                await uploadPageImage(image.id, event.currentTarget.files?.[0]);
+                                event.currentTarget.value = "";
+                              }}
+                            />
+                          </label>
+                          {!isOriginal && (
+                            <button
+                              type="button"
+                              onClick={() => void restoreImage(image.id)}
+                              className="rounded-full border border-border px-3 py-2 text-xs hover:bg-secondary"
+                            >
+                              Rétablir l'originale
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+            </div>
+          </section>
         ))}
       </div>
     </Panel>

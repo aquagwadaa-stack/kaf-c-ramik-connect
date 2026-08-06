@@ -2,7 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Coffee, Phone, ShoppingBag } from "lucide-react";
 import { PdfDocument } from "@/components/pdf-document";
 import { PageShell, PageHeader } from "@/components/page-shell";
-import { getMenuDocument, useContentDocuments, useKafeSettings } from "@/lib/admin-data";
+import {
+  getMenuDocument,
+  getPageImage,
+  useContentDocuments,
+  useKafeSettings,
+  type PageImageKey,
+} from "@/lib/admin-data";
 
 export const Route = createFileRoute("/carte")({
   head: () => ({
@@ -18,35 +24,18 @@ export const Route = createFileRoute("/carte")({
   component: CartePage,
 });
 
-const foodPhotos = [
-  {
-    src: "/photos/manika/brunch-bowl.jpg",
-    alt: "Brunch gourmand servi au Kafé Céramik",
-  },
-  {
-    src: "/photos/manika/brunch-plateau.jpg",
-    alt: "Plateau gourmand du Kafé Céramik",
-  },
-  {
-    src: "/photos/manika/tarte.jpg",
-    alt: "Tarte maison servie au Kafé Céramik",
-  },
-  {
-    src: "/photos/manika/comptoir-desserts.jpg",
-    alt: "Comptoir gourmand du Kafé Céramik",
-  },
-  {
-    src: "/photos/manika/gateau.jpg",
-    alt: "Gâteau maison du Kafé Céramik",
-  },
-  {
-    src: "/photos/manika/equipe-service.jpg",
-    alt: "Service au Kafé Céramik",
-  },
-] as const;
+const foodPhotoKeys: PageImageKey[] = [
+  "menu-food-1",
+  "menu-food-2",
+  "menu-food-3",
+  "menu-food-4",
+  "menu-food-5",
+  "menu-food-6",
+];
 
 function CartePage() {
   const [settings] = useKafeSettings();
+  const foodPhotos = foodPhotoKeys.map((key) => getPageImage(settings, key));
   const [documents] = useContentDocuments();
   const menu = getMenuDocument(documents);
   const resource = (menu.resources ?? []).find((item) => item.category === "menu" && item.visible);
@@ -123,8 +112,8 @@ function CartePage() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {foodPhotos.map((photo, index) => (
               <img
-                key={photo.src}
-                src={photo.src}
+                key={photo.id}
+                src={photo.imageUrl}
                 alt={photo.alt}
                 loading={index === 0 ? "eager" : "lazy"}
                 className={`kafe-photo-frame aspect-[4/3] w-full object-cover ${index % 2 ? "rotate-[0.6deg]" : "rotate-[-0.6deg]"}`}

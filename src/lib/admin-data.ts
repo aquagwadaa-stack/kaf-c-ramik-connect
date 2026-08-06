@@ -574,6 +574,35 @@ export interface GiftCardOption {
   visual: GiftCardVisual;
 }
 
+export type PageImageKey =
+  | "home-hero"
+  | "home-artist"
+  | "home-food"
+  | "home-desserts"
+  | "home-detail"
+  | "story-intro"
+  | "story-process"
+  | "story-team"
+  | "story-artist"
+  | "story-brunch"
+  | "menu-food-1"
+  | "menu-food-2"
+  | "menu-food-3"
+  | "menu-food-4"
+  | "menu-food-5"
+  | "menu-food-6"
+  | "gift-hero";
+
+export interface PageImageSetting {
+  id: PageImageKey;
+  page: "Accueil" | "Le Kafé" | "Carte" | "Carte cadeau";
+  label: string;
+  imageUrl: string;
+  alt: string;
+  imageName?: string;
+  imageHash?: string;
+}
+
 export interface KafeSettings {
   configurationVersion: number;
   reservationsEnabled: boolean;
@@ -629,10 +658,133 @@ export interface KafeSettings {
   groupMealRateMax: number;
   sumupPaymentsEnabled: boolean;
   creationInspirations: CreationInspiration[];
+  pageImages: PageImageSetting[];
 }
 
+export const pageImagesSeed: PageImageSetting[] = [
+  {
+    id: "home-hero",
+    page: "Accueil",
+    label: "Grande photo d'ouverture",
+    imageUrl: "/photos/manika/atelier-table.jpg",
+    alt: "Peinture sur céramique au Kafé Céramik",
+  },
+  {
+    id: "home-artist",
+    page: "Accueil",
+    label: "Mosaïque - artiste",
+    imageUrl: "/photos/manika/artiste-peinture.jpg",
+    alt: "Une participante peint sa céramique",
+  },
+  {
+    id: "home-food",
+    page: "Accueil",
+    label: "Mosaïque - assiette",
+    imageUrl: "/photos/manika/brunch-bowl.jpg",
+    alt: "Une assiette gourmande servie au Kafé",
+  },
+  {
+    id: "home-desserts",
+    page: "Accueil",
+    label: "Mosaïque - comptoir",
+    imageUrl: "/photos/manika/comptoir-desserts.jpg",
+    alt: "Le comptoir et les pâtisseries maison",
+  },
+  {
+    id: "home-detail",
+    page: "Accueil",
+    label: "Photo du bloc déroulement",
+    imageUrl: "/photos/manika/detail-peinture.jpg",
+    alt: "Une pièce en train d'être peinte",
+  },
+  {
+    id: "story-intro",
+    page: "Le Kafé",
+    label: "Présentation du lieu",
+    imageUrl: "/photos/manika/interieur-comptoir.jpg",
+    alt: "L'intérieur du Kafé Céramik à Saint-François",
+  },
+  {
+    id: "story-process",
+    page: "Le Kafé",
+    label: "Déroulement de l'atelier",
+    imageUrl: "/photos/manika/pages/atelier-partage.jpg",
+    alt: "Un atelier de peinture partagé autour d'une table",
+  },
+  {
+    id: "story-team",
+    page: "Le Kafé",
+    label: "Galerie - moment en groupe",
+    imageUrl: "/photos/manika/pages/table-groupe.jpg",
+    alt: "Un moment convivial en groupe au Kafé",
+  },
+  {
+    id: "story-artist",
+    page: "Le Kafé",
+    label: "Galerie - jeune artiste",
+    imageUrl: "/photos/manika/pages/enfant-atelier.jpg",
+    alt: "Une jeune artiste peint sa céramique",
+  },
+  {
+    id: "story-brunch",
+    page: "Le Kafé",
+    label: "Galerie - table gourmande",
+    imageUrl: "/photos/manika/pages/brunch-partage.jpg",
+    alt: "Une table gourmande partagée au Kafé",
+  },
+  {
+    id: "menu-food-1",
+    page: "Carte",
+    label: "Galerie gourmande 1",
+    imageUrl: "/photos/manika/pages/patisseries-chocolat.jpg",
+    alt: "Pâtisseries au chocolat préparées au Kafé",
+  },
+  {
+    id: "menu-food-2",
+    page: "Carte",
+    label: "Galerie gourmande 2",
+    imageUrl: "/photos/manika/pages/plat-gourmand.jpg",
+    alt: "Un plat gourmand servi au Kafé",
+  },
+  {
+    id: "menu-food-3",
+    page: "Carte",
+    label: "Galerie gourmande 3",
+    imageUrl: "/photos/manika/pages/paniers-fruits.jpg",
+    alt: "Des fruits frais utilisés dans la cuisine du Kafé",
+  },
+  {
+    id: "menu-food-4",
+    page: "Carte",
+    label: "Galerie gourmande 4",
+    imageUrl: "/photos/manika/pages/serveuse-cafe.jpg",
+    alt: "Le service chaleureux du Kafé Céramik",
+  },
+  {
+    id: "menu-food-5",
+    page: "Carte",
+    label: "Galerie gourmande 5",
+    imageUrl: "/photos/manika/pages/table-boissons.jpg",
+    alt: "Boissons fraîches et gourmandises sur une table du Kafé",
+  },
+  {
+    id: "menu-food-6",
+    page: "Carte",
+    label: "Galerie gourmande 6",
+    imageUrl: "/photos/manika/gateau.jpg",
+    alt: "Gâteau maison servi au Kafé Céramik",
+  },
+  {
+    id: "gift-hero",
+    page: "Carte cadeau",
+    label: "Grande photo d'ouverture",
+    imageUrl: "/photos/atelier-mains.webp",
+    alt: "Peinture d'une tasse en céramique au Kafé",
+  },
+];
+
 export const settingsSeed: KafeSettings = {
-  configurationVersion: 12,
+  configurationVersion: 13,
   reservationsEnabled: true,
   reservationPauseMessage: "",
   depositThreshold: 10,
@@ -744,7 +896,16 @@ export const settingsSeed: KafeSettings = {
   groupMealRateMax: 25,
   sumupPaymentsEnabled: false,
   creationInspirations: creationInspirationsSeed,
+  pageImages: pageImagesSeed,
 };
+
+export function getPageImage(settings: KafeSettings, id: PageImageKey): PageImageSetting {
+  return (
+    settings.pageImages?.find((image) => image.id === id) ??
+    pageImagesSeed.find((image) => image.id === id) ??
+    pageImagesSeed[0]
+  );
+}
 
 export function useCeramicObjects() {
   return useStoredList<CeramicObject>("kafe-ceramik-objects", ceramicObjectsSeed, {
@@ -775,6 +936,13 @@ export function useWaiverSignatures() {
 }
 
 function normalizeKafeSettings(value?: Partial<KafeSettings> | null): KafeSettings {
+  const pageImages = pageImagesSeed.map((seedImage) => ({
+    ...seedImage,
+    ...value?.pageImages?.find((image) => image.id === seedImage.id),
+    id: seedImage.id,
+    page: seedImage.page,
+    label: seedImage.label,
+  }));
   const merged: KafeSettings = {
     ...settingsSeed,
     ...value,
@@ -783,10 +951,19 @@ function normalizeKafeSettings(value?: Partial<KafeSettings> | null): KafeSettin
       ...value?.reservationFieldRequirements,
     },
     giftCardOptions: value?.giftCardOptions ?? settingsSeed.giftCardOptions,
+    pageImages,
   };
 
   if ((value?.configurationVersion ?? 0) >= settingsSeed.configurationVersion) {
     return merged;
+  }
+
+  if ((value?.configurationVersion ?? 0) >= 12) {
+    return {
+      ...merged,
+      configurationVersion: settingsSeed.configurationVersion,
+      pageImages,
+    };
   }
 
   if ((value?.configurationVersion ?? 0) >= 2) {

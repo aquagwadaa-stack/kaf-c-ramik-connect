@@ -10,6 +10,7 @@ import {
   Utensils,
 } from "lucide-react";
 import { PageShell, PageHeader } from "@/components/page-shell";
+import { getPageImage, useKafeSettings } from "@/lib/admin-data";
 
 export const Route = createFileRoute("/histoire")({
   head: () => ({
@@ -59,6 +60,13 @@ const flow = [
 ] as const;
 
 function HistoirePage() {
+  const [settings] = useKafeSettings();
+  const introImage = getPageImage(settings, "story-intro");
+  const processImage = getPageImage(settings, "story-process");
+  const teamImage = getPageImage(settings, "story-team");
+  const artistImage = getPageImage(settings, "story-artist");
+  const brunchImage = getPageImage(settings, "story-brunch");
+
   return (
     <PageShell>
       <PageHeader
@@ -71,8 +79,8 @@ function HistoirePage() {
         <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <figure className="kafe-photo-frame rotate-[-1deg]">
             <img
-              src="/photos/manika/interieur-comptoir.jpg"
-              alt="L'intérieur du Kafé Céramik à Saint-François"
+              src={introImage.imageUrl}
+              alt={introImage.alt}
               className="aspect-[4/3] h-full w-full object-cover"
             />
           </figure>
@@ -115,8 +123,8 @@ function HistoirePage() {
 
           <figure className="kafe-photo-frame mt-8">
             <img
-              src="/photos/manika/atelier-table.jpg"
-              alt="Atelier de peinture sur céramique au Kafé Céramik"
+              src={processImage.imageUrl}
+              alt={processImage.alt}
               className="h-[250px] w-full object-cover sm:h-[360px]"
             />
           </figure>
@@ -168,18 +176,18 @@ function HistoirePage() {
 
       <section className="mx-auto grid max-w-6xl gap-5 px-4 py-12 sm:grid-cols-3">
         <img
-          src="/photos/manika/equipe-service.jpg"
-          alt="L'équipe du Kafé"
+          src={teamImage.imageUrl}
+          alt={teamImage.alt}
           className="kafe-photo-frame aspect-[4/5] w-full rotate-[-1deg] object-cover"
         />
         <img
-          src="/photos/manika/artiste-peinture.jpg"
-          alt="Une artiste en train de peindre"
+          src={artistImage.imageUrl}
+          alt={artistImage.alt}
           className="kafe-photo-frame aspect-[4/5] w-full rotate-[1deg] object-cover sm:translate-y-7"
         />
         <img
-          src="/photos/manika/brunch-plateau.jpg"
-          alt="Un brunch servi au Kafé"
+          src={brunchImage.imageUrl}
+          alt={brunchImage.alt}
           className="kafe-photo-frame aspect-[4/5] w-full rotate-[-0.5deg] object-cover"
         />
       </section>

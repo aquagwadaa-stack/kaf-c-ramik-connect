@@ -10,7 +10,12 @@ import {
   Sparkles,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { useKafeSettings, type GiftCardOption, type GiftCardVisual } from "@/lib/admin-data";
+import {
+  getPageImage,
+  useKafeSettings,
+  type GiftCardOption,
+  type GiftCardVisual,
+} from "@/lib/admin-data";
 import { createGiftCardCheckout, readGiftCardStatus, type GiftCardOrder } from "@/lib/gift-cards";
 
 export const Route = createFileRoute("/cadeau")({
@@ -40,6 +45,7 @@ type PublicGiftStatus = Pick<
 
 function CadeauPage() {
   const [settings] = useKafeSettings();
+  const heroImage = getPageImage(settings, "gift-hero");
   const options = settings.giftCardOptions.filter((option) => option.visible);
   const [selectedId, setSelectedId] = useState(options[0]?.id ?? "custom");
   const [customAmount, setCustomAmount] = useState(settings.giftCardCustomMin);
@@ -141,8 +147,8 @@ function CadeauPage() {
     <PageShell>
       <section className="relative isolate min-h-[560px] overflow-hidden">
         <img
-          src="/photos/atelier-mains.webp"
-          alt="Peinture d'une tasse en céramique au Kafé"
+          src={heroImage.imageUrl}
+          alt={heroImage.alt}
           className="absolute inset-0 h-full w-full object-cover object-center"
         />
         <div className="absolute inset-0 bg-[#2f1620]/52" />
