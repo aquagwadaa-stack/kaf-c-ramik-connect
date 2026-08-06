@@ -84,6 +84,7 @@ import { useAdminGuestbookEntries, type GuestbookEntry } from "@/lib/guestbook";
 import { resendGiftCardPdf, useAdminGiftCardOrders, type GiftCardOrder } from "@/lib/gift-cards";
 import { storeDocumentFile } from "@/lib/document-files";
 import {
+  deleteAdminFileByPublicUrl,
   deleteRow,
   callRpc,
   isSupabaseConfigured,
@@ -2594,44 +2595,97 @@ function GuestbookPanel({
   settings: KafeSettings;
   saveSettings: (next: KafeSettings) => void;
 }) {
-  const [qrDataUrl, setQrDataUrl] = useState("");
   const [draft, setDraft] = useState({ author: "", message: "", rating: 5 });
-  const guestbookUrl =
-    typeof window === "undefined"
-      ? "https://kafeceramik.fr/livre-dor"
-      : `${window.location.origin}/livre-dor`;
+  const [draftImage, setDraftImage] = useState<File | null>(null);
+  const [draftImagePreview, setDraftImagePreview] = useState("");
+  const [uploadingImageId, setUploadingImageId] = useState("");
+  const [imageError, setImageError] = useState("");
 
   useEffect(() => {
-    QRCode.toDataURL(guestbookUrl, {
-      width: 720,
-      margin: 2,
-      color: { dark: "#301c1a", light: "#fff8ef" },
-      errorCorrectionLevel: "H",
-    })
-      .then(setQrDataUrl)
-      .catch(() => setQrDataUrl(""));
-  }, [guestbookUrl]);
+    if (!draftImage) {
+      setDraftImagePreview("");
+      return;
+    }
+    const previewUrl = URL.createObjectURL(draftImage);
+    setDraftImagePreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [draftImage]);
 
   function updateEntry(id: string, patch: Partial<GuestbookEntry>) {
     saveEntries(entries.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)));
   }
 
-  function addGoogleReview() {
+  async function storeGuestbookImage(id: string, file: File) {
+    const error = guestbookImageError(file);
+    if (error) throw new Error(error);
+    const stored = await storeDocumentFile(`livre-dor/${id}`, file);
+    return (
+      stored.previewImageUrls?.[0] ??
+      stored.previewImageDataUrls?.[0] ??
+      stored.attachmentUrl ??
+      stored.attachmentDataUrl ??
+      ""
+    );
+  }
+
+  async function updateEntryImage(id: string, file?: File) {
+    if (!file) return;
+    setImageError("");
+    setUploadingImageId(id);
+    try {
+      const imageUrl = await storeGuestbookImage(id, file);
+      const previousImageUrl = entries.find((entry) => entry.id === id)?.imageUrl;
+      updateEntry(id, { imageUrl });
+      if (previousImageUrl && previousImageUrl !== imageUrl) {
+        await deleteAdminFileByPublicUrl(previousImageUrl).catch(() => undefined);
+      }
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : "La photo n'a pas pu être importée.");
+    } finally {
+      setUploadingImageId("");
+    }
+  }
+
+  async function removeEntryImage(entry: GuestbookEntry) {
+    if (entry.imageUrl) await deleteAdminFileByPublicUrl(entry.imageUrl).catch(() => undefined);
+    updateEntry(entry.id, { imageUrl: undefined });
+  }
+
+  async function deleteGuestbookEntry(entry: GuestbookEntry) {
+    if (entry.imageUrl) await deleteAdminFileByPublicUrl(entry.imageUrl).catch(() => undefined);
+    saveEntries(entries.filter((item) => item.id !== entry.id));
+  }
+
+  async function addGoogleReview() {
     if (draft.author.trim().length < 2 || draft.message.trim().length < 4) return;
+    const id = `guest-google-${Date.now()}`;
+    setImageError("");
+    setUploadingImageId(id);
+    let imageUrl = "";
+    try {
+      if (draftImage) imageUrl = await storeGuestbookImage(id, draftImage);
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : "La photo n'a pas pu être importée.");
+      setUploadingImageId("");
+      return;
+    }
     saveEntries([
       {
-        id: `guest-google-${Date.now()}`,
+        id,
         author: draft.author.trim(),
         message: draft.message.trim(),
         rating: draft.rating,
         status: "published",
         source: "google",
         sourceUrl: settings.googleReviewUrl,
+        imageUrl: imageUrl || undefined,
         createdAt: new Date().toISOString(),
       },
       ...entries,
     ]);
     setDraft({ author: "", message: "", rating: 5 });
+    setDraftImage(null);
+    setUploadingImageId("");
   }
 
   const pending = entries.filter((entry) => entry.status === "pending");
@@ -2668,27 +2722,19 @@ function GuestbookPanel({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-[#fff8ef] p-4 text-center">
-          <QrCode className="mx-auto h-5 w-5 text-primary" />
-          <h3 className="mt-2 font-display text-xl">QR code du livre d'or</h3>
-          {qrDataUrl && (
-            <img
-              src={qrDataUrl}
-              alt="QR code du livre d'or"
-              className="mx-auto mt-3 aspect-square w-44 rounded-xl bg-white p-2"
-            />
-          )}
-          {qrDataUrl && (
-            <a
-              href={qrDataUrl}
-              download="qr-code-livre-dor-kafe-ceramik.png"
-              className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground"
-            >
-              <Download className="h-3.5 w-3.5" /> Télécharger
-            </a>
-          )}
-        </div>
+        <AdminQrCodeCard
+          title="QR code du livre d'or"
+          description="À poser près de la sortie ou de la caisse."
+          path="/livre-dor"
+          filename="qr-code-livre-dor-kafe-ceramik.png"
+        />
       </div>
+
+      {imageError && (
+        <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          {imageError}
+        </div>
+      )}
 
       <div className="mt-6">
         <h3 className="font-display text-xl">
@@ -2702,7 +2748,10 @@ function GuestbookPanel({
               entry={entry}
               onPublish={() => updateEntry(entry.id, { status: "published" })}
               onHide={() => updateEntry(entry.id, { status: "hidden" })}
-              onDelete={() => saveEntries(entries.filter((item) => item.id !== entry.id))}
+              onDelete={() => void deleteGuestbookEntry(entry)}
+              onImageChange={(file) => void updateEntryImage(entry.id, file)}
+              onRemoveImage={() => void removeEntryImage(entry)}
+              uploadingImage={uploadingImageId === entry.id}
             />
           ))}
         </div>
@@ -2731,12 +2780,55 @@ function GuestbookPanel({
           value={draft.message}
           onChange={(message) => setDraft({ ...draft, message })}
         />
+        <div className="mt-3 rounded-xl border border-dashed border-border p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-medium">Photo associée</div>
+              <p className="text-xs text-muted-foreground">
+                Facultative · JPG, PNG ou WebP · 5 Mo max.
+              </p>
+            </div>
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm hover:bg-secondary">
+              <ImageIcon className="h-4 w-4" /> Choisir
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0] ?? null;
+                  const error = file ? guestbookImageError(file) : "";
+                  setImageError(error);
+                  setDraftImage(error ? null : file);
+                }}
+              />
+            </label>
+          </div>
+          {draftImagePreview && (
+            <div className="relative mt-3 w-full max-w-sm overflow-hidden rounded-xl border border-border">
+              <img
+                src={draftImagePreview}
+                alt="Aperçu de l'avis"
+                className="aspect-[4/3] w-full object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => setDraftImage(null)}
+                className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full border border-border bg-background"
+                aria-label="Retirer la photo"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
         <button
           type="button"
-          onClick={addGoogleReview}
+          onClick={() => void addGoogleReview()}
+          disabled={Boolean(uploadingImageId)}
           className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground"
         >
-          <Plus className="h-4 w-4" /> Ajouter l'avis
+          <Plus className="h-4 w-4" />
+          {uploadingImageId ? "Import en cours..." : "Ajouter l'avis"}
         </button>
       </div>
 
@@ -2750,7 +2842,10 @@ function GuestbookPanel({
               entry={entry}
               onPublish={() => updateEntry(entry.id, { status: "published" })}
               onHide={() => updateEntry(entry.id, { status: "hidden" })}
-              onDelete={() => saveEntries(entries.filter((item) => item.id !== entry.id))}
+              onDelete={() => void deleteGuestbookEntry(entry)}
+              onImageChange={(file) => void updateEntryImage(entry.id, file)}
+              onRemoveImage={() => void removeEntryImage(entry)}
+              uploadingImage={uploadingImageId === entry.id}
             />
           ))}
         </div>
@@ -2759,36 +2854,154 @@ function GuestbookPanel({
   );
 }
 
+function guestbookImageError(file: File) {
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    return "Choisissez une image JPG, PNG ou WebP.";
+  }
+  if (file.size > 5 * 1024 * 1024) return "La photo doit peser moins de 5 Mo.";
+  return "";
+}
+
+function AdminQrCodeCard({
+  title,
+  description,
+  path,
+  filename,
+}: {
+  title: string;
+  description: string;
+  path: string;
+  filename: string;
+}) {
+  const [qrDataUrl, setQrDataUrl] = useState("");
+  const targetUrl =
+    typeof window === "undefined"
+      ? `https://kafeceramik.fr${path}`
+      : `${window.location.origin}${path}`;
+
+  useEffect(() => {
+    QRCode.toDataURL(targetUrl, {
+      width: 720,
+      margin: 2,
+      color: { dark: "#301c1a", light: "#fff8ef" },
+      errorCorrectionLevel: "H",
+    })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(""));
+  }, [targetUrl]);
+
+  return (
+    <div className="rounded-2xl border border-border bg-[#fff8ef] p-4 text-center">
+      <QrCode className="mx-auto h-5 w-5 text-primary" />
+      <h3 className="mt-2 font-display text-xl">{title}</h3>
+      <p className="mx-auto mt-1 max-w-xs text-xs leading-5 text-muted-foreground">{description}</p>
+      {qrDataUrl && (
+        <img
+          src={qrDataUrl}
+          alt={title}
+          className="mx-auto mt-3 aspect-square w-44 rounded-xl bg-white p-2"
+        />
+      )}
+      <div className="mt-3 flex flex-wrap justify-center gap-2">
+        {qrDataUrl && (
+          <a
+            href={qrDataUrl}
+            download={filename}
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground"
+          >
+            <Download className="h-3.5 w-3.5" /> Télécharger
+          </a>
+        )}
+        <a
+          href={targetUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center rounded-full border border-border bg-background px-4 py-2 text-xs hover:bg-secondary"
+        >
+          Ouvrir
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function GuestbookAdminCard({
   entry,
   onPublish,
   onHide,
   onDelete,
+  onImageChange,
+  onRemoveImage,
+  uploadingImage,
 }: {
   entry: GuestbookEntry;
   onPublish: () => void;
   onHide: () => void;
   onDelete: () => void;
+  onImageChange: (file: File) => void;
+  onRemoveImage: () => void;
+  uploadingImage: boolean;
 }) {
   return (
     <article className="rounded-2xl border border-border bg-background p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_170px]">
         <div>
-          <div className="font-medium">{entry.author}</div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            {entry.rating}/5 · {entry.source === "google" ? "Google" : "Livre d'or"} ·{" "}
-            {new Date(entry.createdAt).toLocaleDateString("fr-FR")}
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="font-medium">{entry.author}</div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {entry.rating}/5 · {entry.source === "google" ? "Google" : "Livre d'or"} ·{" "}
+                {new Date(entry.createdAt).toLocaleDateString("fr-FR")}
+              </div>
+            </div>
+            <InfoPill tone={entry.status === "published" ? "success" : undefined}>
+              {entry.status === "published"
+                ? "Publié"
+                : entry.status === "pending"
+                  ? "À valider"
+                  : "Masqué"}
+            </InfoPill>
+          </div>
+          <p className="mt-3 text-sm leading-6">{entry.message}</p>
+        </div>
+        <div className="overflow-hidden rounded-xl border border-border bg-secondary/30">
+          {entry.imageUrl ? (
+            <img
+              src={entry.imageUrl}
+              alt={`Souvenir de ${entry.author}`}
+              className="aspect-[4/3] w-full object-cover"
+            />
+          ) : (
+            <div className="grid aspect-[4/3] place-items-center text-muted-foreground">
+              <ImageIcon className="h-8 w-8" />
+            </div>
+          )}
+          <div className="flex flex-wrap gap-1.5 p-2">
+            <label className="cursor-pointer rounded-full border border-border bg-background px-2.5 py-1 text-[11px] hover:bg-secondary">
+              {uploadingImage ? "Import..." : entry.imageUrl ? "Remplacer" : "Ajouter"}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                disabled={uploadingImage}
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0];
+                  if (file) onImageChange(file);
+                }}
+              />
+            </label>
+            {entry.imageUrl && (
+              <button
+                type="button"
+                onClick={onRemoveImage}
+                className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] hover:bg-secondary"
+              >
+                Retirer
+              </button>
+            )}
           </div>
         </div>
-        <InfoPill tone={entry.status === "published" ? "success" : undefined}>
-          {entry.status === "published"
-            ? "Publié"
-            : entry.status === "pending"
-              ? "À valider"
-              : "Masqué"}
-        </InfoPill>
       </div>
-      <p className="mt-3 text-sm leading-6">{entry.message}</p>
       <div className="mt-4 flex flex-wrap gap-2">
         {entry.status !== "published" && (
           <button
@@ -3200,23 +3413,33 @@ function DocumentsPanel({
           </Link>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <Field
-            label="Titre"
-            value={guide.title}
-            onChange={(value) => updateDocument({ title: value })}
-          />
-          <Field
-            label="Nom de la version"
-            value={guide.version}
-            onChange={(value) => updateDocument({ version: value })}
+        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_270px]">
+          <div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <Field
+                label="Titre"
+                value={guide.title}
+                onChange={(value) => updateDocument({ title: value })}
+              />
+              <Field
+                label="Nom de la version"
+                value={guide.version}
+                onChange={(value) => updateDocument({ version: value })}
+              />
+            </div>
+            <TextareaField
+              label="Introduction"
+              value={guide.intro ?? ""}
+              onChange={(value) => updateDocument({ intro: value })}
+            />
+          </div>
+          <AdminQrCodeCard
+            title="QR code du guide"
+            description="À télécharger puis imprimer pour les tables et la tablette du Kafé."
+            path="/guide"
+            filename="qr-code-guide-kafe-ceramik.png"
           />
         </div>
-        <TextareaField
-          label="Introduction"
-          value={guide.intro ?? ""}
-          onChange={(value) => updateDocument({ intro: value })}
-        />
 
         <div className="mt-7">
           {groups.map((group) => (

@@ -369,3 +369,65 @@ export async function uploadAdminFile(bucket: string, path: string, file: Blob) 
     .map(encodeURIComponent)
     .join("/")}`;
 }
+
+export function publicFileUrl(bucket: string, path: string) {
+  return `${baseUrl()}/storage/v1/object/public/${encodeURIComponent(bucket)}/${path
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/")}`;
+}
+
+export async function uploadPublicFile(bucket: string, path: string, file: Blob) {
+  if (!isSupabaseConfigured()) throw new Error("Supabase is not configured");
+
+  const response = await fetch(
+    `${baseUrl()}/storage/v1/object/${encodeURIComponent(bucket)}/${path
+      .split("/")
+      .map(encodeURIComponent)
+      .join("/")}`,
+    {
+      method: "POST",
+      headers: {
+        apikey: anonKey(),
+        Authorization: `Bearer ${anonKey()}`,
+        "Content-Type": file.type || "application/octet-stream",
+        "x-upsert": "false",
+      },
+      body: file,
+    },
+  );
+  if (!response.ok) throw new Error(await errorMessage(response));
+  return publicFileUrl(bucket, path);
+}
+
+export async function deleteAdminFileByPublicUrl(fileUrl: string) {
+  if (!isSupabaseConfigured() || !fileUrl) return;
+  const session = readAdminSession();
+  if (!session?.access_token) throw new Error("Admin session required");
+
+  const marker = "/storage/v1/object/public/";
+  const parsed = new URL(fileUrl, baseUrl());
+  if (parsed.origin !== new URL(baseUrl()).origin) return;
+  const markerIndex = parsed.pathname.indexOf(marker);
+  if (markerIndex === -1) return;
+  const objectParts = parsed.pathname
+    .slice(markerIndex + marker.length)
+    .split("/")
+    .map(decodeURIComponent);
+  const bucket = objectParts.shift();
+  if (!bucket || objectParts.length === 0) return;
+
+  const response = await fetch(
+    `${baseUrl()}/storage/v1/object/${encodeURIComponent(bucket)}/${objectParts
+      .map(encodeURIComponent)
+      .join("/")}`,
+    {
+      method: "DELETE",
+      headers: {
+        apikey: anonKey(),
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    },
+  );
+  if (!response.ok && response.status !== 404) throw new Error(await errorMessage(response));
+}

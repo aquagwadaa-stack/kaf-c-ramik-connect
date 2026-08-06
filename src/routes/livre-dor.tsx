@@ -1,6 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { BookHeart, ExternalLink, Heart, Quote, Send, Sparkles, Star } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  BookHeart,
+  ExternalLink,
+  Heart,
+  ImagePlus,
+  Quote,
+  Send,
+  Sparkles,
+  Star,
+  X,
+} from "lucide-react";
 import { PageShell, PageHeader } from "@/components/page-shell";
 import { useKafeSettings } from "@/lib/admin-data";
 import { submitGuestbookEntry, usePublishedGuestbookEntries } from "@/lib/guestbook";
@@ -27,27 +37,64 @@ function LivreDorPage() {
   const [author, setAuthor] = useState("");
   const [message, setMessage] = useState("");
   const [rating, setRating] = useState(5);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [imageError, setImageError] = useState("");
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState("");
   const canSend = useMemo(
-    () => author.trim().length >= 2 && message.trim().length >= 4,
-    [author, message],
+    () => author.trim().length >= 2 && message.trim().length >= 4 && !imageError,
+    [author, imageError, message],
   );
   const average = useMemo(() => {
     if (!entries.length) return null;
     return (entries.reduce((total, entry) => total + entry.rating, 0) / entries.length).toFixed(1);
   }, [entries]);
 
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreview("");
+      return;
+    }
+    const previewUrl = URL.createObjectURL(imageFile);
+    setImagePreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [imageFile]);
+
+  function chooseImage(file?: File) {
+    setImageError("");
+    if (!file) {
+      setImageFile(null);
+      return;
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setImageFile(null);
+      setImageError("Choisis une image JPG, PNG ou WebP.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setImageFile(null);
+      setImageError("La photo doit peser moins de 5 Mo.");
+      return;
+    }
+    setImageFile(file);
+  }
+
   async function submit() {
     if (!canSend || sending) return;
     setSending(true);
     setNotice("");
     try {
-      await submitGuestbookEntry({ author, message, rating });
+      const result = await submitGuestbookEntry({ author, message, rating, image: imageFile });
       setAuthor("");
       setMessage("");
       setRating(5);
-      setNotice("Merci ! Ton message a bien été envoyé à l'équipe après publication.");
+      setImageFile(null);
+      setNotice(
+        result.imageUploaded
+          ? "Merci ! Ton souvenir a bien été envoyé à l'équipe pour validation."
+          : "Ton message a bien été envoyé, mais la photo n'a pas pu être ajoutée.",
+      );
     } catch {
       setNotice("Le message n'a pas pu être envoyé. Réessaie dans un instant.");
     } finally {
@@ -135,6 +182,46 @@ function LivreDorPage() {
               />
             </label>
 
+            <div className="mt-4 rounded-xl border-2 border-dashed border-ink/35 bg-[#fffbd6]/45 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-bold">Une photo souvenir ?</div>
+                  <p className="mt-0.5 text-xs text-ink/65">
+                    Facultatif · JPG, PNG ou WebP · 5 Mo max.
+                  </p>
+                </div>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border-2 border-ink bg-white px-4 py-2 text-sm font-bold shadow-[2px_2px_0_#2f1620] hover:-translate-y-0.5">
+                  <ImagePlus className="h-4 w-4" /> Ajouter
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    onChange={(event) => chooseImage(event.currentTarget.files?.[0])}
+                  />
+                </label>
+              </div>
+              {imagePreview && (
+                <div className="relative mt-3 overflow-hidden rounded-xl border-2 border-ink bg-white">
+                  <img
+                    src={imagePreview}
+                    alt="Aperçu de la photo souvenir"
+                    className="aspect-[4/3] w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => chooseImage()}
+                    className="absolute right-2 top-2 grid h-9 w-9 place-items-center rounded-full border-2 border-ink bg-white shadow-[2px_2px_0_#2f1620]"
+                    aria-label="Retirer la photo"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+              {imageError && (
+                <p className="mt-2 text-sm font-medium text-destructive">{imageError}</p>
+              )}
+            </div>
+
             <button
               type="button"
               disabled={!canSend || sending}
@@ -163,26 +250,36 @@ function LivreDorPage() {
               {entries.map((entry, index) => (
                 <article
                   key={entry.id}
-                  className={`kafe-note-paper p-5 text-ink ${noteTones[index % noteTones.length]} ${noteRotations[index % noteRotations.length]}`}
+                  className={`kafe-note-paper overflow-hidden text-ink ${noteTones[index % noteTones.length]} ${noteRotations[index % noteRotations.length]}`}
                 >
-                  <div className="flex gap-0.5">
-                    {Array.from({ length: 5 }, (_, starIndex) => (
-                      <Star
-                        key={starIndex}
-                        className={`h-4 w-4 ${
-                          starIndex < entry.rating ? "fill-[#f0ad19] text-ink" : "text-ink/25"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <p className="mt-4 leading-7">“{entry.message}”</p>
-                  <div className="mt-4 flex flex-wrap items-center gap-2 text-sm font-bold">
-                    {entry.author}
-                    {entry.source === "google" && (
-                      <span className="rounded-full border border-ink/25 bg-[#fffdf0]/70 px-2 py-0.5 text-xs font-medium">
-                        Avis Google
-                      </span>
-                    )}
+                  {entry.imageUrl && (
+                    <img
+                      src={entry.imageUrl}
+                      alt={`Souvenir partagé par ${entry.author}`}
+                      className="aspect-[4/3] w-full border-b-2 border-ink object-cover"
+                      loading="lazy"
+                    />
+                  )}
+                  <div className="p-5">
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: 5 }, (_, starIndex) => (
+                        <Star
+                          key={starIndex}
+                          className={`h-4 w-4 ${
+                            starIndex < entry.rating ? "fill-[#f0ad19] text-ink" : "text-ink/25"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p className="mt-4 leading-7">“{entry.message}”</p>
+                    <div className="mt-4 flex flex-wrap items-center gap-2 text-sm font-bold">
+                      {entry.author}
+                      {entry.source === "google" && (
+                        <span className="rounded-full border border-ink/25 bg-[#fffdf0]/70 px-2 py-0.5 text-xs font-medium">
+                          Avis Google
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </article>
               ))}
