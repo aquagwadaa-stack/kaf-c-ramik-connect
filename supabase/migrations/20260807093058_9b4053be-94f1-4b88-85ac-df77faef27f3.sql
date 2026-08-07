@@ -1,0 +1,1 @@
+drop function if exists public.clear_failed_kafe_guestbook_image(text, text);
