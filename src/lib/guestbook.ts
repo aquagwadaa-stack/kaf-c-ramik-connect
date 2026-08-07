@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import {
-  callRpc,
   insertRow,
   isSupabaseConfigured,
-  publicFileUrl,
   selectRows,
   uploadPublicFile,
 } from "./supabase-rest";
