@@ -68,6 +68,20 @@ export async function submitGuestbookEntry(input: {
   if (!isSupabaseConfigured()) throw new Error("GUESTBOOK_NOT_CONFIGURED");
   const id = `guest-${crypto.randomUUID()}`;
   const imagePath = input.image ? `submissions/${id}/${safeImageName(input.image.name)}` : "";
+
+  // Upload first: the entry only ever stores an image URL that already exists,
+  // so no privileged cleanup function is needed when an upload fails.
+  let imageUrl: string | undefined;
+  let imageUploaded = true;
+  if (input.image && imagePath) {
+    try {
+      imageUrl = await uploadPublicFile("kafe-guestbook", imagePath, input.image);
+    } catch {
+      imageUrl = undefined;
+      imageUploaded = false;
+    }
+  }
+
   const entry: GuestbookEntry = {
     id,
     author: input.author.trim(),
@@ -75,7 +89,7 @@ export async function submitGuestbookEntry(input: {
     rating: Math.max(1, Math.min(5, input.rating)),
     status: "pending",
     source: "site",
-    imageUrl: imagePath ? publicFileUrl("kafe-guestbook", imagePath) : undefined,
+    imageUrl,
     createdAt: new Date().toISOString(),
   };
   await insertRow("kafe_guestbook_entries", {
@@ -84,19 +98,7 @@ export async function submitGuestbookEntry(input: {
     sort_order: 9999,
     updated_at: entry.createdAt,
   });
-  if (input.image && imagePath) {
-    try {
-      await uploadPublicFile("kafe-guestbook", imagePath, input.image);
-    } catch {
-      await callRpc("clear_failed_kafe_guestbook_image", {
-        p_id: id,
-        p_image_url: entry.imageUrl,
-      }).catch(() => undefined);
-      entry.imageUrl = undefined;
-      return { entry, imageUploaded: false };
-    }
-  }
-  return { entry, imageUploaded: true };
+  return { entry, imageUploaded };
 }
 
 function safeImageName(value: string) {
