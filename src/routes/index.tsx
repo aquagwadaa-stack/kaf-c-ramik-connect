@@ -228,7 +228,7 @@ function HomePage() {
                   key={item.to}
                   to={item.to}
                   className={`kafe-block-link group flex items-center justify-between gap-3 p-4 transition hover:-translate-y-0.5 ${
-                    item.to === "/brunch"
+                    item.to === "/guide"
                       ? "bg-[#f4b6cd]"
                       : item.to === "/objets"
                         ? "bg-[#79c6e8]"
