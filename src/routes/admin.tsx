@@ -3476,33 +3476,38 @@ function DocumentsPanel({
   saveDocuments,
 }: {
   documents: ContentDocument[];
-  saveDocuments: (next: ContentDocument[]) => void;
+  saveDocuments: (next: ContentDocument[]) => Promise<boolean>;
 }) {
   const guide = getGuideDocument(documents);
   const menu = getMenuDocument(documents);
 
-  function saveDocument(nextDocument: ContentDocument) {
+  async function saveDocument(nextDocument: ContentDocument) {
     const exists = documents.some((document) => document.id === nextDocument.id);
-    saveDocuments(
+    const saved = await saveDocuments(
       exists
         ? documents.map((document) => (document.id === nextDocument.id ? nextDocument : document))
         : [...documents, nextDocument],
     );
+    if (!saved) {
+      throw new Error(
+        "Le fichier a été envoyé, mais sa publication n'a pas pu être enregistrée. Réessayez.",
+      );
+    }
   }
 
   function updateDocument(patch: Partial<ContentDocument>) {
-    saveDocument({ ...guide, ...patch, updatedAt: new Date().toISOString() });
+    return saveDocument({ ...guide, ...patch, updatedAt: new Date().toISOString() });
   }
 
   function updateMenu(patch: Partial<ContentDocument>) {
-    saveDocument({ ...menu, ...patch, updatedAt: new Date().toISOString() });
+    return saveDocument({ ...menu, ...patch, updatedAt: new Date().toISOString() });
   }
 
   async function updateResource(resource: ContentResource, file?: File) {
     const nextResource = file
       ? { ...resource, ...(await storeDocumentFile(`guide/${resource.id}`, file)) }
       : resource;
-    updateDocument({
+    await updateDocument({
       resources: (guide.resources ?? []).map((item) =>
         item.id === resource.id ? nextResource : item,
       ),
@@ -3511,9 +3516,14 @@ function DocumentsPanel({
 
   async function updateMenuResource(resource: ContentResource, file?: File) {
     const nextResource = file
-      ? { ...resource, ...(await storeDocumentFile(`menu/${resource.id}`, file)) }
+      ? {
+          ...resource,
+          ...(await storeDocumentFile(`menu/${resource.id}`, file, {
+            generatePreviews: false,
+          })),
+        }
       : resource;
-    updateMenu({
+    await updateMenu({
       resources: (menu.resources ?? []).map((item) =>
         item.id === resource.id ? nextResource : item,
       ),
@@ -3647,6 +3657,35 @@ function ResourceAdminList({
   onReorder?: (resources: ContentResource[]) => void;
   compact?: boolean;
 }) {
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [uploadFeedback, setUploadFeedback] = useState<{
+    id: string;
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  async function importResource(resource: ContentResource, file?: File) {
+    if (!file) return;
+    setUploadingId(resource.id);
+    setUploadFeedback(null);
+    try {
+      await onChange(resource, file);
+      setUploadFeedback({
+        id: resource.id,
+        type: "success",
+        message: `${file.name} a bien été importé et publié.`,
+      });
+    } catch (error) {
+      setUploadFeedback({
+        id: resource.id,
+        type: "error",
+        message: error instanceof Error ? error.message : "Import impossible. Réessayez.",
+      });
+    } finally {
+      setUploadingId(null);
+    }
+  }
+
   function move(index: number, direction: -1 | 1) {
     const target = index + direction;
     if (!onReorder || target < 0 || target >= resources.length) return;
@@ -3694,14 +3733,20 @@ function ResourceAdminList({
             </div>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs hover:bg-secondary">
-                  <UploadCloud className="h-3.5 w-3.5" /> Remplacer le document
+                <label
+                  className={`inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium ${
+                    uploadingId ? "cursor-wait opacity-60" : "cursor-pointer hover:bg-secondary"
+                  }`}
+                >
+                  <UploadCloud className="h-4 w-4" />
+                  {uploadingId === resource.id ? "Import en cours..." : "Remplacer le document"}
                   <input
                     type="file"
                     accept="application/pdf,image/*"
                     className="sr-only"
+                    disabled={uploadingId !== null}
                     onChange={async (event) => {
-                      await onChange(resource, event.currentTarget.files?.[0]);
+                      await importResource(resource, event.currentTarget.files?.[0]);
                       event.currentTarget.value = "";
                     }}
                   />
@@ -3735,6 +3780,24 @@ function ResourceAdminList({
                 onChange={(visible) => onChange({ ...resource, visible })}
               />
             </div>
+            {uploadFeedback?.id === resource.id && (
+              <div
+                role="status"
+                aria-live="polite"
+                className={`mt-3 flex items-start gap-2 rounded-xl border px-3 py-2 text-sm ${
+                  uploadFeedback.type === "success"
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                    : "border-red-300 bg-red-50 text-red-900"
+                }`}
+              >
+                {uploadFeedback.type === "success" ? (
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                ) : (
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                )}
+                <span>{uploadFeedback.message}</span>
+              </div>
+            )}
           </div>
         );
       })}

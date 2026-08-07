@@ -131,16 +131,18 @@ export function useStoredList<T extends { id: string }>(
           sort_order: index,
           updated_at: new Date().toISOString(),
         }));
-      remoteSaveQueue.current = remoteSaveQueue.current
+      const operation = remoteSaveQueue.current
         .catch(() => undefined)
         .then(async () => {
           await Promise.all(removedIds.map((id) => deleteRow(remote.table, id, true)));
           await saveRemoteList(remote.table, next, toRow);
-        })
-        .catch((error) => {
-          console.warn(`Remote save skipped for ${remote.table}:`, error);
         });
+      remoteSaveQueue.current = operation.catch((error) => {
+        console.warn(`Remote save skipped for ${remote.table}:`, error);
+      });
+      return operation.then(() => true).catch(() => false);
     }
+    return Promise.resolve(true);
   };
   return [list, save] as const;
 }

@@ -13,6 +13,18 @@ export interface StoredDocumentFile {
   previewImageDataUrls?: string[];
 }
 
+type StoreDocumentFileOptions = {
+  generatePreviews?: boolean;
+};
+
+const MAX_DOCUMENT_SIZE = 15 * 1024 * 1024;
+const SUPPORTED_DOCUMENT_TYPES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
 function readFileAsDataUrl(file: Blob) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -29,6 +41,27 @@ function safeName(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9.]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function documentType(file: File) {
+  if (file.type) return file.type;
+  if (file.name.toLowerCase().endsWith(".pdf")) return "application/pdf";
+  if (/\.jpe?g$/i.test(file.name)) return "image/jpeg";
+  if (/\.png$/i.test(file.name)) return "image/png";
+  if (/\.webp$/i.test(file.name)) return "image/webp";
+  return "application/octet-stream";
+}
+
+function validateDocument(file: File, attachmentType: string) {
+  if (!SUPPORTED_DOCUMENT_TYPES.has(attachmentType)) {
+    throw new Error("Format non pris en charge. Utilisez un PDF, JPG, PNG ou WebP.");
+  }
+  if (file.size > MAX_DOCUMENT_SIZE) {
+    throw new Error("Le fichier dépasse la limite de 15 Mo.");
+  }
+  if (file.size === 0) {
+    throw new Error("Le fichier sélectionné est vide.");
+  }
 }
 
 async function canvasToBlob(canvas: HTMLCanvasElement) {
@@ -63,14 +96,26 @@ async function renderPdfPages(file: File) {
   return previews;
 }
 
-export async function storeDocumentFile(scope: string, file: File): Promise<StoredDocumentFile> {
-  const attachmentType = file.type || "application/octet-stream";
-  const previews = attachmentType === "application/pdf" ? await renderPdfPages(file) : [];
+export async function storeDocumentFile(
+  scope: string,
+  file: File,
+  options: StoreDocumentFileOptions = {},
+): Promise<StoredDocumentFile> {
+  const attachmentType = documentType(file);
+  validateDocument(file, attachmentType);
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const base = `${safeName(scope)}/${stamp}-${safeName(file.name)}`;
 
   if (isSupabaseConfigured()) {
     const attachmentUrl = await uploadAdminFile("kafe-documents", `${base}/original`, file);
+    let previews: Blob[] = [];
+    if (attachmentType === "application/pdf" && options.generatePreviews !== false) {
+      try {
+        previews = await renderPdfPages(file);
+      } catch (error) {
+        console.warn("PDF preview generation skipped:", error);
+      }
+    }
     const previewImageUrls = attachmentType.startsWith("image/")
       ? [attachmentUrl]
       : await Promise.all(
@@ -84,16 +129,25 @@ export async function storeDocumentFile(scope: string, file: File): Promise<Stor
         );
     return {
       attachmentUrl,
+      attachmentDataUrl: undefined,
       attachmentName: file.name,
       attachmentType,
       previewImageUrls,
+      previewImageDataUrls: [],
     };
   }
 
+  let previews: Blob[] = [];
+  if (attachmentType === "application/pdf" && options.generatePreviews !== false) {
+    previews = await renderPdfPages(file);
+  }
+
   return {
+    attachmentUrl: undefined,
     attachmentDataUrl: await readFileAsDataUrl(file),
     attachmentName: file.name,
     attachmentType,
+    previewImageUrls: [],
     previewImageDataUrls: attachmentType.startsWith("image/")
       ? [await readFileAsDataUrl(file)]
       : await Promise.all(previews.map(readFileAsDataUrl)),
