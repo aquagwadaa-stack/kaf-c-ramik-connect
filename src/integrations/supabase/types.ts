@@ -436,6 +436,10 @@ export type Database = {
         Args: { p_token: string }
         Returns: Json
       }
+      clear_failed_kafe_guestbook_image: {
+        Args: { p_id: string; p_image_url: string }
+        Returns: undefined
+      }
       create_kafe_reservation: {
         Args: {
           p_date: string
