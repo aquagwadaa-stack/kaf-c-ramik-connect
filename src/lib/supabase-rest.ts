@@ -349,39 +349,62 @@ export async function uploadAdminFile(bucket: string, path: string, file: Blob) 
     throw new Error("Ce stockage n'est pas autorisé pour les documents administrateur.");
   }
 
-  const formData = new FormData();
-  formData.append("path", path);
-  formData.append("file", file, file instanceof File ? file.name : "document");
+  const fileName = file instanceof File ? file.name : "document";
 
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 120_000);
+  async function attempt() {
+    const formData = new FormData();
+    formData.append("path", path);
+    formData.append("file", file, fileName);
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 120_000);
+
+    try {
+      const response = await fetch("/api/admin-document-upload", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session!.access_token}`,
+        },
+        body: formData,
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(await errorMessage(response));
+
+      const data = (await response.json()) as { publicUrl?: string };
+      if (!data.publicUrl) throw new Error("Le serveur n'a pas renvoyé l'adresse du document.");
+      return data.publicUrl;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  function isNetworkGlitch(error: unknown) {
+    return (
+      (error instanceof DOMException && error.name === "AbortError") ||
+      (error instanceof TypeError && /fetch/i.test(error.message))
+    );
+  }
 
   try {
-    const response = await fetch("/api/admin-document-upload", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: formData,
-      signal: controller.signal,
-    });
-    if (!response.ok) throw new Error(await errorMessage(response));
-
-    const data = (await response.json()) as { publicUrl?: string };
-    if (!data.publicUrl) throw new Error("Le serveur n'a pas renvoyé l'adresse du document.");
-    return data.publicUrl;
-  } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
-      throw new Error("L'import a dépassé deux minutes. Vérifiez votre connexion puis réessayez.");
+    return await attempt();
+  } catch (firstError) {
+    if (!isNetworkGlitch(firstError)) throw firstError;
+    await new Promise((resolve) => window.setTimeout(resolve, 1200));
+    try {
+      return await attempt();
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new Error(
+          "L'import a dépassé deux minutes. Vérifiez votre connexion puis réessayez.",
+        );
+      }
+      if (error instanceof TypeError && /fetch/i.test(error.message)) {
+        throw new Error(
+          "Le serveur d'import n'a pas pu être joint. Rechargez la page puis réessayez.",
+        );
+      }
+      throw error;
     }
-    if (error instanceof TypeError && error.message === "Failed to fetch") {
-      throw new Error(
-        "Le serveur d'import n'a pas pu être joint. Rechargez la page puis réessayez.",
-      );
-    }
-    throw error;
-  } finally {
-    window.clearTimeout(timeout);
   }
 }
 
