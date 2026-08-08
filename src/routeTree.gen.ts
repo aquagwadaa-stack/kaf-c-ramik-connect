@@ -23,6 +23,7 @@ import { Route as LivreDorRouteImport } from './routes/livre-dor'
 import { Route as ObjetsRouteImport } from './routes/objets'
 import { Route as ReservationRouteImport } from './routes/reservation'
 import { Route as ReserverRouteImport } from './routes/reserver'
+import { Route as ApiAdminDocumentUploadRouteImport } from './routes/api/admin-document-upload'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -94,6 +95,11 @@ const ReserverRoute = ReserverRouteImport.update({
   path: '/reserver',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminDocumentUploadRoute = ApiAdminDocumentUploadRouteImport.update({
+  id: '/api/admin-document-upload',
+  path: '/api/admin-document-upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/objets': typeof ObjetsRoute
   '/reservation': typeof ReservationRoute
   '/reserver': typeof ReserverRoute
+  '/api/admin-document-upload': typeof ApiAdminDocumentUploadRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/objets': typeof ObjetsRoute
   '/reservation': typeof ReservationRoute
   '/reserver': typeof ReserverRoute
+  '/api/admin-document-upload': typeof ApiAdminDocumentUploadRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/objets': typeof ObjetsRoute
   '/reservation': typeof ReservationRoute
   '/reserver': typeof ReserverRoute
+  '/api/admin-document-upload': typeof ApiAdminDocumentUploadRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/objets'
     | '/reservation'
     | '/reserver'
+    | '/api/admin-document-upload'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/objets'
     | '/reservation'
     | '/reserver'
+    | '/api/admin-document-upload'
   id:
     | '__root__'
     | '/'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/objets'
     | '/reservation'
     | '/reserver'
+    | '/api/admin-document-upload'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -210,6 +222,7 @@ export interface RootRouteChildren {
   ObjetsRoute: typeof ObjetsRoute
   ReservationRoute: typeof ReservationRoute
   ReserverRoute: typeof ReserverRoute
+  ApiAdminDocumentUploadRoute: typeof ApiAdminDocumentUploadRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -312,6 +325,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReserverRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin-document-upload': {
+      id: '/api/admin-document-upload'
+      path: '/api/admin-document-upload'
+      fullPath: '/api/admin-document-upload'
+      preLoaderRoute: typeof ApiAdminDocumentUploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -330,7 +350,18 @@ const rootRouteChildren: RootRouteChildren = {
   ObjetsRoute: ObjetsRoute,
   ReservationRoute: ReservationRoute,
   ReserverRoute: ReserverRoute,
+  ApiAdminDocumentUploadRoute: ApiAdminDocumentUploadRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

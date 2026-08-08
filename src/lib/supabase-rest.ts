@@ -345,29 +345,44 @@ export async function uploadAdminFile(bucket: string, path: string, file: Blob) 
   if (!isSupabaseConfigured()) throw new Error("Supabase is not configured");
   const session = readAdminSession();
   if (!session?.access_token) throw new Error("Admin session required");
+  if (bucket !== "kafe-documents") {
+    throw new Error("Ce stockage n'est pas autorisé pour les documents administrateur.");
+  }
 
-  const response = await fetch(
-    `${baseUrl()}/storage/v1/object/${encodeURIComponent(bucket)}/${path
-      .split("/")
-      .map(encodeURIComponent)
-      .join("/")}`,
-    {
+  const formData = new FormData();
+  formData.append("path", path);
+  formData.append("file", file, file instanceof File ? file.name : "document");
+
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 120_000);
+
+  try {
+    const response = await fetch("/api/admin-document-upload", {
       method: "POST",
       headers: {
-        apikey: anonKey(),
         Authorization: `Bearer ${session.access_token}`,
-        "Content-Type": file.type || "application/octet-stream",
-        "x-upsert": "true",
       },
-      body: file,
-    },
-  );
-  if (!response.ok) throw new Error(await errorMessage(response));
+      body: formData,
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(await errorMessage(response));
 
-  return `${baseUrl()}/storage/v1/object/public/${encodeURIComponent(bucket)}/${path
-    .split("/")
-    .map(encodeURIComponent)
-    .join("/")}`;
+    const data = (await response.json()) as { publicUrl?: string };
+    if (!data.publicUrl) throw new Error("Le serveur n'a pas renvoyé l'adresse du document.");
+    return data.publicUrl;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("L'import a dépassé deux minutes. Vérifiez votre connexion puis réessayez.");
+    }
+    if (error instanceof TypeError && error.message === "Failed to fetch") {
+      throw new Error(
+        "Le serveur d'import n'a pas pu être joint. Rechargez la page puis réessayez.",
+      );
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
 
 export function publicFileUrl(bucket: string, path: string) {
