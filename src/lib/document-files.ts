@@ -2,7 +2,53 @@ import * as pdfjs from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { isSupabaseConfigured, uploadAdminFile } from "./supabase-rest";
 
-pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
+function supportsModuleWorker() {
+  if (typeof Worker === "undefined") return false;
+  let supported = false;
+  try {
+    const url = URL.createObjectURL(new Blob([""], { type: "text/javascript" }));
+    const options: WorkerOptions = {
+      get type() {
+        supported = true;
+        return "module";
+      },
+    };
+    const worker = new Worker(url, options);
+    worker.terminate();
+    URL.revokeObjectURL(url);
+  } catch {
+    return false;
+  }
+  return supported;
+}
+
+// Without module-worker support (older mobile browsers) pdf.js must run in the
+// main thread; setting workerSrc there leaves getDocument() hanging forever.
+if (supportsModuleWorker()) {
+  pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
+}
+
+const PREVIEW_TIMEOUT_MS = 45_000;
+
+function withTimeout<T>(task: Promise<T>, ms: number) {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error("La génération de l'aperçu a pris trop de temps.")),
+      ms,
+    );
+    task.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 
 export interface StoredDocumentFile {
   attachmentUrl?: string;
