@@ -61,6 +61,8 @@ export interface StoredDocumentFile {
 
 type StoreDocumentFileOptions = {
   generatePreviews?: boolean;
+  contentDocumentId?: "guide" | "waiver" | "menu";
+  contentResourceId?: string;
 };
 
 const MAX_DOCUMENT_SIZE = 15 * 1024 * 1024;
@@ -153,7 +155,11 @@ export async function storeDocumentFile(
   const base = `${safeName(scope)}/${stamp}-${safeName(file.name)}`;
 
   if (isSupabaseConfigured()) {
-    const attachmentUrl = await uploadAdminFile("kafe-documents", `${base}/original`, file);
+    const attachmentUrl = await uploadAdminFile("kafe-documents", `${base}/original`, file, {
+      contentDocumentId: options.contentDocumentId,
+      contentResourceId: options.contentResourceId,
+      originalFileName: file.name,
+    });
     let previews: Blob[] = [];
     if (attachmentType === "application/pdf" && options.generatePreviews !== false) {
       try {

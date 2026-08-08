@@ -526,7 +526,7 @@ function AdminWorkspace({
   const reservations = useReservations();
   const occupancies = useReservationOccupancies();
   const [objects, saveObjects] = useCeramicObjects();
-  const [documents, saveDocuments] = useContentDocuments();
+  const [documents, saveDocuments, replaceDocumentsLocal] = useContentDocuments();
   const [signatures, saveSignatures] = useWaiverSignatures();
   const [settings, saveSettings] = useKafeSettings();
   const [guestbookEntries, saveGuestbookEntries] = useAdminGuestbookEntries();
@@ -650,6 +650,7 @@ function AdminWorkspace({
               <WaiversPanel
                 documents={documents}
                 saveDocuments={saveDocuments}
+                replaceDocumentsLocal={replaceDocumentsLocal}
                 signatures={signatures}
                 saveSignatures={saveSignatures}
                 reservations={reservations}
@@ -674,7 +675,11 @@ function AdminWorkspace({
               <GiftCardsPanel settings={settings} saveSettings={saveSettings} />
             )}
             {tab === "documents" && (
-              <DocumentsPanel documents={documents} saveDocuments={saveDocuments} />
+              <DocumentsPanel
+                documents={documents}
+                saveDocuments={saveDocuments}
+                replaceDocumentsLocal={replaceDocumentsLocal}
+              />
             )}
             {tab === "settings" && (
               <SettingsPanel settings={settings} saveSettings={saveSettings} />
@@ -1968,12 +1973,14 @@ function GroupDecisionControls({ reservation }: { reservation: Reservation }) {
 function WaiversPanel({
   documents,
   saveDocuments,
+  replaceDocumentsLocal,
   signatures,
   saveSignatures,
   reservations,
 }: {
   documents: ContentDocument[];
   saveDocuments: (next: ContentDocument[]) => void;
+  replaceDocumentsLocal: (next: ContentDocument[]) => void;
   signatures: WaiverSignature[];
   saveSignatures: (next: WaiverSignature[]) => void;
   reservations: Reservation[];
@@ -2066,13 +2073,24 @@ function WaiversPanel({
 
   async function uploadWaiver(file?: File) {
     if (!file) return;
+    setError("");
     setUploading(true);
     try {
-      const stored = await storeDocumentFile("decharge", file);
-      saveWaiver({
+      const stored = await storeDocumentFile("decharge", file, {
+        generatePreviews: false,
+        contentDocumentId: "waiver",
+      });
+      const next = {
+        ...waiver,
         ...stored,
         version: `decharge-${new Date().toISOString().slice(0, 10)}`,
-      });
+        updatedAt: new Date().toISOString(),
+      };
+      replaceDocumentsLocal(
+        documents.some((document) => document.id === "waiver")
+          ? documents.map((document) => (document.id === "waiver" ? next : document))
+          : [...documents, next],
+      );
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Import impossible.");
     } finally {
@@ -3474,9 +3492,11 @@ function GiftCardOrderCard({
 function DocumentsPanel({
   documents,
   saveDocuments,
+  replaceDocumentsLocal,
 }: {
   documents: ContentDocument[];
   saveDocuments: (next: ContentDocument[]) => Promise<boolean>;
+  replaceDocumentsLocal: (next: ContentDocument[]) => void;
 }) {
   const guide = getGuideDocument(documents);
   const menu = getMenuDocument(documents);
@@ -3504,30 +3524,57 @@ function DocumentsPanel({
   }
 
   async function updateResource(resource: ContentResource, file?: File) {
-    const nextResource = file
-      ? { ...resource, ...(await storeDocumentFile(`guide/${resource.id}`, file)) }
-      : resource;
-    await updateDocument({
-      resources: (guide.resources ?? []).map((item) =>
-        item.id === resource.id ? nextResource : item,
-      ),
+    if (!file) {
+      await updateDocument({
+        resources: (guide.resources ?? []).map((item) =>
+          item.id === resource.id ? resource : item,
+        ),
+      });
+      return;
+    }
+
+    const stored = await storeDocumentFile(`guide/${resource.id}`, file, {
+      generatePreviews: false,
+      contentDocumentId: "guide",
+      contentResourceId: resource.id,
     });
+    const nextDocument = {
+      ...guide,
+      updatedAt: new Date().toISOString(),
+      resources: (guide.resources ?? []).map((item) =>
+        item.id === resource.id ? { ...resource, ...stored } : item,
+      ),
+    };
+    replaceDocumentsLocal(
+      documents.map((document) => (document.id === guide.id ? nextDocument : document)),
+    );
   }
 
   async function updateMenuResource(resource: ContentResource, file?: File) {
-    const nextResource = file
-      ? {
-          ...resource,
-          ...(await storeDocumentFile(`menu/${resource.id}`, file, {
-            generatePreviews: false,
-          })),
-        }
-      : resource;
-    await updateMenu({
-      resources: (menu.resources ?? []).map((item) =>
-        item.id === resource.id ? nextResource : item,
-      ),
+    if (!file) {
+      await updateMenu({
+        resources: (menu.resources ?? []).map((item) =>
+          item.id === resource.id ? resource : item,
+        ),
+      });
+      return;
+    }
+
+    const stored = await storeDocumentFile(`menu/${resource.id}`, file, {
+      generatePreviews: false,
+      contentDocumentId: "menu",
+      contentResourceId: resource.id,
     });
+    const nextDocument = {
+      ...menu,
+      updatedAt: new Date().toISOString(),
+      resources: (menu.resources ?? []).map((item) =>
+        item.id === resource.id ? { ...resource, ...stored } : item,
+      ),
+    };
+    replaceDocumentsLocal(
+      documents.map((document) => (document.id === menu.id ? nextDocument : document)),
+    );
   }
 
   const groups: {

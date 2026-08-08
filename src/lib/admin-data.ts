@@ -144,7 +144,8 @@ export function useStoredList<T extends { id: string }>(
     }
     return Promise.resolve(true);
   };
-  return [list, save] as const;
+  const replaceLocal = (next: T[]) => writeStore(key, next);
+  return [list, save, replaceLocal] as const;
 }
 
 export interface CeramicObject {

@@ -341,7 +341,18 @@ export async function invokeEdgeFunction<T>(
   return (await response.json()) as T;
 }
 
-export async function uploadAdminFile(bucket: string, path: string, file: Blob) {
+type AdminFileUploadOptions = {
+  contentDocumentId?: "guide" | "waiver" | "menu";
+  contentResourceId?: string;
+  originalFileName?: string;
+};
+
+export async function uploadAdminFile(
+  bucket: string,
+  path: string,
+  file: Blob,
+  options: AdminFileUploadOptions = {},
+) {
   if (!isSupabaseConfigured()) throw new Error("Supabase is not configured");
   const session = readAdminSession();
   if (!session?.access_token) throw new Error("Admin session required");
@@ -361,6 +372,15 @@ export async function uploadAdminFile(bucket: string, path: string, file: Blob) 
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": file.type || "application/octet-stream",
           "X-Kafe-Document-Path": encodeURIComponent(path),
+          ...(options.contentDocumentId
+            ? { "X-Kafe-Content-Document-Id": options.contentDocumentId }
+            : {}),
+          ...(options.contentResourceId
+            ? { "X-Kafe-Content-Resource-Id": encodeURIComponent(options.contentResourceId) }
+            : {}),
+          ...(options.originalFileName
+            ? { "X-Kafe-Original-File-Name": encodeURIComponent(options.originalFileName) }
+            : {}),
         },
         body: file,
         signal: controller.signal,
