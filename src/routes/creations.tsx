@@ -37,6 +37,9 @@ const ideas = [
 
 function CreationsPage() {
   const [settings] = useKafeSettings();
+  const pinterestUrl =
+    settings.pinterestUrl?.trim() ||
+    "https://www.pinterest.fr/search/pins/?q=peinture%20sur%20ceramique";
   const creations = (
     settings.creationInspirations?.length ? settings.creationInspirations : creationInspirationsSeed
   ).filter((creation) => creation.visible);
@@ -85,6 +88,32 @@ function CreationsPage() {
         </div>
       </section>
 
+      <section className="border-b-2 border-ink bg-[#fffbd6] px-4 py-8 sm:py-10">
+        <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-[1fr_auto] md:items-center">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border-2 border-ink bg-[#f4b6cd] px-3 py-1 text-xs font-bold uppercase">
+              <Palette className="h-3.5 w-3.5" /> Le plein d'idées
+            </div>
+            <h2 className="mt-4 font-display text-3xl leading-tight sm:text-4xl">
+              Besoin d'un petit déclic avant de prendre les pinceaux ?
+            </h2>
+            <p className="mt-3 max-w-2xl leading-7 text-muted-foreground">
+              Couleurs, motifs, lettrages ou techniques : pioche quelques inspirations sur
+              Pinterest, puis imagine une création qui te ressemble.
+            </p>
+          </div>
+
+          <a
+            href={pinterestUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex w-fit items-center gap-2 rounded-full border-2 border-ink bg-[#d22b83] px-6 py-3 font-bold text-white shadow-[4px_4px_0_#2f1620] transition hover:-translate-y-0.5 hover:shadow-[6px_6px_0_#2f1620]"
+          >
+            Voir les inspirations <ExternalLink className="h-4 w-4" />
+          </a>
+        </div>
+      </section>
+
       <section className="mx-auto max-w-6xl px-4 py-6">
         <div className="kafe-block-link grid gap-4 bg-[#dbea4c] p-5 sm:grid-cols-3 sm:p-6">
           {ideas.map((item) => {
@@ -105,27 +134,6 @@ function CreationsPage() {
           })}
         </div>
       </section>
-
-      {settings.pinterestUrl && (
-        <section className="mx-auto max-w-6xl px-4 py-6">
-          <a
-            href={settings.pinterestUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="kafe-block-link flex flex-col gap-4 bg-[#f4b6cd] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
-          >
-            <div>
-              <div className="text-sm font-semibold text-primary">Encore plus d'idées</div>
-              <h2 className="mt-2 font-display text-3xl">
-                Explore le Pinterest du Kafé avant de te lancer.
-              </h2>
-            </div>
-            <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground">
-              Voir Pinterest <ExternalLink className="h-4 w-4" />
-            </span>
-          </a>
-        </section>
-      )}
 
       <section className="mx-auto max-w-6xl px-4 py-8">
         <div className="kafe-block-link flex flex-col gap-4 bg-ink p-6 text-cream sm:flex-row sm:items-center sm:justify-between">
