@@ -8,7 +8,7 @@ function supportsModuleWorker() {
   try {
     const url = URL.createObjectURL(new Blob([""], { type: "text/javascript" }));
     const options: WorkerOptions = {
-      get type() {
+      get type(): WorkerType {
         supported = true;
         return "module";
       },
