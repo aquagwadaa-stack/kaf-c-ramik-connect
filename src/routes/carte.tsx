@@ -72,6 +72,7 @@ function CartePage() {
                   : (menu.previewImageUrls ?? [])
             }
             priority
+            plain
           />
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
