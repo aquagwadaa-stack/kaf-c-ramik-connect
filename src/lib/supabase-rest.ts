@@ -345,34 +345,35 @@ export async function uploadAdminFile(bucket: string, path: string, file: Blob) 
   if (!isSupabaseConfigured()) throw new Error("Supabase is not configured");
   const session = readAdminSession();
   if (!session?.access_token) throw new Error("Admin session required");
+  const accessToken = session.access_token;
   if (bucket !== "kafe-documents") {
     throw new Error("Ce stockage n'est pas autorisé pour les documents administrateur.");
   }
 
-  const fileName = file instanceof File ? file.name : "document";
+  const objectPath = path
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/");
+  const uploadUrl = `${baseUrl()}/storage/v1/object/${encodeURIComponent(bucket)}/${objectPath}`;
 
   async function attempt() {
-    const formData = new FormData();
-    formData.append("path", path);
-    formData.append("file", file, fileName);
-
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 120_000);
 
     try {
-      const response = await fetch("/api/admin-document-upload", {
+      const response = await fetch(uploadUrl, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${session!.access_token}`,
+          apikey: anonKey(),
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": file.type || "application/octet-stream",
+          "x-upsert": "true",
         },
-        body: formData,
+        body: file,
         signal: controller.signal,
       });
       if (!response.ok) throw new Error(await errorMessage(response));
-
-      const data = (await response.json()) as { publicUrl?: string };
-      if (!data.publicUrl) throw new Error("Le serveur n'a pas renvoyé l'adresse du document.");
-      return data.publicUrl;
+      return publicFileUrl(bucket, path);
     } finally {
       window.clearTimeout(timeout);
     }
@@ -400,7 +401,7 @@ export async function uploadAdminFile(bucket: string, path: string, file: Blob) 
       }
       if (error instanceof TypeError && /fetch/i.test(error.message)) {
         throw new Error(
-          "Le serveur d'import n'a pas pu être joint. Rechargez la page puis réessayez.",
+          "Le stockage n'a pas pu être joint. Vérifiez votre connexion puis réessayez.",
         );
       }
       throw error;
