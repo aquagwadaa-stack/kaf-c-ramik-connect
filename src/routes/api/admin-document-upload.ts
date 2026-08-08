@@ -22,15 +22,6 @@ function isSafeStoragePath(path: string) {
   );
 }
 
-function documentType(file: File) {
-  if (file.type) return file.type;
-  if (/\.pdf$/i.test(file.name)) return "application/pdf";
-  if (/\.jpe?g$/i.test(file.name)) return "image/jpeg";
-  if (/\.png$/i.test(file.name)) return "image/png";
-  if (/\.webp$/i.test(file.name)) return "image/webp";
-  return "application/octet-stream";
-}
-
 export const Route = createFileRoute("/api/admin-document-upload")({
   server: {
     handlers: {
@@ -44,26 +35,21 @@ export const Route = createFileRoute("/api/admin-document-upload")({
           return errorResponse("Session administrateur requise.", 401);
         }
 
-        let formData: FormData;
+        const encodedPath = request.headers.get("x-kafe-document-path");
+        let path = "";
         try {
-          formData = await request.formData();
+          path = encodedPath ? decodeURIComponent(encodedPath) : "";
         } catch {
-          return errorResponse("Le fichier transmis est illisible.", 400);
-        }
-
-        const file = formData.get("file");
-        const path = formData.get("path");
-
-        if (!(file instanceof File) || typeof path !== "string") {
-          return errorResponse("Fichier ou chemin de stockage manquant.", 400);
+          return errorResponse("Chemin de stockage illisible.", 400);
         }
         if (!isSafeStoragePath(path)) {
           return errorResponse("Chemin de stockage invalide.", 400);
         }
-        if (file.size === 0 || file.size > MAX_DOCUMENT_SIZE) {
+        const contentLength = Number(request.headers.get("content-length") ?? 0);
+        if (contentLength > MAX_DOCUMENT_SIZE) {
           return errorResponse("Le fichier doit peser entre 1 octet et 15 Mo.", 400);
         }
-        const contentType = documentType(file);
+        const contentType = request.headers.get("content-type")?.split(";", 1)[0]?.trim() ?? "";
         if (!ALLOWED_DOCUMENT_TYPES.has(contentType)) {
           return errorResponse(
             "Format non pris en charge. Utilisez un PDF, JPG, PNG ou WebP.",
@@ -87,6 +73,17 @@ export const Route = createFileRoute("/api/admin-document-upload")({
         if (profileError || !profile) {
           return errorResponse("Ce compte n'est pas autorisé à importer des documents.", 403);
         }
+
+        let bytes: ArrayBuffer;
+        try {
+          bytes = await request.arrayBuffer();
+        } catch {
+          return errorResponse("Le fichier transmis est illisible.", 400);
+        }
+        if (bytes.byteLength === 0 || bytes.byteLength > MAX_DOCUMENT_SIZE) {
+          return errorResponse("Le fichier doit peser entre 1 octet et 15 Mo.", 400);
+        }
+        const file = new Blob([bytes], { type: contentType });
 
         const { error: uploadError } = await supabaseAdmin.storage
           .from(DOCUMENT_BUCKET)

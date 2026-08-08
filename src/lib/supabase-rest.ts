@@ -353,21 +353,16 @@ export async function uploadAdminFile(bucket: string, path: string, file: Blob) 
   async function attempt() {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 120_000);
-    const formData = new FormData();
-    formData.set("path", path);
-    formData.set(
-      "file",
-      file,
-      file instanceof File && file.name ? file.name : "document-upload",
-    );
 
     try {
       const response = await fetch("/api/admin-document-upload", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
+          "Content-Type": file.type || "application/octet-stream",
+          "X-Kafe-Document-Path": encodeURIComponent(path),
         },
-        body: formData,
+        body: file,
         signal: controller.signal,
       });
       if (!response.ok) throw new Error(await errorMessage(response));
