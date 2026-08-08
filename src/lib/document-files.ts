@@ -157,7 +157,7 @@ export async function storeDocumentFile(
     let previews: Blob[] = [];
     if (attachmentType === "application/pdf" && options.generatePreviews !== false) {
       try {
-        previews = await renderPdfPages(file);
+        previews = await withTimeout(renderPdfPages(file), PREVIEW_TIMEOUT_MS);
       } catch (error) {
         console.warn("PDF preview generation skipped:", error);
       }
@@ -185,7 +185,11 @@ export async function storeDocumentFile(
 
   let previews: Blob[] = [];
   if (attachmentType === "application/pdf" && options.generatePreviews !== false) {
-    previews = await renderPdfPages(file);
+    try {
+      previews = await withTimeout(renderPdfPages(file), PREVIEW_TIMEOUT_MS);
+    } catch (error) {
+      console.warn("PDF preview generation skipped:", error);
+    }
   }
 
   return {
