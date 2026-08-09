@@ -257,10 +257,14 @@ function write(list: Reservation[]) {
   listeners.forEach((listener) => listener());
 }
 
+function getReservationDateTime(reservation: Reservation) {
+  const [year, month, day] = reservation.date.split("-").map(Number);
+  const [hours, minutes] = reservation.slot.split(":").map(Number);
+  return new Date(year, month - 1, day, hours, minutes);
+}
+
 export function useReservations() {
-  const [list, setList] = useState<Reservation[]>(() =>
-    typeof window === "undefined" ? seed : [],
-  );
+  const [list, setList] = useState<Reservation[]>([]);
   useEffect(() => {
     let alive = true;
     let refreshInterval: number | undefined;
@@ -545,6 +549,33 @@ export function shouldWaitForManualConfirmation(
 
 export async function getReservationPortal(managementToken: string) {
   if (!managementToken) throw new Error("KAFE_INVALID_MANAGEMENT_TOKEN");
+  if (!isSupabaseConfigured()) {
+    const reservation = read().find((item) => item.managementToken === managementToken);
+    if (!reservation) throw new Error("KAFE_INVALID_MANAGEMENT_TOKEN");
+
+    let settings = settingsSeed;
+    try {
+      const stored = localStorage.getItem("kafe-ceramik-settings");
+      if (stored) settings = { ...settingsSeed, ...(JSON.parse(stored) as Partial<KafeSettings>) };
+    } catch {
+      // Keep the default cancellation rules when the local preview data is invalid.
+    }
+
+    const cancellationNoticeHours = reservation.depositRequired
+      ? settings.groupDepositForfeitHours
+      : settings.cancellationNoticeHours;
+    const cancellationDeadline = getReservationDateTime(reservation);
+    cancellationDeadline.setHours(cancellationDeadline.getHours() - cancellationNoticeHours);
+    return {
+      reservation,
+      canCancel:
+        !["cancelled", "arrived"].includes(reservation.status) &&
+        new Date() <= cancellationDeadline,
+      cancellationDeadline: cancellationDeadline.toISOString(),
+      cancellationNoticeHours,
+      paymentEnabled: settings.sumupPaymentsEnabled,
+    } satisfies ReservationPortalData;
+  }
   return callRpc<ReservationPortalData>("get_kafe_reservation_by_token", {
     p_token: managementToken,
   });
@@ -552,6 +583,19 @@ export async function getReservationPortal(managementToken: string) {
 
 export async function cancelReservationFromPortal(managementToken: string) {
   if (!managementToken) throw new Error("KAFE_INVALID_MANAGEMENT_TOKEN");
+  if (!isSupabaseConfigured()) {
+    const portal = await getReservationPortal(managementToken);
+    if (!portal.canCancel) throw new Error("KAFE_CANCELLATION_DEADLINE");
+    write(
+      read().map((reservation) =>
+        reservation.managementToken === managementToken
+          ? { ...reservation, status: "cancelled" }
+          : reservation,
+      ),
+    );
+    refreshReservationOccupancies();
+    return getReservationPortal(managementToken);
+  }
   const result = await callRpc<ReservationPortalData>("cancel_kafe_reservation_by_token", {
     p_token: managementToken,
   });

@@ -2127,8 +2127,9 @@ function WaiversPanel({
                 className="sr-only"
                 disabled={uploading}
                 onChange={async (event) => {
-                  await uploadWaiver(event.currentTarget.files?.[0]);
-                  event.currentTarget.value = "";
+                  const input = event.currentTarget;
+                  await uploadWaiver(input.files?.[0]);
+                  input.value = "";
                 }}
               />
             </label>
@@ -2436,8 +2437,9 @@ function ObjectsPanel({
                     accept="image/*"
                     className="sr-only"
                     onChange={async (event) => {
-                      await uploadObjectImage(object.id, event.currentTarget.files?.[0]);
-                      event.currentTarget.value = "";
+                      const input = event.currentTarget;
+                      await uploadObjectImage(object.id, input.files?.[0]);
+                      input.value = "";
                     }}
                   />
                 </label>
@@ -2551,8 +2553,9 @@ function CreationsPanel({
                       accept="image/*"
                       className="sr-only"
                       onChange={async (event) => {
-                        await uploadCreationImage(creation.id, event.currentTarget.files?.[0]);
-                        event.currentTarget.value = "";
+                        const input = event.currentTarget;
+                        await uploadCreationImage(creation.id, input.files?.[0]);
+                        input.value = "";
                       }}
                     />
                   </label>
@@ -2744,8 +2747,9 @@ function PageImagesPanel({
                               disabled={uploadingId !== null}
                               className="sr-only"
                               onChange={async (event) => {
-                                await uploadPageImage(image.id, event.currentTarget.files?.[0]);
-                                event.currentTarget.value = "";
+                                const input = event.currentTarget;
+                                await uploadPageImage(image.id, input.files?.[0]);
+                                input.value = "";
                               }}
                             />
                           </label>
@@ -3793,8 +3797,9 @@ function ResourceAdminList({
                     className="sr-only"
                     disabled={uploadingId !== null}
                     onChange={async (event) => {
-                      await importResource(resource, event.currentTarget.files?.[0]);
-                      event.currentTarget.value = "";
+                      const input = event.currentTarget;
+                      await importResource(resource, input.files?.[0]);
+                      input.value = "";
                     }}
                   />
                 </label>

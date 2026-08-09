@@ -42,6 +42,14 @@ export function usePublishedGuestbookEntries() {
 
   useEffect(() => {
     if (!isSupabaseConfigured()) {
+      try {
+        const stored = JSON.parse(
+          localStorage.getItem("kafe-ceramik-guestbook") || "[]",
+        ) as GuestbookEntry[];
+        setEntries(stored.filter((entry) => entry.status === "published"));
+      } catch {
+        setEntries([]);
+      }
       setLoading(false);
       return;
     }
@@ -63,7 +71,6 @@ export async function submitGuestbookEntry(input: {
   rating: number;
   image?: File | null;
 }) {
-  if (!isSupabaseConfigured()) throw new Error("GUESTBOOK_NOT_CONFIGURED");
   const id = `guest-${crypto.randomUUID()}`;
   const imagePath = input.image ? `submissions/${id}/${safeImageName(input.image.name)}` : "";
 
@@ -73,7 +80,9 @@ export async function submitGuestbookEntry(input: {
   let imageUploaded = true;
   if (input.image && imagePath) {
     try {
-      imageUrl = await uploadPublicFile("kafe-guestbook", imagePath, input.image);
+      imageUrl = isSupabaseConfigured()
+        ? await uploadPublicFile("kafe-guestbook", imagePath, input.image)
+        : await fileToDataUrl(input.image);
     } catch {
       imageUrl = undefined;
       imageUploaded = false;
@@ -90,6 +99,16 @@ export async function submitGuestbookEntry(input: {
     imageUrl,
     createdAt: new Date().toISOString(),
   };
+  if (!isSupabaseConfigured()) {
+    let stored: GuestbookEntry[] = [];
+    try {
+      stored = JSON.parse(localStorage.getItem("kafe-ceramik-guestbook") || "[]");
+    } catch {
+      stored = [];
+    }
+    localStorage.setItem("kafe-ceramik-guestbook", JSON.stringify([entry, ...stored]));
+    return { entry, imageUploaded };
+  }
   await insertRow("kafe_guestbook_entries", {
     id,
     value: entry,
@@ -97,6 +116,15 @@ export async function submitGuestbookEntry(input: {
     updated_at: entry.createdAt,
   });
   return { entry, imageUploaded };
+}
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error ?? new Error("IMAGE_READ_FAILED"));
+    reader.readAsDataURL(file);
+  });
 }
 
 function safeImageName(value: string) {

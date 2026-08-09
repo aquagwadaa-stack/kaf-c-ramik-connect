@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   CalendarCheck2,
   CalendarDays,
@@ -553,12 +553,13 @@ function ReserverPage() {
                 </div>
                 <div className="sm:col-span-2">
                   <div className="mb-1.5 flex items-center justify-between gap-3">
-                    <label className="block text-sm font-medium">
+                    <label htmlFor="reservation-message" className="block text-sm font-medium">
                       Message ou demande particulière
                     </label>
                     <span className="text-xs text-muted-foreground">Facultatif</span>
                   </div>
                   <textarea
+                    id="reservation-message"
                     value={form.message}
                     onChange={(event) => setForm({ ...form, message: event.target.value })}
                     rows={3}
@@ -834,6 +835,7 @@ function GroupRateField({
       </span>
       <div className="mt-3 grid grid-cols-[1fr_5.5rem] items-center gap-3">
         <input
+          aria-label={`${label} - curseur`}
           type="range"
           min={min}
           max={max}
@@ -844,6 +846,7 @@ function GroupRateField({
         />
         <div className="relative">
           <input
+            aria-label={`${label} - montant`}
             type="number"
             min={min}
             max={max}
@@ -879,13 +882,19 @@ function Field({
   hint?: string;
   placeholder?: string;
 }) {
+  const id = useId();
+
   return (
     <div>
-      <label className="mb-1.5 flex items-center justify-between gap-3 text-sm font-medium">
+      <label
+        htmlFor={id}
+        className="mb-1.5 flex items-center justify-between gap-3 text-sm font-medium"
+      >
         <span>{label}</span>
         {hint && <span className="text-xs font-normal text-muted-foreground">{hint}</span>}
       </label>
       <input
+        id={id}
         type={type}
         value={value}
         placeholder={placeholder}
