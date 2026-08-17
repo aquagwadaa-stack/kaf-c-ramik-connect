@@ -30,6 +30,7 @@ import {
 } from "@/lib/reservations";
 import { useAdminAccess } from "@/lib/supabase-rest";
 import { downloadSignedWaiver } from "@/lib/waiver-pdf";
+import { getKafeDate, getKafeTime } from "@/lib/kafe-time";
 
 export const Route = createFileRoute("/decharge-signature")({
   head: () => ({
@@ -49,17 +50,9 @@ const emptyForm = {
   guardianLastName: "",
 };
 
-function localDateKey(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function reservationDateTime(reservation: Reservation) {
-  const [year, month, day] = reservation.date.split("-").map(Number);
+function reservationMinutes(reservation: Reservation) {
   const [hours, minutes] = reservation.slot.split(":").map(Number);
-  return new Date(year, month - 1, day, hours, minutes);
+  return hours * 60 + minutes;
 }
 
 function WaiverSigningPage() {
@@ -112,21 +105,25 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | undefined>();
   const [error, setError] = useState("");
   const [savedSignature, setSavedSignature] = useState<WaiverSignature | null>(null);
+  const [saving, setSaving] = useState(false);
   const [showEarlierToday, setShowEarlierToday] = useState(false);
   const [showFutureDays, setShowFutureDays] = useState(false);
 
   const reservationChoices = useMemo(() => {
     const now = new Date();
-    const today = localDateKey(now);
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const today = getKafeDate(now);
+    const [hours, minutes] = getKafeTime(now).split(":").map(Number);
+    const oneHourAgoMinutes = hours * 60 + minutes - 60;
     const active = reservations
       .filter((reservation) => reservation.status !== "cancelled")
       .sort((a, b) => `${a.date}-${a.slot}`.localeCompare(`${b.date}-${b.slot}`));
     const earlierToday = active.filter(
-      (reservation) => reservation.date === today && reservationDateTime(reservation) < oneHourAgo,
+      (reservation) =>
+        reservation.date === today && reservationMinutes(reservation) < oneHourAgoMinutes,
     );
     const currentToday = active.filter(
-      (reservation) => reservation.date === today && reservationDateTime(reservation) >= oneHourAgo,
+      (reservation) =>
+        reservation.date === today && reservationMinutes(reservation) >= oneHourAgoMinutes,
     );
     const futureDays = active.filter((reservation) => reservation.date > today);
 
@@ -154,7 +151,7 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
     setError("");
   }
 
-  function saveSignature() {
+  async function saveSignature() {
     if (!form.lastName.trim() || !form.firstName.trim() || !accepted || !signatureDataUrl) {
       setError("Nom, prénom, lecture de la décharge et signature sont obligatoires.");
       return;
@@ -184,10 +181,20 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
       validatedBy,
     };
 
-    saveSignatures([next, ...signatures]);
-    if (reservationRef) updateStatus(reservationRef, "arrived");
-    setSavedSignature(next);
+    setSaving(true);
     setError("");
+    try {
+      const saved = await saveSignatures([next, ...signatures]);
+      if (!saved) throw new Error("La décharge n'a pas pu être enregistrée.");
+      if (reservationRef) await updateStatus(reservationRef, "arrived");
+      setSavedSignature(next);
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error ? saveError.message : "La décharge n'a pas pu être enregistrée.",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   function nextPerson() {
@@ -434,7 +441,7 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
                   Date
                 </div>
                 <div className="mt-5 border-b-2 border-[#22a9d6]/40 pb-2 text-lg font-medium">
-                  {new Date().toLocaleDateString("fr-FR")}
+                  {new Date(`${getKafeDate()}T12:00:00`).toLocaleDateString("fr-FR")}
                 </div>
               </div>
               <div className="rounded-2xl border-2 border-dashed border-[#f2a429] bg-white p-4">
@@ -474,10 +481,12 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
             {error && <div className="mt-4 text-sm font-medium text-destructive">{error}</div>}
             <button
               type="button"
-              onClick={saveSignature}
+              onClick={() => void saveSignature()}
+              disabled={saving}
               className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#e90061] px-6 py-3.5 font-medium text-white shadow-sm"
             >
-              <ClipboardSignature className="h-5 w-5" /> Signer et enregistrer la décharge
+              <ClipboardSignature className="h-5 w-5" />
+              {saving ? "Enregistrement…" : "Signer et enregistrer la décharge"}
             </button>
           </div>
 

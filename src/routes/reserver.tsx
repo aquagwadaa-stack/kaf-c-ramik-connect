@@ -18,6 +18,7 @@ import {
 import { PageShell, PageHeader } from "@/components/page-shell";
 import { useKafeSettings, type KafeSettings } from "@/lib/admin-data";
 import { formatPublicTime } from "@/lib/opening-hours";
+import { addIsoDays, getKafeDate, getKafeTime, kafeTodayAtLocalNoon } from "@/lib/kafe-time";
 import {
   addReservation,
   createSumUpCheckout,
@@ -969,7 +970,7 @@ function WeekPlanner({
   selectedSlot: string;
   onSelect: (date: string, slot: string) => void;
 }) {
-  const currentWeek = useMemo(() => startOfWeek(new Date()), []);
+  const currentWeek = useMemo(() => startOfWeek(kafeTodayAtLocalNoon()), []);
   const [weekStart, setWeekStart] = useState(currentWeek);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const days = useMemo(() => buildWeek(weekStart), [weekStart]);
@@ -979,7 +980,7 @@ function WeekPlanner({
   useEffect(() => {
     const node = scrollerRef.current;
     if (!node) return;
-    const todayIso = toISODate(new Date());
+    const todayIso = getKafeDate();
     const todayIndex = days.findIndex((day) => toISODate(day) === todayIso);
     const targetIndex = todayIndex >= 0 ? todayIndex : 0;
     if (node.scrollWidth > node.clientWidth) {
@@ -1131,7 +1132,10 @@ function getSlotAvailability(
     };
   }
 
-  if (new Date(`${date}T${slot}:00`).getTime() <= Date.now()) {
+  if (
+    date < guadeloupeNow.date ||
+    (date === guadeloupeNow.date && timeToMinutes(slot) <= guadeloupeNow.minutes)
+  ) {
     return { disabled: true, label: "", hideLabel: true };
   }
 
@@ -1154,26 +1158,10 @@ function getSlotAvailability(
 }
 
 function getGuadeloupeNow() {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Guadeloupe",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(new Date());
-  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return {
-    date: `${value.year}-${value.month}-${value.day}`,
-    minutes: Number(value.hour) * 60 + Number(value.minute),
+    date: getKafeDate(),
+    minutes: timeToMinutes(getKafeTime()),
   };
-}
-
-function addIsoDays(date: string, count: number) {
-  const next = new Date(`${date}T12:00:00Z`);
-  next.setUTCDate(next.getUTCDate() + count);
-  return next.toISOString().slice(0, 10);
 }
 
 function timeToMinutes(value: string) {

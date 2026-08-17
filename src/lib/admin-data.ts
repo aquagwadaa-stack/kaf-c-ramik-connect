@@ -4,6 +4,12 @@ import { deleteRow, isSupabaseConfigured, selectRows, upsertRows } from "./supab
 type Listener = () => void;
 
 const listeners = new Map<string, Set<Listener>>();
+export const ADMIN_SYNC_ERROR_EVENT = "kafe-admin-sync-error";
+
+function reportAdminSyncError(message: string) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(ADMIN_SYNC_ERROR_EVENT, { detail: message }));
+}
 
 function notify(key: string) {
   listeners.get(key)?.forEach((listener) => listener());
@@ -79,6 +85,7 @@ async function saveRemoteList<T extends { id: string }>(
   list: T[],
   toRow: (item: T, index: number) => RemoteJsonRow<T>,
 ) {
+  if (list.length === 0) return;
   await upsertRows(table, list.map(toRow), true);
 }
 
@@ -93,10 +100,13 @@ export function useStoredList<T extends { id: string }>(
   const remoteAuthLoad = remote?.authLoad;
   const remoteHasSortOrder = remote?.hasSortOrder;
   const remoteSaveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const saveVersion = useRef(0);
+  const seedRef = useRef(seed);
 
   useEffect(() => {
     let alive = true;
-    const update = () => setList(readList(key, seed));
+    const initialSeed = seedRef.current;
+    const update = () => setList(readList(key, initialSeed));
     update();
     const unsubscribe = subscribe(key, update);
 
@@ -116,9 +126,11 @@ export function useStoredList<T extends { id: string }>(
       alive = false;
       unsubscribe();
     };
-  }, [key, remoteAuthLoad, remoteHasSortOrder, remoteTable, seed]);
+  }, [key, remoteAuthLoad, remoteHasSortOrder, remoteTable]);
 
   const save = (next: T[]) => {
+    const previous = list;
+    const version = ++saveVersion.current;
     const nextIds = new Set(next.map((item) => item.id));
     const removedIds = list.filter((item) => !nextIds.has(item.id)).map((item) => item.id);
     writeStore(key, next);
@@ -134,13 +146,21 @@ export function useStoredList<T extends { id: string }>(
       const operation = remoteSaveQueue.current
         .catch(() => undefined)
         .then(async () => {
-          await Promise.all(removedIds.map((id) => deleteRow(remote.table, id, true)));
           await saveRemoteList(remote.table, next, toRow);
+          await Promise.all(removedIds.map((id) => deleteRow(remote.table, id, true)));
         });
       remoteSaveQueue.current = operation.catch((error) => {
         console.warn(`Remote save skipped for ${remote.table}:`, error);
       });
-      return operation.then(() => true).catch(() => false);
+      return operation
+        .then(() => true)
+        .catch(() => {
+          if (saveVersion.current === version) writeStore(key, previous);
+          reportAdminSyncError(
+            "La derniere modification n'a pas pu etre enregistree. Verifie la connexion puis reessaie.",
+          );
+          return false;
+        });
     }
     return Promise.resolve(true);
   };
@@ -1028,6 +1048,7 @@ export function useKafeSettings() {
   );
   const [ready, setReady] = useState(() => !isSupabaseConfigured());
   const remoteSaveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const saveVersion = useRef(0);
 
   useEffect(() => {
     let alive = true;
@@ -1063,13 +1084,15 @@ export function useKafeSettings() {
   }, []);
 
   const save = (next: KafeSettings) => {
+    const previous = settings;
+    const version = ++saveVersion.current;
     const normalized = normalizeKafeSettings({
       ...next,
       configurationVersion: settingsSeed.configurationVersion,
     });
     writeStore("kafe-ceramik-settings", normalized);
     if (isSupabaseConfigured()) {
-      remoteSaveQueue.current = remoteSaveQueue.current
+      const operation = remoteSaveQueue.current
         .catch(() => undefined)
         .then(() =>
           upsertRows(
@@ -1077,11 +1100,21 @@ export function useKafeSettings() {
             [{ id: "main", value: normalized, updated_at: new Date().toISOString() }],
             true,
           ),
-        )
-        .catch((error) => {
-          console.warn("Remote settings save skipped:", error);
+        );
+      remoteSaveQueue.current = operation.catch((error) => {
+        console.warn("Remote settings save skipped:", error);
+      });
+      return operation
+        .then(() => true)
+        .catch(() => {
+          if (saveVersion.current === version) writeStore("kafe-ceramik-settings", previous);
+          reportAdminSyncError(
+            "Les parametres n'ont pas pu etre enregistres. Verifie la connexion puis reessaie.",
+          );
+          return false;
         });
     }
+    return Promise.resolve(true);
   };
   return [settings, save, ready] as const;
 }

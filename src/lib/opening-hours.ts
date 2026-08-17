@@ -1,4 +1,5 @@
 import type { KafeSettings, ScheduleRule } from "./admin-data";
+import { getKafeDate } from "./kafe-time";
 
 const dayNames = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 
@@ -32,7 +33,7 @@ function formatWeekdays(weekdays: number[]) {
 }
 
 function selectCurrentRules(rules: ScheduleRule[]) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getKafeDate();
   const current = rules.filter(
     (rule) =>
       (!rule.validFrom || rule.validFrom <= today) &&

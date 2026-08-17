@@ -619,9 +619,15 @@ function shell(title: string, content: string) {
   </body></html>`;
 }
 
-function details(row: ReservationRow, settings: SettingsValue, siteUrl: string) {
+function details(
+  row: ReservationRow,
+  settings: SettingsValue,
+  siteUrl: string,
+  options: { includeGuideReminder?: boolean } = {},
+) {
+  const { includeGuideReminder = true } = options;
   const guideReminder =
-    row.value.experience === "brunch_atelier"
+    !includeGuideReminder || row.value.experience === "brunch_atelier"
       ? ""
       : `<p><strong>Avant de venir :</strong> prends quelques minutes pour relire le <a href="${escapeHtml(siteUrl)}/guide" style="color:#914735">guide de peinture</a>. Ses consignes sont importantes pour la cuisson et la récupération de ta création.</p>`;
   const reservationPortal = row.value.managementToken
@@ -763,7 +769,7 @@ async function reservationCancelled(row: ReservationRow, settings: SettingsValue
       "Annulation de ta réservation – Kafé Céramik",
       shell(
         "Réservation annulée",
-        `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Ta réservation au Kafé Céramik a bien été annulée.</p>${details(row, settings, siteUrl)}<p>Pour toute question, tu peux contacter le Kafé au ${escapeHtml(settings.contactPhone ?? "0690 28 47 88")}.</p>`,
+        `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Ta réservation au Kafé Céramik a bien été annulée.</p>${details(row, settings, siteUrl, { includeGuideReminder: false })}<p>Pour toute question, tu peux contacter le Kafé au ${escapeHtml(settings.contactPhone ?? "0690 28 47 88")}.</p>`,
       ),
     );
     if (customerDelivered) {
@@ -778,7 +784,7 @@ async function reservationCancelled(row: ReservationRow, settings: SettingsValue
       `Réservation annulée – ${row.people} personne${row.people > 1 ? "s" : ""}`,
       shell(
         "Réservation annulée",
-        `<p>La réservation de <strong>${escapeHtml(row.value.firstName)} ${escapeHtml(row.value.lastName)}</strong> est annulée.</p>${details(row, settings, siteUrl)}`,
+        `<p>La réservation de <strong>${escapeHtml(row.value.firstName)} ${escapeHtml(row.value.lastName)}</strong> est annulée.</p>${details(row, settings, siteUrl, { includeGuideReminder: false })}`,
       ),
     );
     if (adminDelivered) {

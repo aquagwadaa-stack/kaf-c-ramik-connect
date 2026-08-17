@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { addIsoDays, getKafeDate } from "./kafe-time";
 import { settingsSeed, type KafeSettings, type SeatingZone } from "./admin-data";
 import {
   callRpc,
@@ -308,21 +309,20 @@ export function useReservationOccupancies() {
     if (!isSupabaseConfigured()) return;
     let alive = true;
     async function loadOccupancies() {
-      const today = new Date();
-      const until = new Date();
-      until.setDate(until.getDate() + 90);
+      const today = getKafeDate();
+      const until = addIsoDays(today, 90);
       try {
         const rows = await callRpc<SlotOccupancy[]>("get_kafe_slot_occupancy", {
-          from_date: today.toISOString().slice(0, 10),
-          to_date: until.toISOString().slice(0, 10),
+          from_date: today,
+          to_date: until,
         });
         if (alive) setOccupancies(rows);
       } catch (error) {
         console.warn("Detailed occupancy load skipped, using aggregate fallback:", error);
         try {
           const rows = await callRpc<LegacySlotCapacity[]>("get_kafe_slot_capacity", {
-            from_date: today.toISOString().slice(0, 10),
-            to_date: until.toISOString().slice(0, 10),
+            from_date: today,
+            to_date: until,
           });
           if (!alive) return;
           setOccupancies(
@@ -941,16 +941,14 @@ export function formatDuration(minutes: number) {
 }
 
 export async function updateStatus(id: string, status: ReservationStatus) {
-  const list = read().map((reservation) =>
+  const current = read();
+  const list = current.map((reservation) =>
     reservation.id === id ? { ...reservation, status } : reservation,
   );
-  write(list);
   const updated = list.find((reservation) => reservation.id === id);
+  if (!updated) throw new Error("Réservation introuvable.");
   if (isSupabaseConfigured()) {
-    if (!updated) return;
-    await updateRemoteReservationStatus(updated).catch((error) => {
-      console.warn("Remote reservation status save skipped:", error);
-    });
+    await updateRemoteReservationStatus(updated);
     if (status === "cancelled") {
       await invokeEdgeFunction<EmailDispatchResult>(
         "kafe-emails",
@@ -965,15 +963,16 @@ export async function updateStatus(id: string, status: ReservationStatus) {
       });
     }
   }
+  write(list);
+  refreshReservationOccupancies();
 }
 
-export function removeReservation(id: string) {
-  write(read().filter((reservation) => reservation.id !== id));
+export async function removeReservation(id: string) {
   if (isSupabaseConfigured() && readAdminSession()) {
-    deleteRow("kafe_reservations", id, true).catch((error) => {
-      console.warn("Remote reservation delete skipped:", error);
-    });
+    await deleteRow("kafe_reservations", id, true);
   }
+  write(read().filter((reservation) => reservation.id !== id));
+  refreshReservationOccupancies();
 }
 
 export function experienceLabel(experience: ExperienceType): string {

@@ -70,6 +70,7 @@ import {
   pageImagesSeed,
   useKafeSettings,
   useWaiverSignatures,
+  ADMIN_SYNC_ERROR_EVENT,
   type CreationInspiration,
   type CeramicObject,
   type ContentDocument,
@@ -98,6 +99,7 @@ import {
   useAdminAccess,
 } from "@/lib/supabase-rest";
 import { downloadSignedWaiver } from "@/lib/waiver-pdf";
+import { getKafeDate, getKafeTime, kafeTodayAtLocalNoon } from "@/lib/kafe-time";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -182,7 +184,7 @@ function downloadCsv(filename: string, rows: unknown[][]) {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
 function reservationIsSigned(reservation: Reservation, signatures: WaiverSignature[]) {
@@ -530,6 +532,7 @@ function AdminWorkspace({
   const [signatures, saveSignatures] = useWaiverSignatures();
   const [settings, saveSettings] = useKafeSettings();
   const [guestbookEntries, saveGuestbookEntries] = useAdminGuestbookEntries();
+  const [syncError, setSyncError] = useState("");
   const { notifications, markRead: markNotificationRead } = useAdminNotifications(remoteMode);
   const [tab, setTab] = useState<AdminTab>("overview");
   const creations = settings.creationInspirations?.length
@@ -539,6 +542,16 @@ function AdminWorkspace({
   function saveCreations(next: CreationInspiration[]) {
     saveSettings({ ...settings, creationInspirations: next });
   }
+
+  useEffect(() => {
+    const handleSyncError = (event: Event) => {
+      setSyncError(
+        (event as CustomEvent<string>).detail || "La modification n'a pas ete enregistree.",
+      );
+    };
+    window.addEventListener(ADMIN_SYNC_ERROR_EVENT, handleSyncError);
+    return () => window.removeEventListener(ADMIN_SYNC_ERROR_EVENT, handleSyncError);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -573,6 +586,18 @@ function AdminWorkspace({
       </header>
 
       <main className="mx-auto max-w-7xl space-y-5 px-4 py-6">
+        {syncError && (
+          <div className="flex items-start justify-between gap-4 rounded-xl border border-destructive/35 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <span>{syncError}</span>
+            <button
+              type="button"
+              onClick={() => setSyncError("")}
+              className="font-semibold underline"
+            >
+              Fermer
+            </button>
+          </div>
+        )}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="font-display text-3xl leading-tight sm:text-4xl">Tableau de bord</h1>
@@ -718,7 +743,7 @@ function OverviewPanel({
   onReadNotification: (id: number) => void;
   onNavigate: (tab: AdminTab) => void;
 }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getKafeDate();
   const activeReservations = reservations.filter(
     (reservation) => reservation.status !== "cancelled",
   );
@@ -956,12 +981,12 @@ function WeeklyCapacityPlanner({
   occupancies: SlotOccupancy[];
   settings: KafeSettings;
 }) {
-  const [weekStart, setWeekStart] = useState(() => startOfAdminWeek(new Date()));
+  const [weekStart, setWeekStart] = useState(() => startOfAdminWeek(kafeTodayAtLocalNoon()));
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, index) => addAdminDays(weekStart, index)),
     [weekStart],
   );
-  const today = localDateValue(new Date());
+  const today = getKafeDate();
   const weekLabel = `${days[0].toLocaleDateString("fr-FR", {
     day: "numeric",
     month: "short",
@@ -992,7 +1017,7 @@ function WeeklyCapacityPlanner({
           </button>
           <button
             type="button"
-            onClick={() => setWeekStart(startOfAdminWeek(new Date()))}
+            onClick={() => setWeekStart(startOfAdminWeek(kafeTodayAtLocalNoon()))}
             className="h-9 rounded-full border border-border bg-background px-3 text-xs font-medium hover:bg-secondary"
           >
             Aujourd'hui
@@ -1100,10 +1125,6 @@ function localDateValue(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function localTimeValue(date: Date) {
-  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-}
-
 function WalkInAvailability({
   reservations,
   occupancies,
@@ -1114,7 +1135,7 @@ function WalkInAvailability({
   settings: KafeSettings;
 }) {
   const [now, setNow] = useState(() => new Date());
-  const today = localDateValue(now);
+  const today = getKafeDate(now);
   const [date, setDate] = useState(today);
   const [timeChoice, setTimeChoice] = useState("now");
   const [walkInPeople, setWalkInPeople] = useState(2);
@@ -1123,7 +1144,7 @@ function WalkInAvailability({
   const [walkInNotice, setWalkInNotice] = useState("");
   const [walkInError, setWalkInError] = useState("");
   const slots = useMemo(() => getSlotsForDate(date, settings), [date, settings]);
-  const observedTime = timeChoice === "now" ? localTimeValue(now) : timeChoice;
+  const observedTime = timeChoice === "now" ? getKafeTime(now) : timeChoice;
   const availability = useMemo(
     () =>
       observedTime
@@ -1193,7 +1214,7 @@ function WalkInAvailability({
             onChange={(event) => setTimeChoice(event.target.value)}
             className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
           >
-            {date === today && <option value="now">Maintenant · {localTimeValue(now)}</option>}
+            {date === today && <option value="now">Maintenant · {getKafeTime(now)}</option>}
             {date !== today && slots.length === 0 && <option value="">Aucun créneau</option>}
             {slots.map((slot) => (
               <option key={slot} value={slot}>
@@ -1698,7 +1719,7 @@ function ReservationsPanel({
   settings: KafeSettings;
 }) {
   const [filter, setFilter] = useState<"today" | "upcoming" | "groups" | "all">("today");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getKafeDate();
 
   const filtered = useMemo(() => {
     if (filter === "today") return reservations.filter((r) => r.date === today);
@@ -1767,6 +1788,7 @@ function ReservationCard({
   signed: boolean;
   settings: KafeSettings;
 }) {
+  const [deleting, setDeleting] = useState(false);
   const location = seatingAllocationLabel(reservation, settings);
   const preferenceLabels = {
     indifferent: "Peu importe",
@@ -1884,10 +1906,25 @@ function ReservationCard({
           </>
         )}
         <button
-          onClick={() => removeReservation(reservation.id)}
+          onClick={async () => {
+            if (!window.confirm("Supprimer définitivement cette réservation ?")) return;
+            setDeleting(true);
+            try {
+              await removeReservation(reservation.id);
+            } catch (error) {
+              window.alert(
+                error instanceof Error
+                  ? error.message
+                  : "La réservation n'a pas pu être supprimée.",
+              );
+            } finally {
+              setDeleting(false);
+            }
+          }}
+          disabled={deleting}
           className="rounded-full border border-destructive/30 px-3 py-1 text-xs text-destructive hover:bg-destructive/10"
         >
-          Supprimer
+          {deleting ? "Suppression…" : "Supprimer"}
         </button>
       </div>
     </div>
@@ -2098,12 +2135,12 @@ function WaiversPanel({
     }
   }
 
-  function removeSignature(id: string) {
-    saveSignatures(signatures.filter((signature) => signature.id !== id));
-    if (isSupabaseConfigured()) {
-      deleteRow("kafe_waiver_signatures", id).catch((remoteError) => {
-        console.warn("Remote signature delete skipped:", remoteError);
-      });
+  async function removeSignature(id: string) {
+    if (!window.confirm("Supprimer définitivement cette décharge signée ?")) return;
+    setError("");
+    const saved = await saveSignatures(signatures.filter((signature) => signature.id !== id));
+    if (!saved) {
+      setError("La décharge n'a pas pu être supprimée de l'administration.");
     }
   }
 
@@ -2263,7 +2300,7 @@ function WaiversPanel({
                             <Download className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => removeSignature(signature.id)}
+                            onClick={() => void removeSignature(signature.id)}
                             className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                             aria-label="Supprimer la signature"
                           >
@@ -2297,6 +2334,8 @@ function ObjectsPanel({
   objects: CeramicObject[];
   saveObjects: (next: CeramicObject[]) => void;
 }) {
+  const [uploadingId, setUploadingId] = useState<string>();
+  const [uploadError, setUploadError] = useState("");
   const [draft, setDraft] = useState({
     name: "",
     category: "Petites pieces" as CeramicObject["category"],
@@ -2313,9 +2352,18 @@ function ObjectsPanel({
 
   async function uploadObjectImage(id: string, file?: File) {
     if (!file) return;
-    const stored = await storeDocumentFile(`objets/${id}`, file);
-    const imageDataUrl = stored.attachmentUrl || stored.attachmentDataUrl;
-    updateObject(id, { imageDataUrl, imageName: file.name });
+    setUploadingId(id);
+    setUploadError("");
+    try {
+      const stored = await storeDocumentFile(`objets/${id}`, file);
+      const imageDataUrl = stored.attachmentUrl || stored.attachmentDataUrl;
+      if (!imageDataUrl) throw new Error("L'image n'a pas pu être enregistrée.");
+      updateObject(id, { imageDataUrl, imageName: file.name });
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Impossible d'importer cette image.");
+    } finally {
+      setUploadingId(undefined);
+    }
   }
 
   function addObject() {
@@ -2338,6 +2386,11 @@ function ObjectsPanel({
       title="Objets à peindre"
       desc="Catalogue informatif visible côté client : noms, catégories, prix, précisions et photos."
     >
+      {uploadError && (
+        <div className="mb-4 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {uploadError}
+        </div>
+      )}
       <div className="grid gap-3 rounded-2xl border border-border bg-background p-4 sm:grid-cols-[1fr_180px_110px_auto]">
         <Field
           label="Nouvel objet"
@@ -2431,11 +2484,13 @@ function ObjectsPanel({
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm hover:bg-secondary">
-                  <UploadCloud className="h-4 w-4" /> Ajouter une photo
+                  <UploadCloud className="h-4 w-4" />
+                  {uploadingId === object.id ? "Import en cours..." : "Ajouter une photo"}
                   <input
                     type="file"
                     accept="image/*"
                     className="sr-only"
+                    disabled={uploadingId === object.id}
                     onChange={async (event) => {
                       const input = event.currentTarget;
                       await uploadObjectImage(object.id, input.files?.[0]);
@@ -2482,6 +2537,9 @@ function CreationsPanel({
   creations: CreationInspiration[];
   saveCreations: (next: CreationInspiration[]) => void;
 }) {
+  const [uploadingId, setUploadingId] = useState<string>();
+  const [uploadError, setUploadError] = useState("");
+
   function updateCreation(id: string, patch: Partial<CreationInspiration>) {
     saveCreations(
       creations.map((creation) => (creation.id === id ? { ...creation, ...patch } : creation)),
@@ -2490,9 +2548,18 @@ function CreationsPanel({
 
   async function uploadCreationImage(id: string, file?: File) {
     if (!file) return;
-    const stored = await storeDocumentFile(`creations/${id}`, file);
-    const imageDataUrl = stored.attachmentUrl || stored.attachmentDataUrl;
-    updateCreation(id, { imageDataUrl, imageName: file.name });
+    setUploadingId(id);
+    setUploadError("");
+    try {
+      const stored = await storeDocumentFile(`creations/${id}`, file);
+      const imageDataUrl = stored.attachmentUrl || stored.attachmentDataUrl;
+      if (!imageDataUrl) throw new Error("L'image n'a pas pu être enregistrée.");
+      updateCreation(id, { imageDataUrl, imageName: file.name });
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Impossible d'importer cette image.");
+    } finally {
+      setUploadingId(undefined);
+    }
   }
 
   function addCreation() {
@@ -2516,6 +2583,11 @@ function CreationsPanel({
       title="Créations"
       desc="Photos et inspirations visibles sur la page Créations et dans la section d'accueil."
     >
+      {uploadError && (
+        <div className="mb-4 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {uploadError}
+        </div>
+      )}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
           Chaque carte peut être affichée, masquée, renommée et illustrée avec une photo. Les quatre
@@ -2547,11 +2619,13 @@ function CreationsPanel({
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs hover:bg-secondary">
-                    <UploadCloud className="h-3.5 w-3.5" /> Photo
+                    <UploadCloud className="h-3.5 w-3.5" />
+                    {uploadingId === creation.id ? "Import..." : "Photo"}
                     <input
                       type="file"
                       accept="image/*"
                       className="sr-only"
+                      disabled={uploadingId === creation.id}
                       onChange={async (event) => {
                         const input = event.currentTarget;
                         await uploadCreationImage(creation.id, input.files?.[0]);
@@ -4255,9 +4329,9 @@ const weekdayOptions = [
 ] as const;
 
 function dateInput(offsetMonths = 0) {
-  const date = new Date();
+  const date = kafeTodayAtLocalNoon();
   date.setMonth(date.getMonth() + offsetMonths);
-  return date.toISOString().slice(0, 10);
+  return localDateValue(date);
 }
 
 function createScheduleRule(): ScheduleRule {
@@ -4543,10 +4617,22 @@ function StatusButton({
   danger?: boolean;
 }) {
   const active = current === target;
+  const [saving, setSaving] = useState(false);
   return (
     <button
-      onClick={() => void updateStatus(id, target)}
-      disabled={active}
+      onClick={async () => {
+        setSaving(true);
+        try {
+          await updateStatus(id, target);
+        } catch (error) {
+          window.alert(
+            error instanceof Error ? error.message : "Le statut n'a pas pu être enregistré.",
+          );
+        } finally {
+          setSaving(false);
+        }
+      }}
+      disabled={active || saving}
       className={`rounded-full border px-3 py-1 text-xs ${
         active
           ? "border-foreground/20 bg-secondary text-muted-foreground cursor-default"
@@ -4555,7 +4641,7 @@ function StatusButton({
             : "border-border hover:bg-secondary"
       }`}
     >
-      {label}
+      {saving ? "Enregistrement…" : label}
     </button>
   );
 }
