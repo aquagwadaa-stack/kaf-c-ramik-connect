@@ -59,7 +59,7 @@ export function PageHeader({
   const head = words.join(" ");
 
   return (
-    <section className="kafe-page-header relative overflow-hidden border-b-2 border-ink bg-[#cf2c86] text-[#fffbd6]">
+    <section className="kafe-page-header relative overflow-hidden border-b-2 border-ink bg-blush text-ink">
       <OrganicShapes />
       <div
         aria-hidden
@@ -67,7 +67,7 @@ export function PageHeader({
       />
       <div
         aria-hidden
-        className="absolute -right-5 bottom-1 h-36 w-36 rounded-full border-2 border-ink bg-[#79c6e8] sm:right-[16%] sm:h-44 sm:w-44"
+        className="absolute -right-5 bottom-1 h-36 w-36 rounded-full border-2 border-ink bg-sky sm:right-[16%] sm:h-44 sm:w-44"
       />
       <SunDoodle className="absolute right-5 top-6 h-16 w-16 rotate-6 sm:right-[10%] sm:top-9 sm:h-20 sm:w-20" />
       <SquiggleDoodle className="absolute bottom-8 right-[28%] hidden h-8 w-32 rotate-[-8deg] opacity-90 md:block" />
@@ -75,24 +75,22 @@ export function PageHeader({
       <div className="relative mx-auto max-w-6xl px-4 py-12 sm:py-16">
         {eyebrow && (
           <div className="mb-6 inline-flex">
-            <span className="kafe-poster-label -rotate-2 bg-[#f4db45] text-ink">{eyebrow}</span>
+            <span className="kafe-poster-label -rotate-2 bg-lemon text-ink">{eyebrow}</span>
           </div>
         )}
-        <h1 className="max-w-3xl text-4xl leading-[1.02] text-[#fffbd6] sm:text-6xl">
-          {head} <span className="text-[#f4db45]">{last}</span>
+        <h1 className="max-w-3xl text-4xl leading-[1.12] text-ink sm:text-6xl sm:leading-[1.1]">
+          {head} <span className="text-brick">{last}</span>
         </h1>
         {description && (
-          <p className="mt-6 max-w-2xl text-base leading-7 text-[#fffbd6]/90 sm:text-lg">
-            {description}
-          </p>
+          <p className="mt-6 max-w-2xl text-base leading-7 text-ink/78 sm:text-lg">{description}</p>
         )}
         {children && <div className="mt-8">{children}</div>}
       </div>
       <div className="relative grid h-4 grid-cols-4 border-t-2 border-ink" aria-hidden>
-        <span className="bg-[#f4db45]" />
-        <span className="bg-[#7fcbe7]" />
-        <span className="bg-[#dbea4c]" />
-        <span className="bg-[#ee7832]" />
+        <span className="bg-lemon" />
+        <span className="bg-sky" />
+        <span className="bg-sage" />
+        <span className="bg-coral" />
       </div>
     </section>
   );

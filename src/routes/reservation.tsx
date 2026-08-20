@@ -160,7 +160,7 @@ function ReservationPortalPage() {
                 </Info>
                 {data.reservation.groupQuoteTotal && (
                   <Info icon={FileText} label="Devis estimatif">
-                    {data.reservation.groupQuoteTotal} € pour le groupe
+                    {`${data.reservation.groupQuoteTotal}\u00a0€`} pour le groupe
                   </Info>
                 )}
               </div>
@@ -185,8 +185,8 @@ function ReservationPortalPage() {
                   <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
                     <h2 className="font-medium">Acompte à régler</h2>
                     <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                      Le règlement de {data.reservation.depositAmount ?? 100} € est nécessaire avant
-                      la validation définitive par l'équipe.
+                      Le règlement de {`${data.reservation.depositAmount ?? 100}\u00a0€`} est
+                      nécessaire avant la validation définitive par l'équipe.
                     </p>
                     <button
                       type="button"

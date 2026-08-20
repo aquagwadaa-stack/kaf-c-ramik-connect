@@ -60,16 +60,16 @@ export function SiteHeader() {
     <header
       className={`sticky top-0 z-40 border-b-2 border-ink transition-all duration-300 ${
         scrolled
-          ? "bg-[#fffbd6]/95 shadow-[0_4px_0_rgba(47,22,32,0.12)] backdrop-blur-md"
-          : "bg-[#fffbd6]/92 backdrop-blur"
+          ? "bg-[#fffaf0]/95 shadow-[0_4px_0_rgba(47,22,32,0.12)] backdrop-blur-md"
+          : "bg-[#fffaf0]/92 backdrop-blur"
       }`}
     >
       <div className="grid h-1.5 grid-cols-5" aria-hidden>
-        <span className="bg-[#cf2c86]" />
-        <span className="bg-[#f4da45]" />
-        <span className="bg-[#79c6e8]" />
-        <span className="bg-[#dbea4c]" />
-        <span className="bg-[#ee7832]" />
+        <span className="bg-[#a85f73]" />
+        <span className="bg-[#fef3b0]" />
+        <span className="bg-[#dce6f7]" />
+        <span className="bg-[#d6ead4]" />
+        <span className="bg-[#ffc1b6]" />
       </div>
       <div
         className={`mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 transition-all duration-300 ${
@@ -105,7 +105,7 @@ export function SiteHeader() {
             >
               Plus <ChevronDown className="h-3.5 w-3.5" />
             </button>
-            <div className="invisible absolute right-0 top-full z-50 mt-2 w-48 translate-y-1 rounded-xl border-2 border-ink bg-[#fffdf0] p-2 opacity-0 shadow-[5px_5px_0_#2f1620] transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+            <div className="invisible absolute right-0 top-full z-50 mt-2 w-48 translate-y-1 rounded-xl border-2 border-ink bg-[#fffdf8] p-2 opacity-0 shadow-[5px_5px_0_#2f1620] transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
               {moreLinks.map((link) => (
                 <Link
                   key={link.to}
@@ -133,7 +133,7 @@ export function SiteHeader() {
           )}
           <Link
             to="/reserver"
-            className="press ml-2 rounded-xl border-2 border-ink bg-[#cf2c86] px-4 py-2 text-sm font-bold text-[#fffbd6] shadow-[3px_3px_0_#2f1620]"
+            className="press ml-2 rounded-xl border-2 border-ink bg-[#a85f73] px-4 py-2 text-sm font-bold text-[#fffaf0] shadow-[3px_3px_0_#2f1620]"
           >
             Réserver un atelier
           </Link>
@@ -141,7 +141,7 @@ export function SiteHeader() {
 
         <button
           onClick={() => setOpen((v) => !v)}
-          className="press grid h-10 w-10 place-items-center rounded-xl border-2 border-ink bg-[#f4da45] shadow-[2px_2px_0_#2f1620] lg:hidden"
+          className="press grid h-10 w-10 place-items-center rounded-xl border-2 border-ink bg-[#fef3b0] shadow-[2px_2px_0_#2f1620] lg:hidden"
           aria-label="Menu"
           aria-expanded={open}
         >
@@ -161,7 +161,7 @@ export function SiteHeader() {
       </div>
 
       <div
-        className={`absolute right-4 top-[calc(100%+0.5rem)] w-[min(92vw,330px)] overflow-hidden rounded-xl border-2 border-ink bg-[#fffdf0] shadow-[6px_6px_0_#2f1620] lg:hidden transition-all duration-200 ease-out ${
+        className={`absolute right-4 top-[calc(100%+0.5rem)] w-[min(92vw,330px)] overflow-hidden rounded-xl border-2 border-ink bg-[#fffdf8] shadow-[6px_6px_0_#2f1620] lg:hidden transition-all duration-200 ease-out ${
           open
             ? "translate-y-0 scale-100 opacity-100"
             : "pointer-events-none -translate-y-2 scale-95 opacity-0"
@@ -194,7 +194,7 @@ export function SiteHeader() {
           <Link
             to="/reserver"
             onClick={() => setOpen(false)}
-            className="press mt-1 rounded-lg border-2 border-ink bg-[#cf2c86] px-3 py-3 text-center text-sm font-bold text-[#fffbd6]"
+            className="press mt-1 rounded-lg border-2 border-ink bg-[#a85f73] px-3 py-3 text-center text-sm font-bold text-[#fffaf0]"
           >
             Réserver un atelier
           </Link>
@@ -217,13 +217,13 @@ export function SiteFooter() {
   ].filter(Boolean) as { label: string; href: string; icon: LucideIcon }[];
 
   return (
-    <footer className="relative mt-20 border-t-2 border-ink bg-[#8d194a] text-[#fffbd6]">
+    <footer className="relative mt-20 border-t-2 border-ink bg-[#98566b] text-[#fffaf0]">
       <div className="grid h-4 grid-cols-5 border-b-2 border-ink" aria-hidden>
-        <span className="bg-[#f4da45]" />
-        <span className="bg-[#79c6e8]" />
-        <span className="bg-[#cf2c86]" />
-        <span className="bg-[#dbea4c]" />
-        <span className="bg-[#ee7832]" />
+        <span className="bg-[#fef3b0]" />
+        <span className="bg-[#dce6f7]" />
+        <span className="bg-[#a85f73]" />
+        <span className="bg-[#d6ead4]" />
+        <span className="bg-[#ffc1b6]" />
       </div>
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-[1.2fr_0.8fr_1fr]">
         <div>
@@ -231,32 +231,32 @@ export function SiteFooter() {
             <img
               src="/brand/kafe-ceramik-logo.jpg"
               alt=""
-              className="h-16 w-16 rounded-full border-2 border-[#fffbd6] object-cover"
+              className="h-16 w-16 rounded-full border-2 border-[#fffaf0] object-cover"
             />
             <div className="font-display text-2xl">Kafé Céramik</div>
           </div>
-          <p className="mt-4 max-w-sm text-sm leading-6 text-[#fffbd6]/80">
+          <p className="mt-4 max-w-sm text-sm leading-6 text-[#fffaf0]/80">
             Café, création et gourmandises à Saint-François.
           </p>
         </div>
-        <div className="border-l-2 border-[#fffbd6]/25 pl-5 text-sm">
+        <div className="border-l-2 border-[#fffaf0]/25 pl-5 text-sm">
           <div className="font-poster text-xl font-extrabold uppercase">Nous trouver</div>
-          <p className="mt-2 leading-6 text-[#fffbd6]/80">{settings.contactAddress}</p>
+          <p className="mt-2 leading-6 text-[#fffaf0]/80">{settings.contactAddress}</p>
         </div>
         <div className="text-sm">
           <div className="font-poster text-xl font-extrabold uppercase">Horaires</div>
-          <p className="mt-2 leading-6 text-[#fffbd6]/80">
+          <p className="mt-2 leading-6 text-[#fffaf0]/80">
             {schedule.days}
             <br />
             {schedule.hours}
           </p>
-          <a href={`tel:${phoneHref}`} className="mt-3 inline-block font-bold text-[#f4da45]">
+          <a href={`tel:${phoneHref}`} className="mt-3 inline-block font-bold text-[#fef3b0]">
             {settings.contactPhone}
           </a>
           {settings.contactEmail && (
             <a
               href={`mailto:${settings.contactEmail}`}
-              className="mt-1 block font-bold text-[#f4da45]"
+              className="mt-1 block font-bold text-[#fef3b0]"
             >
               {settings.contactEmail}
             </a>
@@ -272,10 +272,10 @@ export function SiteFooter() {
                   aria-label={label}
                   className={`grid h-10 w-10 place-items-center rounded-full border-2 border-ink text-ink shadow-[2px_2px_0_#2f1620] ${
                     index % 3 === 0
-                      ? "bg-[#f4da45]"
+                      ? "bg-[#fef3b0]"
                       : index % 3 === 1
-                        ? "bg-[#79c6e8]"
-                        : "bg-[#dbea4c]"
+                        ? "bg-[#dce6f7]"
+                        : "bg-[#d6ead4]"
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -285,7 +285,7 @@ export function SiteFooter() {
           )}
         </div>
       </div>
-      <div className="border-t border-[#fffbd6]/20 py-4 text-center text-xs text-[#fffbd6]/65">
+      <div className="border-t border-[#fffaf0]/20 py-4 text-center text-xs text-[#fffaf0]/65">
         © {new Date().getFullYear()} Kafé Céramik · Saint-François
       </div>
     </footer>

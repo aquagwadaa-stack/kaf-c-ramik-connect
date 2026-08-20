@@ -28,7 +28,7 @@ export const Route = createFileRoute("/livre-dor")({
   component: LivreDorPage,
 });
 
-const noteTones = ["bg-[#fffbd6]", "bg-[#f4b6cd]", "bg-[#79c6e8]", "bg-[#dbea4c]"];
+const noteTones = ["bg-[#fffaf0]", "bg-[#f7e1e6]", "bg-[#dce6f7]", "bg-[#d6ead4]"];
 const noteRotations = ["rotate-[-1deg]", "rotate-[1deg]", "rotate-[0.5deg]", "rotate-[-0.5deg]"];
 
 function LivreDorPage() {
@@ -110,10 +110,10 @@ function LivreDorPage() {
         description="Un souvenir, un coup de cœur, une création dont tu es fier·e ? Laisse une trace de ton passage dans notre livre collectif."
       />
 
-      <section className="border-b-2 border-ink bg-[#f4da45] px-4 py-8">
+      <section className="border-b-2 border-ink bg-[#fef3b0] px-4 py-8">
         <div className="mx-auto flex max-w-6xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <span className="grid h-14 w-14 place-items-center rounded-full border-2 border-ink bg-[#cf2c86] text-[#fffbd6] shadow-[3px_3px_0_#2f1620]">
+            <span className="grid h-14 w-14 place-items-center rounded-full border-2 border-ink bg-[#a85f73] text-[#fffaf0] shadow-[3px_3px_0_#2f1620]">
               <BookHeart className="h-7 w-7" />
             </span>
             <div>
@@ -124,17 +124,17 @@ function LivreDorPage() {
             </div>
           </div>
           {average && (
-            <div className="kafe-poster-label rotate-1 bg-[#fffbd6] text-ink">
+            <div className="kafe-poster-label rotate-1 bg-[#fffaf0] text-ink">
               {average}/5 · {entries.length} mot{entries.length > 1 ? "s" : ""}
             </div>
           )}
         </div>
       </section>
 
-      <section className="border-b-2 border-ink bg-[#ee7832] px-4 py-12 sm:py-16">
+      <section className="border-b-2 border-ink bg-[#ffc1b6] px-4 py-12 sm:py-16">
         <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
-          <div className="kafe-note-paper bg-[#fffdf0] p-5 sm:p-7">
-            <div className="inline-flex items-center gap-2 font-poster text-lg font-extrabold uppercase text-[#8d194a]">
+          <div className="kafe-note-paper bg-[#fffdf8] p-5 sm:p-7">
+            <div className="inline-flex items-center gap-2 font-poster text-lg font-extrabold uppercase text-[#98566b]">
               <Heart className="h-5 w-5 fill-current" /> À ton tour
             </div>
             <h2 className="mt-3 font-display text-3xl">Écris dans le livre d'or</h2>
@@ -145,7 +145,7 @@ function LivreDorPage() {
                 value={author}
                 onChange={(event) => setAuthor(event.target.value)}
                 maxLength={80}
-                className="w-full rounded-lg border-2 border-ink px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#cf2c86]"
+                className="w-full rounded-lg border-2 border-ink px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#a85f73]"
               />
             </label>
 
@@ -157,7 +157,7 @@ function LivreDorPage() {
                     key={value}
                     type="button"
                     onClick={() => setRating(value)}
-                    className="grid h-10 w-10 place-items-center rounded-lg hover:bg-[#f4b6cd]"
+                    className="grid h-10 w-10 place-items-center rounded-lg hover:bg-[#f7e1e6]"
                     aria-label={`${value} étoile${value > 1 ? "s" : ""}`}
                   >
                     <Star
@@ -177,12 +177,12 @@ function LivreDorPage() {
                 onChange={(event) => setMessage(event.target.value)}
                 maxLength={800}
                 rows={6}
-                className="w-full rounded-lg border-2 border-ink px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#cf2c86]"
+                className="w-full rounded-lg border-2 border-ink px-3 py-2.5 outline-none focus:ring-2 focus:ring-[#a85f73]"
                 placeholder="Raconte-nous ton moment préféré..."
               />
             </label>
 
-            <div className="mt-4 rounded-xl border-2 border-dashed border-ink/35 bg-[#fffbd6]/45 p-3">
+            <div className="mt-4 rounded-xl border-2 border-dashed border-ink/35 bg-[#fffaf0]/45 p-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="text-sm font-bold">Une photo souvenir ?</div>
@@ -226,7 +226,7 @@ function LivreDorPage() {
               type="button"
               disabled={!canSend || sending}
               onClick={() => void submit()}
-              className="kafe-block-link mt-4 inline-flex items-center gap-2 bg-[#cf2c86] px-5 py-3 font-bold text-[#fffbd6] disabled:opacity-45"
+              className="kafe-block-link mt-4 inline-flex items-center gap-2 bg-[#a85f73] px-5 py-3 font-bold text-[#fffaf0] disabled:opacity-45"
             >
               <Send className="h-4 w-4" />
               {sending ? "Envoi..." : "Déposer mon message"}
@@ -237,14 +237,14 @@ function LivreDorPage() {
           <div>
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
-                <div className="kafe-poster-label -rotate-1 bg-[#dbea4c] text-ink">
+                <div className="kafe-poster-label -rotate-1 bg-[#d6ead4] text-ink">
                   Vos mots doux
                 </div>
                 <h2 className="mt-5 font-display text-4xl text-ink sm:text-5xl">
                   Les pages déjà remplies
                 </h2>
               </div>
-              <Quote className="h-14 w-14 rotate-6 text-[#fffbd6]" />
+              <Quote className="h-14 w-14 rotate-6 text-[#fffaf0]" />
             </div>
             <div className="mt-7 grid gap-5 sm:grid-cols-2">
               {entries.map((entry, index) => (
@@ -275,7 +275,7 @@ function LivreDorPage() {
                     <div className="mt-4 flex flex-wrap items-center gap-2 text-sm font-bold">
                       {entry.author}
                       {entry.source === "google" && (
-                        <span className="rounded-full border border-ink/25 bg-[#fffdf0]/70 px-2 py-0.5 text-xs font-medium">
+                        <span className="rounded-full border border-ink/25 bg-[#fffdf8]/70 px-2 py-0.5 text-xs font-medium">
                           Avis Google
                         </span>
                       )}
@@ -285,7 +285,7 @@ function LivreDorPage() {
               ))}
             </div>
             {!loading && entries.length === 0 && (
-              <div className="kafe-note-paper mt-7 bg-[#fffbd6] p-8 text-center text-sm text-ink/70">
+              <div className="kafe-note-paper mt-7 bg-[#fffaf0] p-8 text-center text-sm text-ink/70">
                 Les premiers messages apparaîtront ici après validation de l'équipe.
               </div>
             )}
@@ -296,7 +296,7 @@ function LivreDorPage() {
       {settings.googleReviewUrl && (
         <section className="checker-strong border-b-2 border-ink px-4 py-12">
           <div className="mx-auto flex max-w-4xl flex-col items-center text-center">
-            <Sparkles className="h-9 w-9 text-[#8d194a]" />
+            <Sparkles className="h-9 w-9 text-[#98566b]" />
             <h2 className="mt-3 font-display text-3xl sm:text-4xl">
               Envie de partager ton avis plus largement ?
             </h2>
@@ -308,7 +308,7 @@ function LivreDorPage() {
               href={settings.googleReviewUrl}
               target="_blank"
               rel="noreferrer"
-              className="kafe-block-link mt-6 inline-flex items-center gap-2 bg-[#8d194a] px-5 py-3 font-bold text-[#fffbd6]"
+              className="kafe-block-link mt-6 inline-flex items-center gap-2 bg-[#98566b] px-5 py-3 font-bold text-[#fffaf0]"
             >
               Laisser un avis Google <ExternalLink className="h-4 w-4" />
             </a>

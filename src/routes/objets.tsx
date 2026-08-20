@@ -66,7 +66,7 @@ function ObjetsPage() {
         title="Objets à peindre"
         description="Découvre les formes et les tarifs proposés au Kafé. Tu choisis ta pièce sur place avant de passer aux couleurs."
       />
-      <section className="border-b-2 border-ink bg-[#eea83a] px-4 py-10">
+      <section className="border-b-2 border-ink bg-[#ffd6a5] px-4 py-10">
         <div className="mx-auto max-w-6xl">
           <div className="flex items-center gap-2 overflow-x-auto pb-2">
             <Filter className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -76,8 +76,8 @@ function ObjetsPage() {
                 onClick={() => setCat(category)}
                 className={`shrink-0 rounded-lg border-2 border-ink px-4 py-1.5 text-sm font-bold shadow-[3px_3px_0_#2f1620] ${
                   cat === category
-                    ? "bg-[#cf2c86] text-primary-foreground"
-                    : "bg-[#fffbd6] hover:bg-secondary"
+                    ? "bg-[#a85f73] text-primary-foreground"
+                    : "bg-[#fffaf0] hover:bg-secondary"
                 }`}
               >
                 {category}
@@ -91,7 +91,7 @@ function ObjetsPage() {
             ))}
           </div>
 
-          <div className="kafe-block-link mt-10 bg-[#dbea4c] p-6 text-center sm:p-10">
+          <div className="kafe-block-link mt-10 bg-[#d6ead4] p-6 text-center sm:p-10">
             <h2 className="text-2xl">Prêt·e à passer aux pinceaux ?</h2>
             <p className="mt-2 text-foreground/70">
               Réserve un créneau et choisis ta pièce sur place.
@@ -133,7 +133,7 @@ function ObjectCard({ item }: { item: CeramicObject }) {
         {item.note && <div className="mt-1 text-xs text-muted-foreground">{item.note}</div>}
         <div className="mt-3 flex items-end justify-between gap-2 border-t border-border/60 pt-3">
           <span className="text-xs text-muted-foreground">Prix de la pièce</span>
-          <span className="font-display text-xl">{item.price} €</span>
+          <span className="whitespace-nowrap font-display text-xl">{`${item.price}\u00a0€`}</span>
         </div>
       </div>
     </div>

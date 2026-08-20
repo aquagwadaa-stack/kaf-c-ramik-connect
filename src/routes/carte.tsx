@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Coffee, Phone, ShoppingBag } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { CalendarHeart, Coffee, Phone, ShoppingBag } from "lucide-react";
 import { PdfDocument } from "@/components/pdf-document";
 import { PageShell, PageHeader } from "@/components/page-shell";
 import {
@@ -50,9 +50,16 @@ function CartePage() {
         eyebrow="Café, brunch & douceurs"
         title="La carte du Kafé"
         description={`Le Kafé t'accueille du mardi au dimanche. Service continu jusqu'à ${settings.kitchenClosingTime.replace(":", "h")}. Réserve ta table pour garantir ta place.`}
-      />
+      >
+        <Link
+          to="/reserver"
+          className="kafe-block-link press inline-flex items-center gap-2 bg-primary px-5 py-3 font-bold text-primary-foreground"
+        >
+          <CalendarHeart className="h-4 w-4" /> Réserver une table
+        </Link>
+      </PageHeader>
 
-      <section className="border-b-2 border-ink bg-[#eea83a] px-4 py-10">
+      <section className="border-b-2 border-ink bg-[#ffd6a5] px-4 py-10">
         <div className="mx-auto max-w-6xl">
           <PdfDocument
             title={resource?.title || menu.title}
@@ -88,7 +95,7 @@ function CartePage() {
             />
             <a
               href={`tel:${phoneHref}`}
-              className="kafe-block-link flex items-start gap-3 bg-[#8d194a] p-4 text-[#fffbd6]"
+              className="kafe-block-link flex items-start gap-3 bg-[#98566b] p-4 text-[#fffaf0]"
             >
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/15">
                 <Phone className="h-5 w-5" />
@@ -105,7 +112,7 @@ function CartePage() {
       <section className="checker-strong border-b-2 border-ink px-4 py-10 sm:py-14">
         <div className="mx-auto max-w-6xl">
           <div className="mb-5 max-w-2xl">
-            <div className="kafe-poster-label bg-[#dbea4c] text-ink">Un aperçu du Kafé</div>
+            <div className="kafe-poster-label bg-[#d6ead4] text-ink">Un aperçu du Kafé</div>
             <h2 className="mt-2 font-display text-3xl sm:text-4xl">
               À savourer entre deux coups de pinceau.
             </h2>
@@ -137,8 +144,8 @@ function InfoCard({
   body: string;
 }) {
   return (
-    <div className="kafe-block-link flex items-start gap-3 bg-[#fffbd6] p-4">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#79c6e8]">
+    <div className="kafe-block-link flex items-start gap-3 bg-[#fffaf0] p-4">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#dce6f7]">
         <Icon className="h-5 w-5" />
       </span>
       <span>

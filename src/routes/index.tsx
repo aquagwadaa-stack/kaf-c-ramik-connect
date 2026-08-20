@@ -79,17 +79,17 @@ function HomePage() {
           className="absolute inset-0 h-full w-full object-cover object-center"
         />
         <div className="absolute inset-0 bg-ink/54" />
-        <div className="absolute inset-y-0 left-0 w-3 bg-[#cf2c86] sm:w-5" />
+        <div className="absolute inset-y-0 left-0 w-3 bg-[#a85f73] sm:w-5" />
         <div className="relative mx-auto flex min-h-[72svh] max-w-6xl items-end px-4 py-12 sm:items-center sm:py-16">
           <div className="max-w-3xl">
-            <div className="kafe-poster-label inline-flex rotate-[-1deg] items-center gap-2 bg-[#f4da45] text-ink">
-              <span className="h-2 w-2 rounded-full bg-[#f4d44d]" /> Saint-François ·{" "}
+            <div className="kafe-poster-label inline-flex rotate-[-1deg] items-center gap-2 bg-[#fef3b0] text-ink">
+              <span className="h-2 w-2 rounded-full bg-[#e5cf78]" /> Saint-François ·{" "}
               {schedule.inline}
             </div>
-            <h1 className="mt-6 text-4xl leading-[0.98] text-cream sm:text-7xl lg:text-8xl">
+            <h1 className="mt-6 text-4xl leading-[1.12] text-cream sm:text-7xl sm:leading-[1.08] lg:text-8xl">
               Kafé Céramik.
               <br />
-              <span className="block text-[#f4da45] sm:inline">Gourmandise</span>
+              <span className="block text-[#fef3b0] sm:inline">Gourmandise</span>
               <span className="block sm:inline"> &amp; création.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-7 text-cream/90 sm:text-lg">
@@ -99,13 +99,13 @@ function HomePage() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 to="/reserver"
-                className="kafe-block-link inline-flex items-center gap-2 bg-[#cf2c86] px-6 py-3.5 text-sm font-bold text-[#fffbd6] transition hover:-translate-y-0.5"
+                className="kafe-block-link inline-flex items-center gap-2 bg-[#a85f73] px-6 py-3.5 text-sm font-bold text-[#fffaf0] transition hover:-translate-y-0.5"
               >
                 <CalendarHeart className="h-4 w-4" /> Réserver un atelier
               </Link>
               <Link
                 to="/carte"
-                className="kafe-block-link inline-flex items-center gap-2 bg-[#fffbd6] px-6 py-3.5 text-sm font-bold text-ink transition hover:-translate-y-0.5"
+                className="kafe-block-link inline-flex items-center gap-2 bg-[#fffaf0] px-6 py-3.5 text-sm font-bold text-ink transition hover:-translate-y-0.5"
               >
                 <Coffee className="h-4 w-4" /> Voir la carte
               </Link>
@@ -115,37 +115,37 @@ function HomePage() {
         <div className="checker-strong absolute inset-x-0 bottom-0 h-5 border-t-2 border-ink" />
       </section>
 
-      <section className="border-b-2 border-ink bg-[#f4da45]">
+      <section className="border-b-2 border-ink bg-[#fef3b0]">
         <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:grid-cols-3 sm:py-10">
           <VisitNote
             icon={Coffee}
-            tone="bg-[#fffbd6]"
+            tone="bg-[#fffaf0]"
             title="Réserve aussi pour le Kafé"
             body="Café, bagel ou brunch : la réservation te garantit une place. Sans elle, l'accueil dépend des disponibilités."
           />
           <VisitNote
             icon={CalendarHeart}
-            tone="bg-[#f4b6cd]"
+            tone="bg-[#f7e1e6]"
             title="Atelier avec consommation"
             body="Pour peindre, réserve ta table et prévois une consommation obligatoire sur place."
           />
           <VisitNote
             icon={Sparkles}
-            tone="bg-[#79c6e8]"
+            tone="bg-[#dce6f7]"
             title="Jusqu’à 4 heures sur place"
             body="Profite de ton moment créatif, puis laisse la place aux artistes suivants."
           />
         </div>
       </section>
 
-      <section className="border-b-2 border-ink bg-[#eea83a] py-14 sm:py-20">
+      <section className="border-b-2 border-ink bg-[#ffd6a5] py-14 sm:py-20">
         <div className="mx-auto max-w-6xl px-4">
           <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
             <div>
-              <div className="kafe-poster-label inline-flex items-center gap-2 bg-[#dbea4c] text-ink">
-                <Sparkles className="h-3.5 w-3.5 text-[#e90061]" /> Sur place
+              <div className="kafe-poster-label inline-flex items-center gap-2 bg-[#d6ead4] text-ink">
+                <Sparkles className="h-3.5 w-3.5 text-[#a85f73]" /> Sur place
               </div>
-              <h2 className="mt-5 max-w-xl text-4xl leading-[1.03] text-ink sm:text-5xl">
+              <h2 className="mt-5 max-w-xl text-4xl leading-[1.12] text-ink sm:text-5xl">
                 Un vrai lieu de vie, pas seulement une table et des pinceaux.
               </h2>
               <p className="mt-5 max-w-xl leading-7 text-ink/75">
@@ -185,7 +185,7 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="border-b-2 border-ink bg-[#fff8dd] py-14 sm:py-20">
+      <section className="border-b-2 border-ink bg-[#fffaf1] py-14 sm:py-20">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 lg:grid-cols-[1.2fr_0.8fr]">
           <Link
             to="/histoire"
@@ -200,10 +200,10 @@ function HomePage() {
             />
             <div className="absolute inset-0 bg-ink/55" />
             <div className="relative flex h-full min-h-[430px] flex-col justify-end p-6 sm:p-8">
-              <span className="kafe-poster-label w-fit bg-[#f4da45] text-ink">
+              <span className="kafe-poster-label w-fit bg-[#fef3b0] text-ink">
                 Avant · pendant · après
               </span>
-              <h2 className="mt-4 max-w-xl text-4xl leading-none sm:text-5xl">
+              <h2 className="mt-4 max-w-xl text-4xl leading-[1.12] sm:text-5xl">
                 Comment se passe un atelier ?
               </h2>
               <p className="mt-4 max-w-xl leading-7 text-cream/85">
@@ -218,7 +218,7 @@ function HomePage() {
 
           <div className="grid content-start gap-3">
             <div className="mb-2">
-              <div className="text-sm font-semibold text-[#e90061]">Tout retrouver facilement</div>
+              <div className="text-sm font-semibold text-[#a85f73]">Tout retrouver facilement</div>
               <h2 className="mt-2 text-3xl leading-tight">Prépare ton passage au Kafé.</h2>
             </div>
             {quickLinks.map((item) => {
@@ -229,14 +229,14 @@ function HomePage() {
                   to={item.to}
                   className={`kafe-block-link group flex items-center justify-between gap-3 p-4 transition hover:-translate-y-0.5 ${
                     item.to === "/guide"
-                      ? "bg-[#f4b6cd]"
+                      ? "bg-[#f7e1e6]"
                       : item.to === "/objets"
-                        ? "bg-[#79c6e8]"
-                        : "bg-[#dbea4c]"
+                        ? "bg-[#dce6f7]"
+                        : "bg-[#d6ead4]"
                   }`}
                 >
                   <span className="flex min-w-0 items-center gap-3">
-                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#fffbd6] text-ink">
+                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#fffaf0] text-ink">
                       <Icon className="h-5 w-5" />
                     </span>
                     <span className="min-w-0">
@@ -244,7 +244,7 @@ function HomePage() {
                       <span className="block text-sm text-muted-foreground">{item.desc}</span>
                     </span>
                   </span>
-                  <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-[#e90061]" />
+                  <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-[#a85f73]" />
                 </Link>
               );
             })}
@@ -252,7 +252,7 @@ function HomePage() {
               href="https://www.google.com/maps?q=16.286364%2C-61.288357"
               target="_blank"
               rel="noreferrer"
-              className="kafe-block-link group flex items-center justify-between gap-3 bg-[#6f9369] p-4 text-cream transition hover:-translate-y-0.5"
+              className="kafe-block-link group flex items-center justify-between gap-3 bg-[#8faa93] p-4 text-cream transition hover:-translate-y-0.5"
             >
               <span className="flex items-center gap-3">
                 <span className="grid h-11 w-11 place-items-center rounded-xl bg-cream/15">
@@ -269,13 +269,13 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="border-b-2 border-ink bg-[#dbea4c] py-14 sm:py-20">
+      <section className="border-b-2 border-ink bg-[#d6ead4] py-14 sm:py-20">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
           <div>
-            <div className="kafe-poster-label inline-flex items-center gap-2 bg-[#f4b6cd] text-ink">
+            <div className="kafe-poster-label inline-flex items-center gap-2 bg-[#f7e1e6] text-ink">
               <Brush className="h-3.5 w-3.5" /> Le catalogue
             </div>
-            <h2 className="mt-5 text-4xl leading-[1.03] sm:text-5xl">
+            <h2 className="mt-5 text-4xl leading-[1.12] sm:text-5xl">
               Choisis d’abord la forme qui te donne envie.
             </h2>
             <p className="mt-5 max-w-xl leading-7 text-muted-foreground">
@@ -309,11 +309,11 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="border-b-2 border-ink bg-[#f4b6cd] px-4 py-14 sm:py-20">
+      <section className="border-b-2 border-ink bg-[#f7e1e6] px-4 py-14 sm:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <div className="text-sm font-semibold text-[#e90061]">Créations</div>
+              <div className="text-sm font-semibold text-[#a85f73]">Créations</div>
               <h2 className="mt-2 max-w-2xl text-4xl leading-tight sm:text-5xl">
                 Des inspirations, jamais des modèles imposés.
               </h2>
@@ -377,7 +377,7 @@ function VisitNote({
 }) {
   return (
     <div className={`kafe-block-link flex items-start gap-3 p-4 ${tone}`}>
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#fffdf0] text-ink">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#fffdf8] text-ink">
         <Icon className="h-5 w-5" />
       </span>
       <span className="min-w-0">
@@ -398,8 +398,8 @@ function InfoTile({
   body: string;
 }) {
   return (
-    <div className="kafe-block-link flex items-start gap-3 bg-[#fffdf0] p-4">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#f4da45] text-ink">
+    <div className="kafe-block-link flex items-start gap-3 bg-[#fffdf8] p-4">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#fef3b0] text-ink">
         <Icon className="h-5 w-5" />
       </span>
       <div className="min-w-0">

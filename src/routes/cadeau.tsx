@@ -152,13 +152,13 @@ function CadeauPage() {
           className="absolute inset-0 h-full w-full object-cover object-center"
         />
         <div className="absolute inset-0 bg-[#2f1620]/52" />
-        <div className="absolute inset-y-0 left-0 w-4 bg-[#cf2c86]" />
+        <div className="absolute inset-y-0 left-0 w-4 bg-[#a85f73]" />
         <div className="relative mx-auto flex min-h-[560px] max-w-6xl items-end px-4 pb-16 pt-28 text-white">
           <div className="max-w-3xl">
-            <div className="kafe-poster-label inline-flex items-center gap-2 bg-[#f4da45] text-[#2f1620]">
+            <div className="kafe-poster-label inline-flex items-center gap-2 bg-[#fef3b0] text-[#2f1620]">
               <Gift className="h-4 w-4" /> À offrir, à peindre, à savourer
             </div>
-            <h1 className="mt-6 max-w-3xl font-display text-4xl leading-none sm:text-7xl sm:leading-[0.95]">
+            <h1 className="mt-6 max-w-3xl font-display text-4xl leading-[1.12] sm:text-7xl sm:leading-[1.08]">
               La carte cadeau Kafé Céramik
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/90">
@@ -170,16 +170,16 @@ function CadeauPage() {
       </section>
 
       <div className="grid h-5 grid-cols-5 border-y-2 border-ink" aria-hidden="true">
-        <span className="bg-[#cf2c86]" />
-        <span className="bg-[#f4da45]" />
-        <span className="bg-[#79c6e8]" />
-        <span className="bg-[#dbea4c]" />
-        <span className="bg-[#ee7832]" />
+        <span className="bg-[#a85f73]" />
+        <span className="bg-[#fef3b0]" />
+        <span className="bg-[#dce6f7]" />
+        <span className="bg-[#d6ead4]" />
+        <span className="bg-[#ffc1b6]" />
       </div>
 
       {returnedOrder && (
-        <section className="border-b border-border bg-[#cfe6a5] px-4 py-6">
-          <div className="mx-auto flex max-w-6xl items-start gap-3 rounded-3xl bg-[#fff8ef] p-5 text-[#301c1a]">
+        <section className="border-b border-border bg-[#d6ead4] px-4 py-6">
+          <div className="mx-auto flex max-w-6xl items-start gap-3 rounded-3xl bg-[#fffaf1] p-5 text-[#301c1a]">
             <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-[#315d39]" />
             <div>
               <h2 className="font-display text-2xl">
@@ -195,7 +195,7 @@ function CadeauPage() {
         </section>
       )}
 
-      <section className="border-b-2 border-ink bg-[#eea83a] px-4 py-14 sm:py-20">
+      <section className="border-b-2 border-ink bg-[#ffd6a5] px-4 py-14 sm:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="max-w-3xl">
             <div className="text-sm font-semibold text-primary">1. Choisis une formule</div>
@@ -208,7 +208,7 @@ function CadeauPage() {
             </p>
           </div>
 
-          <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {options.map((option) => (
               <GiftOptionCard
                 key={option.id}
@@ -226,12 +226,14 @@ function CadeauPage() {
                 onClick={() => setSelectedId("custom")}
                 className={`rounded-3xl border p-5 text-left transition ${
                   selectedId === "custom"
-                    ? "border-primary bg-[#f5cdd7] ring-2 ring-primary/20"
+                    ? "border-primary bg-[#f7e1e6] ring-2 ring-primary/20"
                     : "border-border bg-card hover:border-primary/40"
                 }`}
               >
                 <div className="text-sm font-medium text-primary">Montant libre</div>
-                <div className="mt-3 font-display text-4xl">Dès {settings.giftCardCustomMin} €</div>
+                <div className="mt-3 font-display text-4xl">
+                  {`Dès ${settings.giftCardCustomMin}\u00a0€`}
+                </div>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
                   Aucun plafond imposé : choisis simplement le budget à offrir.
                 </p>
@@ -344,7 +346,7 @@ function CadeauPage() {
                   ) : (
                     <ExternalLink className="h-4 w-4" />
                   )}
-                  Payer {amount} €
+                  {`Payer ${amount}\u00a0€`}
                 </button>
               ) : (
                 <button
@@ -366,7 +368,7 @@ function CadeauPage() {
         </div>
       </section>
 
-      <section className="bg-[#dbea4c] px-4 py-12 text-[#301c1a]">
+      <section className="bg-[#d6ead4] px-4 py-12 text-[#301c1a]">
         <div className="mx-auto flex max-w-6xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Sparkles className="h-5 w-5" />
@@ -399,13 +401,15 @@ function GiftOptionCard({
       onClick={onSelect}
       className={`kafe-block-link p-5 text-left transition ${
         selected
-          ? "border-primary bg-[#f5cdd7] ring-2 ring-primary/20"
+          ? "border-primary bg-[#f7e1e6] ring-2 ring-primary/20"
           : "border-border bg-card hover:border-primary/40"
       }`}
     >
       <div className="text-sm font-medium text-primary">{option.title}</div>
-      <div className="mt-3 font-display text-4xl">{option.amount} €</div>
-      <p className="mt-3 text-sm leading-6 text-muted-foreground">{option.description}</p>
+      <div className="mt-3 font-display text-4xl">{`${option.amount}\u00a0€`}</div>
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+        {formatEuroText(option.description)}
+      </p>
     </button>
   );
 }
@@ -426,21 +430,21 @@ function GiftPreview({
   validityMonths: number;
 }) {
   const backgrounds: Record<GiftCardVisual, string> = {
-    rose: "checker-pink bg-[#f5cdd7]",
-    tropical: "brand-stripes bg-[#cfe6a5]",
-    confetti: "checker-strong bg-[#fff0c7]",
+    rose: "checker-pink bg-[#f7e1e6]",
+    tropical: "brand-stripes bg-[#d6ead4]",
+    confetti: "checker-strong bg-[#fef3b0]",
   };
   return (
     <div
-      className={`relative mt-5 aspect-[1.42/1] overflow-hidden rounded-lg border-2 border-ink p-4 shadow-[6px_6px_0_#2f1620] sm:p-6 ${backgrounds[visual]}`}
+      className={`relative mt-5 min-h-[330px] overflow-hidden rounded-3xl border-2 border-ink p-4 shadow-[4px_4px_0_rgba(62,42,49,0.86)] sm:min-h-[350px] sm:p-6 ${backgrounds[visual]}`}
     >
-      <div className="relative flex h-full flex-col justify-between rounded-2xl border border-white/70 bg-[#fff8ef]/92 p-4 sm:p-5">
+      <div className="relative flex min-h-[298px] flex-col justify-between rounded-2xl border border-white/70 bg-[#fffaf1]/92 p-4 sm:min-h-[302px] sm:p-5">
         <div>
           <div className="text-xs font-semibold uppercase text-primary">Bon cadeau</div>
           <div className="mt-1 font-display text-2xl sm:text-3xl">Kafé Céramik</div>
         </div>
         <div>
-          <div className="font-display text-4xl sm:text-5xl">{amount} €</div>
+          <div className="font-display text-4xl leading-[1.12] sm:text-5xl">{`${amount}\u00a0€`}</div>
           <p className="mt-2 line-clamp-2 text-xs sm:text-sm">
             {message || "Un moment créatif et gourmand rien que pour toi."}
           </p>
@@ -453,6 +457,10 @@ function GiftPreview({
       </div>
     </div>
   );
+}
+
+function formatEuroText(value: string) {
+  return value.replace(/(\d)\s*€/g, "$1\u00a0€");
 }
 
 function GiftField({

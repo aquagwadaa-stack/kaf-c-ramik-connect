@@ -585,7 +585,9 @@ function ReserverPage() {
                     </div>
                     <div className="rounded-xl bg-card px-4 py-2 text-right">
                       <div className="text-xs text-muted-foreground">Total estimatif</div>
-                      <div className="font-display text-2xl">{groupQuoteTotal} €</div>
+                      <div className="whitespace-nowrap font-display text-2xl">
+                        {`${groupQuoteTotal}\u00a0€`}
+                      </div>
                     </div>
                   </div>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -618,7 +620,7 @@ function ReserverPage() {
                   <div className="flex items-start gap-3">
                     <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                     <div className="text-sm">
-                      <div className="font-medium">Acompte nécessaire : {deposit} €</div>
+                      <div className="font-medium">Acompte nécessaire : {`${deposit}\u00a0€`}</div>
                       <p className="mt-1 text-muted-foreground">
                         Il devra être réglé en ligne avant que l'équipe valide définitivement la
                         demande.
@@ -725,8 +727,8 @@ function ReserverPage() {
                 <Row k="Personnes" v={`${people}`} />
                 <Row k="Date" v={formatReservationDate(date)} />
                 <Row k="Créneau" v={slot} />
-                {groupQuoteTotal > 0 && <Row k="Devis estimatif" v={`${groupQuoteTotal} €`} />}
-                {deposit > 0 && <Row k="Acompte" v={`${deposit} €`} />}
+                {groupQuoteTotal > 0 && <Row k="Devis estimatif" v={`${groupQuoteTotal}\u00a0€`} />}
+                {deposit > 0 && <Row k="Acompte" v={`${deposit}\u00a0€`} />}
                 <Row k="Référence" v={done} />
               </div>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
@@ -830,8 +832,8 @@ function GroupRateField({
     <label className="rounded-xl border border-border bg-card p-3">
       <span className="flex items-center justify-between gap-3 text-sm font-medium">
         {label}
-        <span className="text-xs font-normal text-muted-foreground">
-          {min} à {max} € / pers.
+        <span className="whitespace-nowrap text-xs font-normal text-muted-foreground">
+          {`${min} à ${max}\u00a0€ / pers.`}
         </span>
       </span>
       <div className="mt-3 grid grid-cols-[1fr_5.5rem] items-center gap-3">
@@ -1240,10 +1242,14 @@ function Summary({
             {groupQuoteTotal > 0 && (
               <>
                 <div className="text-xs text-muted-foreground">Devis estimatif</div>
-                <div className="font-display text-xl">{groupQuoteTotal} €</div>
+                <div className="whitespace-nowrap font-display text-xl">
+                  {`${groupQuoteTotal}\u00a0€`}
+                </div>
               </>
             )}
-            <div className="mt-1 text-xs text-muted-foreground">Acompte : {deposit} €</div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              Acompte : {`${deposit}\u00a0€`}
+            </div>
           </div>
         )}
       </div>

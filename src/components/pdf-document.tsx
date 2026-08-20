@@ -27,7 +27,7 @@ export function PdfDocument({
   return (
     <article className={plain ? "overflow-hidden" : "kafe-block-link overflow-hidden bg-card"}>
       {!plain && (
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-ink bg-[#f4b6cd] px-4 py-5 sm:px-6">
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-ink bg-[#f7e1e6] px-4 py-5 sm:px-6">
           <div className="max-w-2xl">
             <h3 className="font-display text-2xl leading-tight">{title}</h3>
             {description && (
@@ -39,7 +39,7 @@ export function PdfDocument({
               href={href}
               target="_blank"
               rel="noreferrer"
-              className="kafe-block-link inline-flex items-center gap-2 bg-[#fffbd6] px-4 py-2 text-sm font-bold"
+              className="kafe-block-link inline-flex items-center gap-2 bg-[#fffaf0] px-4 py-2 text-sm font-bold"
             >
               Ouvrir <ExternalLink className="h-4 w-4" />
             </a>
@@ -48,7 +48,7 @@ export function PdfDocument({
       )}
 
       {previewUrls.length > 0 ? (
-        <div className={plain ? "grid gap-4" : "grid gap-3 bg-[#eea83a] p-2 sm:gap-5 sm:p-5"}>
+        <div className={plain ? "grid gap-4" : "grid gap-3 bg-[#ffd6a5] p-2 sm:gap-5 sm:p-5"}>
           {previewUrls.map((preview, index) => (
             <img
               key={`${title}-${index}`}
@@ -66,11 +66,15 @@ export function PdfDocument({
       ) : href && isPdf ? (
         <RenderedPdf href={href} title={title} plain={plain} priority={priority} />
       ) : href ? (
-        <div className={plain ? "" : "bg-[#eea83a] p-2 sm:p-5"}>
-          <img src={href} alt={title} className="mx-auto block h-auto w-full max-w-5xl object-contain" />
+        <div className={plain ? "" : "bg-[#ffd6a5] p-2 sm:p-5"}>
+          <img
+            src={href}
+            alt={title}
+            className="mx-auto block h-auto w-full max-w-5xl object-contain"
+          />
         </div>
       ) : (
-        <div className="grid min-h-72 place-items-center bg-[#eea83a] p-8 text-center">
+        <div className="grid min-h-72 place-items-center bg-[#ffd6a5] p-8 text-center">
           <div>
             <FileText className="mx-auto h-9 w-9 text-primary" />
             <p className="mt-3 font-medium">Le document sera ajouté ici.</p>
@@ -83,7 +87,7 @@ export function PdfDocument({
           className={
             plain
               ? "flex justify-center px-4 pt-6"
-              : "flex justify-center border-t-2 border-ink bg-[#fffbd6] px-4 py-5"
+              : "flex justify-center border-t-2 border-ink bg-[#fffaf0] px-4 py-5"
           }
         >
           <a
@@ -176,7 +180,9 @@ function RenderedPdf({
 
   if (loading) {
     return (
-      <div className={`grid min-h-72 place-items-center ${plain ? "bg-[#fffbd6]" : "bg-[#eea83a]"}`}>
+      <div
+        className={`grid min-h-72 place-items-center ${plain ? "bg-[#fffaf0]" : "bg-[#ffd6a5]"}`}
+      >
         <div className="flex items-center gap-3 text-sm font-medium">
           <LoaderCircle className="h-5 w-5 animate-spin" /> Chargement de la carte…
         </div>
@@ -186,14 +192,14 @@ function RenderedPdf({
 
   if (error) {
     return (
-      <div className="grid min-h-52 place-items-center bg-[#fffbd6] p-6 text-center text-sm">
+      <div className="grid min-h-52 place-items-center bg-[#fffaf0] p-6 text-center text-sm">
         {error} Utilise le bouton de téléchargement ci-dessous.
       </div>
     );
   }
 
   return (
-    <div className={plain ? "grid gap-4" : "grid gap-3 bg-[#eea83a] p-2 sm:gap-5 sm:p-5"}>
+    <div className={plain ? "grid gap-4" : "grid gap-3 bg-[#ffd6a5] p-2 sm:gap-5 sm:p-5"}>
       {pages.map((page, index) => (
         <img
           key={page}

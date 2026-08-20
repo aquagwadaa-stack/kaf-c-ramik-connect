@@ -52,7 +52,7 @@ function CreationsPage() {
         description="Quelques exemples de pièces peintes au Kafé. Chaque atelier reste libre dans l'esprit : l'idée est surtout de donner envie, pas d'imposer un modèle."
       />
 
-      <section className="border-b-2 border-ink bg-[#eea83a] px-4 py-10">
+      <section className="border-b-2 border-ink bg-[#ffd6a5] px-4 py-10">
         <div className="mx-auto max-w-6xl">
           {creations.length > 0 ? (
             <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 sm:mx-0 sm:px-0">
@@ -74,7 +74,7 @@ function CreationsPage() {
                     />
                   </div>
                   <div className="p-4">
-                    <div className="font-display text-2xl leading-none">{creation.title}</div>
+                    <div className="font-display text-2xl leading-[1.16]">{creation.title}</div>
                     <p className="mt-3 text-sm leading-6 text-muted-foreground">{creation.body}</p>
                   </div>
                 </article>
@@ -88,10 +88,10 @@ function CreationsPage() {
         </div>
       </section>
 
-      <section className="border-b-2 border-ink bg-[#fffbd6] px-4 py-8 sm:py-10">
+      <section className="border-b-2 border-ink bg-[#fffaf0] px-4 py-8 sm:py-10">
         <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-[1fr_auto] md:items-center">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border-2 border-ink bg-[#f4b6cd] px-3 py-1 text-xs font-bold uppercase">
+            <div className="inline-flex items-center gap-2 rounded-full border-2 border-ink bg-[#f7e1e6] px-3 py-1 text-xs font-bold uppercase">
               <Palette className="h-3.5 w-3.5" /> Le plein d'idées
             </div>
             <h2 className="mt-4 font-display text-3xl leading-tight sm:text-4xl">
@@ -107,7 +107,7 @@ function CreationsPage() {
             href={pinterestUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex w-fit items-center gap-2 rounded-full border-2 border-ink bg-[#d22b83] px-6 py-3 font-bold text-white shadow-[4px_4px_0_#2f1620] transition hover:-translate-y-0.5 hover:shadow-[6px_6px_0_#2f1620]"
+            className="inline-flex w-fit items-center gap-2 rounded-full border-2 border-ink bg-[#a85f73] px-6 py-3 font-bold text-white shadow-[4px_4px_0_#2f1620] transition hover:-translate-y-0.5 hover:shadow-[6px_6px_0_#2f1620]"
           >
             Voir les inspirations <ExternalLink className="h-4 w-4" />
           </a>
@@ -115,12 +115,12 @@ function CreationsPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-6">
-        <div className="kafe-block-link grid gap-4 bg-[#dbea4c] p-5 sm:grid-cols-3 sm:p-6">
+        <div className="kafe-block-link grid gap-4 bg-[#d6ead4] p-5 sm:grid-cols-3 sm:p-6">
           {ideas.map((item) => {
             const Icon = item.icon;
             return (
               <div key={item.title} className="flex items-start gap-3">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#fffbd6]">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#fffaf0]">
                   <Icon className="h-5 w-5" />
                 </span>
                 <span>

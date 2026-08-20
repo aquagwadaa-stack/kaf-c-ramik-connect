@@ -7,7 +7,7 @@
 @theme inline {
   --font-display: "Caprasimo", "Bagel Fat One", "Fraunces", Georgia, serif;
   --font-poster: "Barlow Condensed", "Arial Narrow", sans-serif;
-  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-sans: "Nunito Sans", "Inter", system-ui, sans-serif;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -44,47 +44,63 @@
   --color-lavender: var(--lavender);
   --color-mustard: var(--mustard);
   --color-ink: var(--ink);
+  --color-peach: var(--peach);
+  --color-lemon: var(--lemon);
+  --color-mauve: var(--mauve);
+  --color-coral: var(--coral);
+  --color-aqua: var(--aqua);
+  --color-sand: var(--sand);
+  --color-sky: var(--sky);
+  --color-deep-ocean: var(--deep-ocean);
 }
 
 :root {
   --radius: 0.9rem;
 
-  /* Palette issue des affiches et stories du Kafé. */
-  --blush: #f4b6cd;
-  --rose: #e97db3;
-  --cream: #fffbd6;
-  --sage: #6f9369;
-  --brick: #8d194a;
-  --lavender: #8884ec;
-  --mustard: #f4da45;
-  --ink: #2f1620;
+  /* Palette pastel transmise par le Kafé. Les tons soutenus restent réservés au texte. */
+  --blush: #f7e1e6;
+  --rose: #e7b4c5;
+  --cream: #fffaf0;
+  --sage: #8faa93;
+  --brick: #98566b;
+  --lavender: #c9b9dd;
+  --mustard: #e5cf78;
+  --ink: #3e2a31;
+  --peach: #ffd6a5;
+  --lemon: #fef3b0;
+  --mauve: #e6d6e7;
+  --coral: #ffc1b6;
+  --aqua: #d0f0ed;
+  --sand: #ead8b0;
+  --sky: #dce6f7;
+  --deep-ocean: #294f60;
 
-  --background: #fff8dd;
-  --foreground: #2f1620;
+  --background: #fffaf1;
+  --foreground: #3e2a31;
 
-  --card: #fffdf0;
-  --card-foreground: #2f1620;
-  --popover: #fffdf0;
-  --popover-foreground: #2f1620;
+  --card: #fffdf8;
+  --card-foreground: #3e2a31;
+  --popover: #fffdf8;
+  --popover-foreground: #3e2a31;
 
-  --primary: #cf2c86;
-  --primary-foreground: #fffbd6;
+  --primary: #a85f73;
+  --primary-foreground: #fffaf0;
 
-  --secondary: #f4bfd2;
-  --secondary-foreground: #2f1620;
+  --secondary: #f7e1e6;
+  --secondary-foreground: #3e2a31;
 
-  --muted: #f4e9dc;
-  --muted-foreground: #6a4d57;
+  --muted: #f3e8df;
+  --muted-foreground: #735d65;
 
-  --accent: #6f9369;
-  --accent-foreground: #fffbd6;
+  --accent: #7e9f82;
+  --accent-foreground: #fffaf0;
 
   --destructive: oklch(0.55 0.2 25);
   --destructive-foreground: oklch(0.98 0 0);
 
-  --border: #d8a8b7;
-  --input: #d8a8b7;
-  --ring: #cf2c86;
+  --border: #d7bcc4;
+  --input: #d7bcc4;
+  --ring: #a85f73;
 
   --sidebar: oklch(0.9 0.045 10);
   --sidebar-foreground: oklch(0.16 0.01 30);
@@ -126,6 +142,8 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    line-height: 1.5;
   }
   h1,
   h2,
@@ -134,6 +152,17 @@
     font-family: var(--font-display);
     letter-spacing: 0;
     font-weight: 400;
+    line-height: 1.12;
+    text-wrap: balance;
+    word-spacing: 0.06em;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  button,
+  a {
+    letter-spacing: 0;
+    word-spacing: 0.035em;
   }
 }
 
@@ -177,12 +206,12 @@
     background-size: 64px 64px;
   }
   .checker-strong {
-    background-color: #fff0c7;
+    background-color: var(--color-lemon);
     background-image:
-      linear-gradient(45deg, #f08bab 25%, transparent 25%),
-      linear-gradient(-45deg, #f08bab 25%, transparent 25%),
-      linear-gradient(45deg, transparent 75%, #f08bab 75%),
-      linear-gradient(-45deg, transparent 75%, #f08bab 75%);
+      linear-gradient(45deg, var(--color-blush) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--color-blush) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, var(--color-blush) 75%),
+      linear-gradient(-45deg, transparent 75%, var(--color-blush) 75%);
     background-position:
       0 0,
       0 24px,
@@ -193,15 +222,15 @@
   .brand-stripes {
     background: repeating-linear-gradient(
       -12deg,
-      #f5c4d2 0 34px,
-      #fff0c7 34px 68px,
-      #7b9c69 68px 102px,
-      #7f82ea 102px 136px
+      var(--color-blush) 0 34px,
+      var(--color-lemon) 34px 68px,
+      var(--color-sage) 68px 102px,
+      var(--color-lavender) 102px 136px
     );
   }
   .poster-border {
     border: 3px solid var(--color-ink);
-    box-shadow: 7px 7px 0 color-mix(in oklab, var(--color-brick) 85%, transparent);
+    box-shadow: 5px 5px 0 color-mix(in oklab, var(--color-brick) 65%, transparent);
   }
 
   .kafe-poster-label {
@@ -211,11 +240,11 @@
     padding: 0.45rem 1rem;
     border: 2px solid var(--color-ink);
     border-radius: 0.8rem;
-    box-shadow: 4px 4px 0 var(--color-ink);
+    box-shadow: 3px 3px 0 color-mix(in oklab, var(--color-ink) 88%, transparent);
     font-family: var(--font-poster);
     font-size: 0.95rem;
     font-weight: 800;
-    line-height: 1;
+    line-height: 1.2;
     letter-spacing: 0;
     text-transform: uppercase;
   }
@@ -225,13 +254,13 @@
     border: 2px solid var(--color-ink);
     border-radius: 1rem;
     background: var(--color-cream);
-    box-shadow: 7px 7px 0 var(--color-ink);
+    box-shadow: 5px 5px 0 color-mix(in oklab, var(--color-ink) 88%, transparent);
   }
 
   .kafe-block-link {
     border: 2px solid var(--color-ink);
     border-radius: 0.9rem;
-    box-shadow: 4px 4px 0 var(--color-ink);
+    box-shadow: 3px 3px 0 color-mix(in oklab, var(--color-ink) 88%, transparent);
   }
 
   .kafe-block-link:hover {
@@ -253,13 +282,13 @@
     width: 3.8rem;
     height: 1.1rem;
     transform: translateX(-50%) rotate(-2deg);
-    background: rgb(255 251 214 / 72%);
-    border: 1px solid rgb(47 22 32 / 12%);
+    background: rgb(255 250 240 / 78%);
+    border: 1px solid rgb(62 42 49 / 12%);
   }
 
   .kafe-site {
     background-color: var(--color-background);
-    background-image: radial-gradient(rgb(47 22 32 / 5%) 0.7px, transparent 0.7px);
+    background-image: radial-gradient(rgb(62 42 49 / 4%) 0.7px, transparent 0.7px);
     background-size: 9px 9px;
   }
 
@@ -270,7 +299,7 @@
   .kafe-site input,
   .kafe-site textarea,
   .kafe-site select {
-    background-color: #fffdf0;
+    background-color: var(--color-card);
   }
 
   /* Animated nav link underline */
@@ -424,7 +453,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    opacity: 0.32;
+    opacity: 0.17;
     mix-blend-mode: multiply;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.16  0 0 0 0 0.09  0 0 0 0 0.06  0 0 0 0.25 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
     background-size: 220px 220px;
@@ -508,7 +537,7 @@
     color: var(--color-ink);
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0;
     font-size: 0.72rem;
     transform: rotate(-3deg);
     border-radius: 999px;

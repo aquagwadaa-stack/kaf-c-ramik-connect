@@ -3148,7 +3148,7 @@ function AdminQrCodeCard({
     QRCode.toDataURL(targetUrl, {
       width: 720,
       margin: 2,
-      color: { dark: "#301c1a", light: "#fff8ef" },
+      color: { dark: "#301c1a", light: "#fffaf1" },
       errorCorrectionLevel: "H",
     })
       .then(setQrDataUrl)
@@ -3156,7 +3156,7 @@ function AdminQrCodeCard({
   }, [targetUrl]);
 
   return (
-    <div className="rounded-2xl border border-border bg-[#fff8ef] p-4 text-center">
+    <div className="rounded-2xl border border-border bg-[#fffaf1] p-4 text-center">
       <QrCode className="mx-auto h-5 w-5 text-primary" />
       <h3 className="mt-2 font-display text-xl">{title}</h3>
       <p className="mx-auto mt-1 max-w-xs text-xs leading-5 text-muted-foreground">{description}</p>

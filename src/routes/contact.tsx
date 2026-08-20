@@ -31,7 +31,7 @@ function ContactPage() {
         <div className="flex flex-wrap gap-3">
           <a
             href={`tel:${phoneHref}`}
-            className="kafe-block-link inline-flex items-center gap-2 bg-[#f4da45] px-5 py-3 font-bold text-ink"
+            className="kafe-block-link inline-flex items-center gap-2 bg-[#fef3b0] px-5 py-3 font-bold text-ink"
           >
             <Phone className="h-4 w-4" /> Appeler le Kafé
           </a>
@@ -39,14 +39,14 @@ function ContactPage() {
             href={settings.contactMapUrl}
             target="_blank"
             rel="noreferrer"
-            className="kafe-block-link inline-flex items-center gap-2 bg-[#fffbd6] px-5 py-3 font-bold text-ink"
+            className="kafe-block-link inline-flex items-center gap-2 bg-[#fffaf0] px-5 py-3 font-bold text-ink"
           >
             <MapPin className="h-4 w-4" /> Itinéraire
           </a>
         </div>
       </PageHeader>
 
-      <section className="border-b-2 border-ink bg-[#eea83a] px-4 py-10 lg:py-14">
+      <section className="border-b-2 border-ink bg-[#ffd6a5] px-4 py-10 lg:py-14">
         <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="kafe-block-link bg-card p-5 sm:p-7">
             <h2 className="font-display text-2xl">Nous contacter</h2>
@@ -110,7 +110,7 @@ function ContactPage() {
               href={settings.contactMapUrl}
               target="_blank"
               rel="noreferrer"
-              className="kafe-block-link absolute bottom-4 left-4 inline-flex items-center gap-2 bg-[#fffbd6] px-4 py-2 text-sm font-bold"
+              className="kafe-block-link absolute bottom-4 left-4 inline-flex items-center gap-2 bg-[#fffaf0] px-4 py-2 text-sm font-bold"
             >
               Voir dans Google Maps <ArrowUpRight className="h-4 w-4" />
             </a>
@@ -141,7 +141,7 @@ function ContactRow({
       rel={external ? "noreferrer" : undefined}
       className="group grid grid-cols-[2.5rem_1fr_auto] items-start gap-3 py-4 first:pt-0 last:pb-0"
     >
-      <span className="grid h-10 w-10 place-items-center rounded-lg border-2 border-ink bg-[#f4b6cd] text-[#8d194a]">
+      <span className="grid h-10 w-10 place-items-center rounded-lg border-2 border-ink bg-[#f7e1e6] text-[#98566b]">
         <Icon className="h-4 w-4" />
       </span>
       <span className="min-w-0">

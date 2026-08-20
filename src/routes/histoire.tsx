@@ -75,7 +75,7 @@ function HistoirePage() {
         description="À Saint-François, on vient peindre une pièce autour d'une douceur salée ou sucrée, puis on revient récupérer sa création après cuisson."
       />
 
-      <section className="border-b-2 border-ink bg-[#eea83a] px-4 py-12">
+      <section className="border-b-2 border-ink bg-[#ffd6a5] px-4 py-12">
         <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <figure className="kafe-photo-frame rotate-[-1deg]">
             <img
@@ -85,7 +85,7 @@ function HistoirePage() {
             />
           </figure>
           <div className="max-w-xl">
-            <div className="kafe-poster-label inline-flex items-center gap-2 bg-[#dbea4c] text-ink">
+            <div className="kafe-poster-label inline-flex items-center gap-2 bg-[#d6ead4] text-ink">
               <MapPin className="h-4 w-4" /> Saint-François, Guadeloupe
             </div>
             <h2 className="mt-5 font-display text-4xl leading-tight sm:text-5xl">
@@ -107,11 +107,11 @@ function HistoirePage() {
 
       <section
         id="deroulement"
-        className="scroll-mt-24 border-b-2 border-ink bg-[#fff8dd] px-4 py-12 sm:py-16"
+        className="scroll-mt-24 border-b-2 border-ink bg-[#fffaf1] px-4 py-12 sm:py-16"
       >
         <div className="mx-auto max-w-6xl">
           <div className="max-w-3xl">
-            <div className="kafe-poster-label bg-[#f4b6cd] text-ink">Ton atelier</div>
+            <div className="kafe-poster-label bg-[#f7e1e6] text-ink">Ton atelier</div>
             <h2 className="mt-3 font-display text-4xl leading-tight sm:text-5xl">
               De la réservation à la récupération.
             </h2>
@@ -134,21 +134,21 @@ function HistoirePage() {
               const Icon = item.icon;
               const tone =
                 index % 3 === 0
-                  ? "bg-[#f4b6cd]"
+                  ? "bg-[#f7e1e6]"
                   : index % 3 === 1
-                    ? "bg-[#79c6e8]"
-                    : "bg-[#dbea4c]";
+                    ? "bg-[#dce6f7]"
+                    : "bg-[#d6ead4]";
               return (
                 <article key={item.title} className={`kafe-block-link p-5 ${tone}`}>
                   <div className="flex items-start gap-3">
-                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#fff8dd]">
+                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#fffaf1]">
                       <Icon className="h-5 w-5" />
                     </span>
                     <div>
                       <div className="text-xs font-medium text-ink/60">
                         Étape {String(index + 1).padStart(2, "0")}
                       </div>
-                      <h3 className="mt-1 font-display text-2xl leading-none">{item.title}</h3>
+                      <h3 className="mt-1 font-display text-2xl leading-[1.16]">{item.title}</h3>
                       <p className="mt-3 text-sm leading-6 text-ink/70">{item.body}</p>
                     </div>
                   </div>
@@ -160,7 +160,7 @@ function HistoirePage() {
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               to="/guide"
-              className="kafe-block-link inline-flex items-center gap-2 bg-[#fffbd6] px-5 py-3 text-sm font-bold"
+              className="kafe-block-link inline-flex items-center gap-2 bg-[#fffaf0] px-5 py-3 text-sm font-bold"
             >
               Lire le guide <ArrowRight className="h-4 w-4" />
             </Link>

@@ -55,15 +55,15 @@ function PosterHeader({
   children?: ReactNode;
 }) {
   return (
-    <header className="relative overflow-hidden bg-[#fff4f5] px-5 py-9 text-center sm:px-8 sm:py-12">
+    <header className="relative overflow-hidden bg-[#fdf4f6] px-5 py-9 text-center sm:px-8 sm:py-12">
       <Sparkles className="absolute left-5 top-5 h-6 w-6 text-[#efa900]" />
-      <Heart className="absolute bottom-6 right-6 h-7 w-7 text-[#e90061]" />
+      <Heart className="absolute bottom-6 right-6 h-7 w-7 text-[#a85f73]" />
       {eyebrow && (
-        <div className="text-xs font-bold uppercase tracking-[0.16em] text-[#e90061]">
+        <div className="text-xs font-bold uppercase tracking-[0.16em] text-[#a85f73]">
           {eyebrow}
         </div>
       )}
-      <h3 className="mt-2 font-display text-4xl leading-none text-[#4a1b12] sm:text-6xl">
+      <h3 className="mt-2 font-display text-4xl leading-[1.12] text-[#4a1b12] sm:text-6xl">
         {title}
       </h3>
       {children}
@@ -90,10 +90,10 @@ function CompleteGuide() {
         </div>
       </PosterHeader>
 
-      <div className="mx-3 grid grid-cols-2 gap-2 rounded-[1.75rem] border border-[#e90061]/15 bg-[#fff4f5] p-3 sm:mx-5 sm:grid-cols-3 sm:p-4 lg:grid-cols-6">
+      <div className="mx-3 grid grid-cols-2 gap-2 rounded-[1.75rem] border border-[#a85f73]/15 bg-[#fdf4f6] p-3 sm:mx-5 sm:grid-cols-3 sm:p-4 lg:grid-cols-6">
         {process.map(([Icon, title, detail], index) => (
           <div key={title} className="rounded-2xl bg-white/90 px-3 py-5 text-center">
-            <span className="mx-auto grid h-9 w-9 place-items-center rounded-full bg-[#e90061] text-sm font-bold text-white">
+            <span className="mx-auto grid h-9 w-9 place-items-center rounded-full bg-[#a85f73] text-sm font-bold text-white">
               {index + 1}
             </span>
             <Icon className="mx-auto mt-3 h-7 w-7 text-[#4a1b12]" />
@@ -103,7 +103,7 @@ function CompleteGuide() {
         ))}
       </div>
 
-      <div className="space-y-4 bg-[#fff4f5] p-3 sm:p-5">
+      <div className="space-y-4 bg-[#fdf4f6] p-3 sm:p-5">
         <GuideSection
           number="1"
           tone="blue"
@@ -169,7 +169,7 @@ function CompleteGuide() {
         </GuideSection>
       </div>
 
-      <div className="grid gap-3 bg-[#fff4f5] px-3 pb-4 sm:grid-cols-2 sm:px-5 lg:grid-cols-4">
+      <div className="grid gap-3 bg-[#fdf4f6] px-3 pb-4 sm:grid-cols-2 sm:px-5 lg:grid-cols-4">
         <Fact icon={<CalendarDays />} title="Délai de cuisson">
           7 à 10 jours pour récupérer votre création.
         </Fact>
@@ -183,7 +183,7 @@ function CompleteGuide() {
           Une céramique brute cassée est facturée à la moitié de son prix.
         </Fact>
       </div>
-      <div className="mx-3 mb-4 rounded-2xl bg-[#e90061] px-5 py-4 text-center text-sm font-bold leading-6 text-white sm:mx-5">
+      <div className="mx-3 mb-4 rounded-2xl bg-[#a85f73] px-5 py-4 text-center text-sm font-bold leading-6 text-white sm:mx-5">
         Un excès de peinture ou de vernis peut coller la céramique aux plaques de cuisson et
         l’endommager. Les ateliers se déroulent en autonomie.
       </div>
@@ -228,7 +228,7 @@ function GuideSection({
 function GuideBullet({ children }: { children: ReactNode }) {
   return (
     <div className="flex gap-3 border-b border-dotted border-primary/25 pb-4 text-sm leading-7 sm:text-base">
-      <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#e90061]" />
+      <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#a85f73]" />
       <p>{children}</p>
     </div>
   );
@@ -249,7 +249,7 @@ function Important({ children, tone = "pink" }: { children: ReactNode; tone?: "p
 function Fact({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
   return (
     <div className="rounded-2xl bg-[#fff9eb] p-5 text-center">
-      <div className="mx-auto flex h-8 w-8 items-center justify-center text-[#e90061]">{icon}</div>
+      <div className="mx-auto flex h-8 w-8 items-center justify-center text-[#a85f73]">{icon}</div>
       <div className="mt-2 text-sm font-bold">{title}</div>
       <p className="mt-1 text-xs leading-5 text-muted-foreground">{children}</p>
     </div>
@@ -307,7 +307,7 @@ function ColorChartTwo() {
       <div className="rounded-2xl bg-[#ffe25e] px-5 py-5 text-center text-xl font-bold uppercase text-[#b60d51] sm:text-2xl">
         Les peintures de ce nuancier ne nécessitent pas de vernis.
       </div>
-      <div className="grid gap-4 rounded-2xl bg-[#fff4f5] p-5 text-sm leading-6 sm:grid-cols-2 sm:p-7">
+      <div className="grid gap-4 rounded-2xl bg-[#fdf4f6] p-5 text-sm leading-6 sm:grid-cols-2 sm:p-7">
         <p>Pour vous servir dans les palettes, aidez-vous du dos de votre pinceau.</p>
         <p>
           Des billes se trouvent dans la peinture. Elles explosent en cuisson et forment les effets
@@ -335,13 +335,13 @@ function ColorChart({
           Fiez-vous toujours au nuancier, la magie des couleurs s’opère pendant la cuisson.
         </p>
       </PosterHeader>
-      <div className="space-y-2 bg-[#fff4f5] p-4 sm:p-7">
+      <div className="space-y-2 bg-[#fdf4f6] p-4 sm:p-7">
         {steps.map(([Icon, title, detail], index) => (
           <div
             key={`${number}-${index}`}
             className="grid grid-cols-[3rem_2.5rem_1fr] items-center gap-3 rounded-2xl bg-white px-4 py-4 sm:grid-cols-[4rem_4rem_1fr]"
           >
-            <span className="grid h-10 w-10 place-items-center rounded-full bg-[#e90061] text-lg font-bold text-white sm:h-12 sm:w-12">
+            <span className="grid h-10 w-10 place-items-center rounded-full bg-[#a85f73] text-lg font-bold text-white sm:h-12 sm:w-12">
               {index + 1}
             </span>
             <Icon className="h-7 w-7 text-[#4a1b12] sm:h-9 sm:w-9" />
@@ -356,15 +356,15 @@ function ColorChart({
           </div>
         ))}
       </div>
-      <div className="space-y-3 bg-[#fff4f5] px-4 pb-6 sm:px-7">{children}</div>
+      <div className="space-y-3 bg-[#fdf4f6] px-4 pb-6 sm:px-7">{children}</div>
     </>
   );
 }
 
 function WarningLine() {
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-[#e90061]/30 bg-white p-4 text-sm font-semibold leading-6">
-      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#e90061]" />
+    <div className="flex items-start gap-3 rounded-2xl border border-[#a85f73]/30 bg-white p-4 text-sm font-semibold leading-6">
+      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#a85f73]" />
       Un excès de peinture ou de vernis collera la céramique à nos plaques de cuisson et risquera de
       l’endommager.
     </div>
@@ -375,9 +375,9 @@ function PaintWaste() {
   return (
     <>
       <PosterHeader eyebrow="Prévention" title="Gaspillage peinture">
-        <Paintbrush className="mx-auto mt-5 h-10 w-10 text-[#e90061]" />
+        <Paintbrush className="mx-auto mt-5 h-10 w-10 text-[#a85f73]" />
       </PosterHeader>
-      <div className="space-y-5 bg-[#fff4f5] px-5 py-7 text-center sm:px-10 sm:py-10">
+      <div className="space-y-5 bg-[#fdf4f6] px-5 py-7 text-center sm:px-10 sm:py-10">
         <PreventionLine>
           Merci de vous servir en petite quantité dans les palettes blanches.
         </PreventionLine>
@@ -386,7 +386,7 @@ function PaintWaste() {
         <div className="rounded-3xl border-2 border-[#ef8cac] bg-white px-5 py-6 text-lg font-bold leading-8 text-[#14365a]">
           Un abus ou gaspillage de peinture peut être facturé 2 € par compartiment de palette jeté.
         </div>
-        <div className="inline-flex items-center justify-center gap-2 text-sm font-bold text-[#e90061]">
+        <div className="inline-flex items-center justify-center gap-2 text-sm font-bold text-[#a85f73]">
           <Heart className="h-5 w-5" /> Merci de votre compréhension. L’équipe du Kafé.
         </div>
       </div>
@@ -420,7 +420,7 @@ function CeramicBreakage() {
 function PreventionLine({ children }: { children: ReactNode }) {
   return (
     <div className="flex items-center justify-center gap-3 text-base font-bold uppercase leading-7 text-[#14365a]">
-      <Check className="h-5 w-5 shrink-0 text-[#e90061]" /> <span>{children}</span>
+      <Check className="h-5 w-5 shrink-0 text-[#a85f73]" /> <span>{children}</span>
     </div>
   );
 }

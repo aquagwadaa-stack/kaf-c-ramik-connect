@@ -388,16 +388,16 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
           </div>
         )}
 
-        <div className="relative overflow-hidden rounded-[2rem] border border-[#e90061]/25 bg-[#fff4f5] shadow-[0_24px_60px_rgba(97,49,39,0.12)]">
+        <div className="relative overflow-hidden rounded-[2rem] border border-[#a85f73]/25 bg-[#fdf4f6] shadow-[0_24px_60px_rgba(97,49,39,0.12)]">
           <Sparkles className="absolute left-5 top-6 h-7 w-7 text-[#f0ad19]" />
-          <Heart className="absolute right-6 top-8 h-8 w-8 text-[#e90061]" />
+          <Heart className="absolute right-6 top-8 h-8 w-8 text-[#a85f73]" />
 
           <header className="px-5 pb-7 pt-12 text-center sm:px-10 sm:pb-9 sm:pt-14">
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#cfe6a5] px-4 py-2 text-xs font-bold sm:text-sm">
-              <Coffee className="h-4 w-4 text-[#e90061]" /> Une petite consommation accompagne
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#d6ead4] px-4 py-2 text-xs font-bold sm:text-sm">
+              <Coffee className="h-4 w-4 text-[#a85f73]" /> Une petite consommation accompagne
               l’atelier
             </div>
-            <h1 className="mt-6 font-display text-4xl leading-none text-[#e90061] sm:text-6xl">
+            <h1 className="mt-6 font-display text-4xl leading-[1.12] text-[#a85f73] sm:text-6xl">
               Décharge de responsabilité
             </h1>
             <div className="mt-5 flex items-center justify-center gap-3 text-center text-lg font-bold uppercase leading-7 text-[#d10b50] sm:text-2xl">
@@ -406,7 +406,7 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
             </div>
           </header>
 
-          <div className="mx-4 rounded-[1.75rem] border-2 border-dashed border-white bg-[#cfe6a5] px-5 py-7 text-center sm:mx-10 sm:px-10 sm:py-9">
+          <div className="mx-4 rounded-[1.75rem] border-2 border-dashed border-white bg-[#d6ead4] px-5 py-7 text-center sm:mx-10 sm:px-10 sm:py-9">
             <ShieldCheck className="mx-auto h-9 w-9 text-[#315d39]" />
             <p className="mx-auto mt-4 max-w-3xl text-base font-medium leading-7 sm:text-xl sm:leading-9">
               {waiver.body}
@@ -416,7 +416,7 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
                 type="checkbox"
                 checked={accepted}
                 onChange={(event) => setAccepted(event.target.checked)}
-                className="mt-0.5 h-5 w-5 shrink-0 accent-[#e90061]"
+                className="mt-0.5 h-5 w-5 shrink-0 accent-[#a85f73]"
               />
               <span>Je confirme avoir lu et compris cette décharge.</span>
             </label>
@@ -458,13 +458,13 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
                 type="checkbox"
                 checked={form.isMinor}
                 onChange={(event) => setForm({ ...form, isMinor: event.target.checked })}
-                className="h-5 w-5 accent-[#e90061]"
+                className="h-5 w-5 accent-[#a85f73]"
               />
               La personne qui peint est mineure
             </label>
 
             {form.isMinor && (
-              <div className="mt-4 grid gap-3 rounded-2xl border border-[#315d39]/20 bg-[#cfe6a5]/45 p-4 sm:grid-cols-2">
+              <div className="mt-4 grid gap-3 rounded-2xl border border-[#315d39]/20 bg-[#d6ead4]/45 p-4 sm:grid-cols-2">
                 <DigitalField
                   label="Prénom du responsable légal"
                   value={form.guardianFirstName}
@@ -483,14 +483,14 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
               type="button"
               onClick={() => void saveSignature()}
               disabled={saving}
-              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#e90061] px-6 py-3.5 font-medium text-white shadow-sm"
+              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#a85f73] px-6 py-3.5 font-medium text-white shadow-sm"
             >
               <ClipboardSignature className="h-5 w-5" />
               {saving ? "Enregistrement…" : "Signer et enregistrer la décharge"}
             </button>
           </div>
 
-          <div className="h-5 bg-[repeating-linear-gradient(135deg,#f4b6cd_0,#f4b6cd_18px,#fff4f5_18px,#fff4f5_36px)]" />
+          <div className="h-5 bg-[repeating-linear-gradient(135deg,#f7e1e6_0,#f7e1e6_18px,#fdf4f6_18px,#fdf4f6_36px)]" />
         </div>
       </section>
     </main>
@@ -544,10 +544,10 @@ function DigitalField({
     tone === "purple"
       ? "border-[#8d59b6]"
       : tone === "rose"
-        ? "border-[#e90061]"
+        ? "border-[#a85f73]"
         : "border-primary/35";
   const labelTone =
-    tone === "purple" ? "bg-[#8d59b6]" : tone === "rose" ? "bg-[#e90061]" : "bg-primary";
+    tone === "purple" ? "bg-[#8d59b6]" : tone === "rose" ? "bg-[#a85f73]" : "bg-primary";
   return (
     <label className={`rounded-2xl border-2 border-dashed bg-white p-4 ${border}`}>
       <span
