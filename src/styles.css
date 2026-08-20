@@ -63,7 +63,7 @@
   --cream: #fffaf0;
   --sage: #8faa93;
   --brick: #98566b;
-  --lavender: #c9b9dd;
+  --lavender: #e6d6f7;
   --mustard: #e5cf78;
   --ink: #3e2a31;
   --peach: #ffd6a5;
@@ -155,6 +155,7 @@
     line-height: 1.12;
     text-wrap: balance;
     word-spacing: 0.06em;
+    overflow-wrap: break-word;
   }
   p {
     text-wrap: pretty;
@@ -163,6 +164,21 @@
   a {
     letter-spacing: 0;
     word-spacing: 0.035em;
+  }
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 3px solid var(--color-ring);
+    outline-offset: 3px;
+  }
+  img {
+    display: block;
+  }
+  ::selection {
+    background: var(--color-lavender);
+    color: var(--color-ink);
   }
 }
 
@@ -267,6 +283,11 @@
     box-shadow: 2px 2px 0 var(--color-ink);
   }
 
+  .kafe-block-link:focus-visible,
+  .kafe-poster-label:focus-visible {
+    outline-offset: 4px;
+  }
+
   .kafe-note-paper {
     position: relative;
     border: 2px solid var(--color-ink);
@@ -366,6 +387,14 @@
 }
 
 @layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   @keyframes float-y {
     0%,
     100% {

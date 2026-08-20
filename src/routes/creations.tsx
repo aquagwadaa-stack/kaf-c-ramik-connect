@@ -55,7 +55,7 @@ function CreationsPage() {
       <section className="border-b-2 border-ink bg-[#ffd6a5] px-4 py-10">
         <div className="mx-auto max-w-6xl">
           {creations.length > 0 ? (
-            <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 sm:mx-0 sm:px-0">
+            <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 sm:mx-0 sm:px-0">
               {creations.map((creation, index) => (
                 <article
                   key={creation.id}

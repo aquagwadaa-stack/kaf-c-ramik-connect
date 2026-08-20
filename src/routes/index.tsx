@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { CeramicPiece, type CeramicKind } from "@/components/ceramic-piece";
-import { creationInspirationsSeed, getPageImage, useKafeSettings } from "@/lib/admin-data";
+import { getPageImage, useKafeSettings } from "@/lib/admin-data";
 import { getPublicSchedule } from "@/lib/opening-hours";
 
 export const Route = createFileRoute("/")({
@@ -53,8 +53,31 @@ const pieces: { name: string; detail: string; kind: CeramicKind; tone: string }[
   { name: "Tasses", detail: "à personnaliser", kind: "mug", tone: "bg-[#fff6e7]" },
   { name: "Assiettes", detail: "à personnaliser", kind: "plate", tone: "bg-[#f7cbd6]" },
   { name: "Vases", detail: "à personnaliser", kind: "vase", tone: "bg-[#dce6ca]" },
-  { name: "Bols", detail: "à personnaliser", kind: "bowl", tone: "bg-[#f5d46f]" },
+  { name: "Bols", detail: "à personnaliser", kind: "bowl", tone: "bg-[#fef3b0]" },
 ];
+
+const homeInspirations = [
+  {
+    id: "home-inspiration-1" as const,
+    title: "Des couleurs qui se répondent",
+    body: "Aplats, contours ou petits détails : chaque pièce prend son propre caractère.",
+  },
+  {
+    id: "home-inspiration-2" as const,
+    title: "Des motifs à inventer",
+    body: "Une idée simple peut devenir une création vraiment personnelle.",
+  },
+  {
+    id: "home-inspiration-3" as const,
+    title: "Une pièce du quotidien",
+    body: "Tasse, bol ou assiette : choisis un objet que tu auras plaisir à retrouver.",
+  },
+  {
+    id: "home-inspiration-4" as const,
+    title: "Ta palette, ton univers",
+    body: "Prends le temps de choisir les teintes qui donnent vie à ton idée.",
+  },
+] as const;
 
 function HomePage() {
   const [settings] = useKafeSettings();
@@ -64,11 +87,10 @@ function HomePage() {
   const dessertsImage = getPageImage(settings, "home-desserts");
   const detailImage = getPageImage(settings, "home-detail");
   const schedule = getPublicSchedule(settings);
-  const featuredCreations = (
-    settings.creationInspirations?.length ? settings.creationInspirations : creationInspirationsSeed
-  )
-    .filter((creation) => creation.visible)
-    .slice(0, 4);
+  const featuredCreations = homeInspirations.map((inspiration) => ({
+    ...inspiration,
+    image: getPageImage(settings, inspiration.id),
+  }));
 
   return (
     <PageShell>
@@ -337,8 +359,8 @@ function HomePage() {
                   className={`kafe-photo-frame ${index % 2 === 0 ? "rotate-[-1deg]" : "rotate-[1deg]"}`}
                 >
                   <img
-                    src={photo.imageDataUrl || photo.imageSrc || "/creations/assiette-tortue.webp"}
-                    alt={photo.title}
+                    src={photo.image.imageUrl}
+                    alt={photo.image.alt}
                     loading="lazy"
                     className="aspect-[4/5] h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
                   />

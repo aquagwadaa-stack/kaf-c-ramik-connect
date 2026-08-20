@@ -1023,7 +1023,7 @@ function WeekPlanner({
         {formatPublicTime(settings.bookingCutoffTime)}.
       </p>
 
-      <div ref={scrollerRef} className="mt-5 overflow-x-auto pb-2">
+      <div ref={scrollerRef} className="no-scrollbar mt-5 overflow-x-auto pb-2">
         <div className="grid min-w-[840px] grid-cols-7 gap-2">
           {days.map((day) => {
             const iso = toISODate(day);

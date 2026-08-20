@@ -93,9 +93,9 @@ function GuidePage() {
                 activeChapter === id
                   ? "bg-[#a85f73] text-[#fffaf0]"
                   : id === "nuanciers"
-                    ? "bg-[#dce6f7] text-foreground hover:bg-[#90d1ec]"
+                    ? "bg-[#dce6f7] text-foreground hover:bg-[#d0f0ed]"
                     : id === "preventions"
-                      ? "bg-[#d6ead4] text-foreground hover:bg-[#e5ef75]"
+                      ? "bg-[#d6ead4] text-foreground hover:bg-[#fef3b0]"
                       : "bg-card text-foreground hover:bg-secondary"
               }`}
             >

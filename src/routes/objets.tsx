@@ -68,7 +68,7 @@ function ObjetsPage() {
       />
       <section className="border-b-2 border-ink bg-[#ffd6a5] px-4 py-10">
         <div className="mx-auto max-w-6xl">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+          <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-2">
             <Filter className="h-4 w-4 shrink-0 text-muted-foreground" />
             {cats.map((category) => (
               <button

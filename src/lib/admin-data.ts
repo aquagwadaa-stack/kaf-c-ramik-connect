@@ -603,6 +603,10 @@ export type PageImageKey =
   | "home-food"
   | "home-desserts"
   | "home-detail"
+  | "home-inspiration-1"
+  | "home-inspiration-2"
+  | "home-inspiration-3"
+  | "home-inspiration-4"
   | "story-intro"
   | "story-process"
   | "story-team"
@@ -719,6 +723,34 @@ export const pageImagesSeed: PageImageSetting[] = [
     label: "Photo du bloc déroulement",
     imageUrl: "/photos/manika/detail-peinture.jpg",
     alt: "Une pièce en train d'être peinte",
+  },
+  {
+    id: "home-inspiration-1",
+    page: "Accueil",
+    label: "Galerie inspirations 1",
+    imageUrl: "/photos/manika/peinture-bol.jpg",
+    alt: "Peinture colorée réalisée sur un bol au Kafé Céramik",
+  },
+  {
+    id: "home-inspiration-2",
+    page: "Accueil",
+    label: "Galerie inspirations 2",
+    imageUrl: "/photos/manika/pages/peinture-etoile.jpg",
+    alt: "Détail d'un motif étoilé peint sur une céramique",
+  },
+  {
+    id: "home-inspiration-3",
+    page: "Accueil",
+    label: "Galerie inspirations 3",
+    imageUrl: "/photos/manika/pages/peinture-tasse.jpg",
+    alt: "Tasse personnalisée pendant un atelier de peinture",
+  },
+  {
+    id: "home-inspiration-4",
+    page: "Accueil",
+    label: "Galerie inspirations 4",
+    imageUrl: "/photos/manika/pages/palette-couleurs.jpg",
+    alt: "Palette de couleurs pour personnaliser une céramique",
   },
   {
     id: "story-intro",

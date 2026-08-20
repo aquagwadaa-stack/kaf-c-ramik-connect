@@ -217,7 +217,7 @@ export function SiteFooter() {
   ].filter(Boolean) as { label: string; href: string; icon: LucideIcon }[];
 
   return (
-    <footer className="relative mt-20 border-t-2 border-ink bg-[#98566b] text-[#fffaf0]">
+    <footer className="relative border-t-2 border-ink bg-[#98566b] text-[#fffaf0]">
       <div className="grid h-4 grid-cols-5 border-b-2 border-ink" aria-hidden>
         <span className="bg-[#fef3b0]" />
         <span className="bg-[#dce6f7]" />
@@ -225,7 +225,7 @@ export function SiteFooter() {
         <span className="bg-[#d6ead4]" />
         <span className="bg-[#ffc1b6]" />
       </div>
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-[1.2fr_0.8fr_1fr]">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-[1.2fr_0.8fr_1fr] sm:py-12">
         <div>
           <div className="flex items-center gap-3">
             <img
@@ -239,7 +239,7 @@ export function SiteFooter() {
             Café, création et gourmandises à Saint-François.
           </p>
         </div>
-        <div className="border-l-2 border-[#fffaf0]/25 pl-5 text-sm">
+        <div className="border-t border-[#fffaf0]/25 pt-6 text-sm sm:border-l-2 sm:border-t-0 sm:pl-5 sm:pt-0">
           <div className="font-poster text-xl font-extrabold uppercase">Nous trouver</div>
           <p className="mt-2 leading-6 text-[#fffaf0]/80">{settings.contactAddress}</p>
         </div>
