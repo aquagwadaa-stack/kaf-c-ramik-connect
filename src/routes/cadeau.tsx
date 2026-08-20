@@ -449,11 +449,15 @@ function GiftPreview({
             {message || "Un moment créatif et gourmand rien que pour toi."}
           </p>
         </div>
-        <div className="flex justify-between gap-3 text-[10px] sm:text-xs">
-          <span>Pour {recipient || "..."}</span>
-          <span>De {sender || "..."}</span>
+        <div className="space-y-3 text-[10px] sm:text-xs">
+          <div className="break-words">Pour {recipient || "..."}</div>
+          <div className="flex items-end justify-between gap-3">
+            <span className="shrink-0 text-[9px] text-muted-foreground">
+              Valable {validityMonths} mois
+            </span>
+            <span className="min-w-0 break-words text-right">De {sender || "..."}</span>
+          </div>
         </div>
-        <div className="text-[9px] text-muted-foreground">Valable {validityMonths} mois</div>
       </div>
     </div>
   );
