@@ -674,8 +674,6 @@ function AdminWorkspace({
             {tab === "waivers" && (
               <WaiversPanel
                 documents={documents}
-                saveDocuments={saveDocuments}
-                replaceDocumentsLocal={replaceDocumentsLocal}
                 signatures={signatures}
                 saveSignatures={saveSignatures}
                 reservations={reservations}
@@ -2009,15 +2007,11 @@ function GroupDecisionControls({ reservation }: { reservation: Reservation }) {
 
 function WaiversPanel({
   documents,
-  saveDocuments,
-  replaceDocumentsLocal,
   signatures,
   saveSignatures,
   reservations,
 }: {
   documents: ContentDocument[];
-  saveDocuments: (next: ContentDocument[]) => void;
-  replaceDocumentsLocal: (next: ContentDocument[]) => void;
   signatures: WaiverSignature[];
   saveSignatures: (next: WaiverSignature[]) => void;
   reservations: Reservation[];
@@ -2025,7 +2019,6 @@ function WaiversPanel({
   const waiver = getWaiverDocument(documents);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const [uploading, setUploading] = useState(false);
   const [archiveView, setArchiveView] = useState<"reservation" | "date">("reservation");
 
   const filteredSignatures = useMemo(() => {
@@ -2099,42 +2092,6 @@ function WaiversPanel({
     return signedPeople < reservation.people;
   });
 
-  function saveWaiver(patch: Partial<ContentDocument>) {
-    const next = { ...waiver, ...patch, updatedAt: new Date().toISOString() };
-    saveDocuments(
-      documents.some((document) => document.id === "waiver")
-        ? documents.map((document) => (document.id === "waiver" ? next : document))
-        : [...documents, next],
-    );
-  }
-
-  async function uploadWaiver(file?: File) {
-    if (!file) return;
-    setError("");
-    setUploading(true);
-    try {
-      const stored = await storeDocumentFile("decharge", file, {
-        generatePreviews: false,
-        contentDocumentId: "waiver",
-      });
-      const next = {
-        ...waiver,
-        ...stored,
-        version: `decharge-${new Date().toISOString().slice(0, 10)}`,
-        updatedAt: new Date().toISOString(),
-      };
-      replaceDocumentsLocal(
-        documents.some((document) => document.id === "waiver")
-          ? documents.map((document) => (document.id === "waiver" ? next : document))
-          : [...documents, next],
-      );
-    } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Import impossible.");
-    } finally {
-      setUploading(false);
-    }
-  }
-
   async function removeSignature(id: string) {
     if (!window.confirm("Supprimer définitivement cette décharge signée ?")) return;
     setError("");
@@ -2145,51 +2102,22 @@ function WaiversPanel({
   }
 
   return (
-    <Panel title="Décharges" desc="Document, signature sur tablette et archives.">
-      <div className="grid gap-5 lg:grid-cols-[1fr_0.72fr] lg:items-start">
-        <div className="border border-border bg-background p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="font-display text-xl">Document à signer</h3>
-              <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                Ce fichier est la base affichée à la personne puis utilisée pour générer sa décharge
-                signée.
-              </p>
-            </div>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-secondary">
-              <UploadCloud className="h-4 w-4" /> {uploading ? "Import…" : "Remplacer"}
-              <input
-                type="file"
-                accept="application/pdf,image/*"
-                className="sr-only"
-                disabled={uploading}
-                onChange={async (event) => {
-                  const input = event.currentTarget;
-                  await uploadWaiver(input.files?.[0]);
-                  input.value = "";
-                }}
-              />
-            </label>
-          </div>
-          <DocumentPreview document={waiver} className="mt-4" compact />
-          {error && <div className="mt-3 text-sm text-destructive">{error}</div>}
-        </div>
-
-        <div className="border border-primary/35 bg-secondary/50 p-5">
-          <ClipboardSignature className="h-8 w-8 text-primary" />
-          <h3 className="mt-4 font-display text-2xl">Faire signer la décharge</h3>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Ouvrez l'écran simplifié sur la tablette, liez éventuellement la réservation, puis
-            laissez chaque personne lire, renseigner ses informations et signer.
-          </p>
-          <Link
-            to="/decharge-signature"
-            className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground"
-          >
-            <ClipboardSignature className="h-4 w-4" /> Ouvrir l'écran tablette
-          </Link>
-        </div>
+    <Panel title="Décharges" desc="Signature sur tablette et archives.">
+      <div className="border border-primary/35 bg-secondary/50 p-5">
+        <ClipboardSignature className="h-8 w-8 text-primary" />
+        <h3 className="mt-4 font-display text-2xl">Faire signer la décharge</h3>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+          Ouvrez l'écran simplifié sur la tablette, liez éventuellement la réservation, puis laissez
+          chaque personne lire, renseigner ses informations et signer.
+        </p>
+        <Link
+          to="/decharge-signature"
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground"
+        >
+          <ClipboardSignature className="h-4 w-4" /> Ouvrir l'écran tablette
+        </Link>
       </div>
+      {error && <div className="mt-3 text-sm text-destructive">{error}</div>}
 
       {incompleteWaiverReservations.length > 0 && (
         <div className="mt-5 flex items-start gap-3 border-l-4 border-primary bg-secondary/45 p-4 text-sm">

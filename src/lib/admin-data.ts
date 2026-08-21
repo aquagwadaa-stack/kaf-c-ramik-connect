@@ -433,12 +433,12 @@ export const contentDocumentsSeed: ContentDocument[] = [
   },
   {
     id: "waiver",
-    title: "Décharge de responsabilité",
-    version: "2026-07",
+    title: "Décharge officielle",
+    version: "2026-08-21",
     updatedAt: new Date().toISOString(),
     body: "Je reconnais avoir pris connaissance du guide complet de l'atelier. En cas de non-respect de celui-ci, l'établissement ne pourra pas être tenu responsable et aucun remboursement ne pourra être exigé.",
     attachmentUrl: "/documents/decharge-officielle.pdf",
-    attachmentName: "Décharge PDF.pdf",
+    attachmentName: "Decharge-Kafe-Ceramik-IMPRESSION.pdf",
     attachmentType: "application/pdf",
     previewImageUrls: ["/documents/decharge-officielle.webp"],
     resources: waiverResourcesSeed,
@@ -472,6 +472,15 @@ export function getWaiverDocument(documents: ContentDocument[]) {
   return {
     ...seed,
     ...waiver,
+    title: seed.title,
+    version: seed.version,
+    body: seed.body,
+    attachmentUrl: seed.attachmentUrl,
+    attachmentDataUrl: undefined,
+    attachmentName: seed.attachmentName,
+    attachmentType: seed.attachmentType,
+    previewImageUrls: seed.previewImageUrls,
+    previewImageDataUrls: undefined,
     resources: waiverResourcesSeed,
   };
 }

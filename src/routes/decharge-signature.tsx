@@ -394,11 +394,11 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
 
           <header className="px-5 pb-7 pt-12 text-center sm:px-10 sm:pb-9 sm:pt-14">
             <div className="inline-flex items-center gap-2 rounded-full bg-[#d6ead4] px-4 py-2 text-xs font-bold sm:text-sm">
-              <Coffee className="h-4 w-4 text-[#a85f73]" /> Une petite consommation accompagne
-              l’atelier
+              <Coffee className="h-4 w-4 text-[#a85f73]" /> Une consommation par personne est
+              obligatoire au Kafé
             </div>
             <h1 className="mt-6 font-display text-4xl leading-[1.12] text-[#a85f73] sm:text-6xl">
-              Décharge de responsabilité
+              {waiver.title}
             </h1>
             <div className="mt-5 flex items-center justify-center gap-3 text-center text-lg font-bold uppercase leading-7 text-[#d10b50] sm:text-2xl">
               <Paintbrush className="hidden h-8 w-8 shrink-0 sm:block" /> À lire et à remplir avant
@@ -418,12 +418,12 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
                 onChange={(event) => setAccepted(event.target.checked)}
                 className="mt-0.5 h-5 w-5 shrink-0 accent-[#a85f73]"
               />
-              <span>Je confirme avoir lu et compris cette décharge.</span>
+              <span>Je confirme avoir lu et compris cette décharge officielle.</span>
             </label>
           </div>
 
           <div className="px-4 py-6 sm:px-10 sm:py-9">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <DigitalField
                 label="Nom"
                 value={form.lastName}
@@ -444,13 +444,13 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
                   {new Date(`${getKafeDate()}T12:00:00`).toLocaleDateString("fr-FR")}
                 </div>
               </div>
-              <div className="rounded-2xl border-2 border-dashed border-[#f2a429] bg-white p-4">
-                <SignaturePad
-                  value={signatureDataUrl}
-                  onChange={setSignatureDataUrl}
-                  label="Signature"
-                />
-              </div>
+            </div>
+            <div className="mt-4 rounded-2xl border-2 border-dashed border-[#f2a429] bg-white p-4">
+              <SignaturePad
+                value={signatureDataUrl}
+                onChange={setSignatureDataUrl}
+                label="Signature"
+              />
             </div>
 
             <label className="mt-5 flex cursor-pointer items-center gap-3 text-sm">

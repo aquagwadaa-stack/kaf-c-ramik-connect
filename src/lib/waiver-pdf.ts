@@ -37,23 +37,23 @@ export async function downloadSignedWaiver(signature: WaiverSignature, fallbackB
     pdf.setTextColor(45, 36, 33);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(9);
-    pdf.text(signature.lastName.toUpperCase(), 35, 241, { align: "center", maxWidth: 38 });
-    pdf.text(signature.firstName, 82, 241, { align: "center", maxWidth: 38 });
-    pdf.text(new Date(signature.signedAt).toLocaleDateString("fr-FR"), 126, 241, {
+    pdf.text(signature.lastName.toUpperCase(), 44, 183, { align: "center", maxWidth: 46 });
+    pdf.text(signature.firstName, 105, 183, { align: "center", maxWidth: 46 });
+    pdf.text(new Date(signature.signedAt).toLocaleDateString("fr-FR"), 166, 183, {
       align: "center",
-      maxWidth: 33,
+      maxWidth: 42,
     });
     if (signature.signatureDataUrl) {
-      pdf.addImage(signature.signatureDataUrl, "PNG", 151, 226, 38, 20);
+      pdf.addImage(signature.signatureDataUrl, "PNG", 45, 216, 120, 26);
     }
     if (signature.isMinor) {
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(6.5);
       pdf.text(
         `Responsable légal : ${signature.guardianFirstName ?? ""} ${signature.guardianLastName ?? ""}`,
-        151,
-        253,
-        { maxWidth: 39 },
+        105,
+        245,
+        { align: "center", maxWidth: 150 },
       );
     }
   } else {

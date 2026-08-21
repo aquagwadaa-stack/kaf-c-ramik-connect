@@ -59,7 +59,7 @@ function CartePage() {
         </Link>
       </PageHeader>
 
-      <section className="border-b-2 border-ink bg-[#ffd6a5] px-4 py-10">
+      <section className="border-b-2 border-ink bg-background px-4 py-8 sm:py-10">
         <div className="mx-auto max-w-6xl">
           <PdfDocument
             title={resource?.title || menu.title}

@@ -184,7 +184,7 @@ function RenderedPdf({
         className={`grid min-h-72 place-items-center ${plain ? "bg-[#fffaf0]" : "bg-[#ffd6a5]"}`}
       >
         <div className="flex items-center gap-3 text-sm font-medium">
-          <LoaderCircle className="h-5 w-5 animate-spin" /> Chargement de la carte…
+          <LoaderCircle className="h-5 w-5 animate-spin" /> Chargement du document…
         </div>
       </div>
     );
