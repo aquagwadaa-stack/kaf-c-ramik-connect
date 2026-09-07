@@ -162,8 +162,8 @@ function CadeauPage() {
               La carte cadeau Kafé Céramik
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/90">
-              Choisis un montant, personnalise ta carte, puis reçois son PDF après le paiement. Elle
-              reste valable {settings.giftCardValidityMonths} mois.
+              Choisis un montant et personnalise ta carte. Son PDF sera envoyé au bénéficiaire après
+              le paiement. Elle reste valable {settings.giftCardValidityMonths} mois.
             </p>
           </div>
         </div>
@@ -280,7 +280,7 @@ function CadeauPage() {
               <GiftField label="De la part de" value={sender} onChange={setSender} required />
               <div className="sm:col-span-2">
                 <GiftField
-                  label="Email d'envoi de la carte"
+                  label="Email du bénéficiaire"
                   value={recipientEmail}
                   onChange={setRecipientEmail}
                   type="email"

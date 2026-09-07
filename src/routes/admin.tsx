@@ -47,6 +47,7 @@ import {
   decideGroupReservation,
   useReservations,
   experienceLabel,
+  experienceUsesCeramicGuide,
   formatReservationDate,
   getSeatingAvailability,
   getSlotsForDate,
@@ -171,7 +172,8 @@ const tabs = tabGroups.flatMap((group) => group.items);
 
 function csvCell(value: unknown) {
   const text = value === undefined || value === null ? "" : String(value);
-  return `"${text.replaceAll('"', '""')}"`;
+  const safe = /^[\s]*[=+@-]/.test(text) ? `'${text}` : text;
+  return `"${safe.replaceAll('"', '""')}"`;
 }
 
 function downloadCsv(filename: string, rows: unknown[][]) {
@@ -188,13 +190,7 @@ function downloadCsv(filename: string, rows: unknown[][]) {
 }
 
 function reservationIsSigned(reservation: Reservation, signatures: WaiverSignature[]) {
-  if (reservation.source === "walk_in") return true;
-  return signatures.some(
-    (signature) =>
-      signature.reservationRef === reservation.id ||
-      `${signature.firstName} ${signature.lastName}`.toLowerCase() ===
-        `${reservation.firstName} ${reservation.lastName}`.toLowerCase(),
-  );
+  return signatures.some((signature) => signature.reservationRef === reservation.id);
 }
 
 function exportReservationsCsv(reservations: Reservation[], settings: KafeSettings) {
@@ -757,7 +753,9 @@ function OverviewPanel({
     (reservation) => reservation.depositRequired && !reservation.depositPaid,
   );
   const unsignedToday = todayReservations.filter(
-    (reservation) => !reservationIsSigned(reservation, signatures),
+    (reservation) =>
+      experienceUsesCeramicGuide(reservation.experience) &&
+      !reservationIsSigned(reservation, signatures),
   );
 
   const actions: {
@@ -895,7 +893,11 @@ function OverviewPanel({
                       </span>
                     </span>
                     <InfoPill tone={signed ? "success" : "warning"}>
-                      {signed ? "Arrivée enregistrée" : "Décharge à signer"}
+                      {signed || reservation.status === "arrived"
+                        ? "Arrivée enregistrée"
+                        : experienceUsesCeramicGuide(reservation.experience)
+                          ? "Décharge à signer"
+                          : "Arrivée attendue"}
                     </InfoPill>
                   </button>
                 );
@@ -1844,11 +1846,12 @@ function ReservationCard({
         ) : null}
         {reservation.source === "walk_in" ? (
           <InfoPill>Ajouté sur place</InfoPill>
-        ) : (
+        ) : reservation.status !== "cancelled" &&
+          experienceUsesCeramicGuide(reservation.experience) ? (
           <InfoPill tone={signed ? "success" : "warning"}>
             {signed ? "Décharge signée" : "Décharge à signer sur tablette"}
           </InfoPill>
-        )}
+        ) : null}
       </div>
 
       {reservation.groupQuoteTotal && (
@@ -1878,31 +1881,44 @@ function ReservationCard({
       {groupRequest && <GroupDecisionControls reservation={reservation} />}
 
       <div className="mt-3 flex flex-wrap gap-2">
-        {!pendingGroup && (
-          <>
-            <StatusButton
-              id={reservation.id}
-              target="confirmed"
-              current={reservation.status}
-              label="Confirmer"
-            />
-            {reservation.depositRequired && (
+        {!pendingGroup &&
+          reservation.status !== "cancelled" &&
+          reservation.status !== "arrived" && (
+            <>
+              {!experienceUsesCeramicGuide(reservation.experience) &&
+                reservation.status === "confirmed" && (
+                  <StatusButton
+                    id={reservation.id}
+                    target="arrived"
+                    current={reservation.status}
+                    label="Marquer l'arrivée"
+                  />
+                )}
+              {reservation.status !== "confirmed" && (
+                <StatusButton
+                  id={reservation.id}
+                  target="confirmed"
+                  current={reservation.status}
+                  label="Confirmer"
+                />
+              )}
+              {reservation.depositRequired && !reservation.depositPaid && (
+                <StatusButton
+                  id={reservation.id}
+                  target="deposit_paid"
+                  current={reservation.status}
+                  label="Acompte reçu"
+                />
+              )}
               <StatusButton
                 id={reservation.id}
-                target="deposit_paid"
+                target="cancelled"
                 current={reservation.status}
-                label="Acompte reçu"
+                label="Annuler"
+                danger
               />
-            )}
-            <StatusButton
-              id={reservation.id}
-              target="cancelled"
-              current={reservation.status}
-              label="Annuler"
-              danger
-            />
-          </>
-        )}
+            </>
+          )}
         <button
           onClick={async () => {
             if (!window.confirm("Supprimer définitivement cette réservation ?")) return;
@@ -2013,7 +2029,7 @@ function WaiversPanel({
 }: {
   documents: ContentDocument[];
   signatures: WaiverSignature[];
-  saveSignatures: (next: WaiverSignature[]) => void;
+  saveSignatures: (next: WaiverSignature[]) => Promise<boolean>;
   reservations: Reservation[];
 }) {
   const waiver = getWaiverDocument(documents);
@@ -2085,7 +2101,8 @@ function WaiversPanel({
   }, [archiveView, filteredSignatures, reservations]);
 
   const incompleteWaiverReservations = reservations.filter((reservation) => {
-    if (reservation.status === "cancelled" || reservation.source === "walk_in") return false;
+    if (reservation.status === "cancelled" || !experienceUsesCeramicGuide(reservation.experience))
+      return false;
     const signedPeople = signatures.filter(
       (signature) => signature.reservationRef === reservation.id,
     ).length;
@@ -2627,7 +2644,7 @@ function PageImagesPanel({
   saveSettings,
 }: {
   settings: KafeSettings;
-  saveSettings: (next: KafeSettings) => void;
+  saveSettings: (next: KafeSettings) => Promise<boolean>;
 }) {
   const [notice, setNotice] = useState("");
   const [uploadingId, setUploadingId] = useState<string | null>(null);
@@ -2635,11 +2652,11 @@ function PageImagesPanel({
   const pages = ["Accueil", "Le Kafé", "Carte", "Carte cadeau"] as const;
 
   function saveImages(next: PageImageSetting[]) {
-    saveSettings({ ...settings, pageImages: next });
+    return saveSettings({ ...settings, pageImages: next });
   }
 
   function updateImage(id: PageImageSetting["id"], patch: Partial<PageImageSetting>) {
-    saveImages(images.map((image) => (image.id === id ? { ...image, ...patch } : image)));
+    return saveImages(images.map((image) => (image.id === id ? { ...image, ...patch } : image)));
   }
 
   async function uploadPageImage(id: PageImageSetting["id"], file?: File) {
@@ -2666,10 +2683,14 @@ function PageImagesPanel({
       const imageUrl = stored.attachmentUrl || stored.attachmentDataUrl;
       if (!imageUrl) throw new Error("Photo introuvable après l'import.");
 
-      if (current?.imageUrl) {
+      const saved = await updateImage(id, { imageUrl, imageName: file.name, imageHash });
+      if (!saved) {
+        await deleteAdminFileByPublicUrl(imageUrl).catch(() => undefined);
+        throw new Error("La photo n'a pas pu être enregistrée. L'ancienne photo est conservée.");
+      }
+      if (current?.imageUrl && current.imageUrl !== imageUrl) {
         await deleteAdminFileByPublicUrl(current.imageUrl).catch(() => undefined);
       }
-      updateImage(id, { imageUrl, imageName: file.name, imageHash });
       setNotice("Photo enregistrée. Elle est déjà utilisée sur la page correspondante.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Impossible d'enregistrer la photo.");
@@ -2682,10 +2703,16 @@ function PageImagesPanel({
     const current = images.find((image) => image.id === id);
     const original = pageImagesSeed.find((image) => image.id === id);
     if (!original) return;
-    if (current?.imageUrl) {
+    const saved = await saveImages(
+      images.map((image) => (image.id === id ? { ...original } : image)),
+    );
+    if (!saved) {
+      setNotice("La photo d'origine n'a pas pu être rétablie. Réessayez.");
+      return;
+    }
+    if (current?.imageUrl && current.imageUrl !== original.imageUrl) {
       await deleteAdminFileByPublicUrl(current.imageUrl).catch(() => undefined);
     }
-    saveImages(images.map((image) => (image.id === id ? { ...original } : image)));
     setNotice("Photo d'origine rétablie.");
   }
 
@@ -2784,7 +2811,7 @@ function GuestbookPanel({
   saveSettings,
 }: {
   entries: GuestbookEntry[];
-  saveEntries: (next: GuestbookEntry[]) => void;
+  saveEntries: (next: GuestbookEntry[]) => Promise<boolean>;
   settings: KafeSettings;
   saveSettings: (next: KafeSettings) => void;
 }) {
@@ -2805,7 +2832,7 @@ function GuestbookPanel({
   }, [draftImage]);
 
   function updateEntry(id: string, patch: Partial<GuestbookEntry>) {
-    saveEntries(entries.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)));
+    return saveEntries(entries.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)));
   }
 
   async function storeGuestbookImage(id: string, file: File) {
@@ -2828,7 +2855,10 @@ function GuestbookPanel({
     try {
       const imageUrl = await storeGuestbookImage(id, file);
       const previousImageUrl = entries.find((entry) => entry.id === id)?.imageUrl;
-      updateEntry(id, { imageUrl });
+      if (!(await updateEntry(id, { imageUrl }))) {
+        await deleteAdminFileByPublicUrl(imageUrl).catch(() => undefined);
+        throw new Error("La photo n'a pas pu être enregistrée. L'ancienne photo est conservée.");
+      }
       if (previousImageUrl && previousImageUrl !== imageUrl) {
         await deleteAdminFileByPublicUrl(previousImageUrl).catch(() => undefined);
       }
@@ -2840,13 +2870,13 @@ function GuestbookPanel({
   }
 
   async function removeEntryImage(entry: GuestbookEntry) {
+    if (!(await updateEntry(entry.id, { imageUrl: undefined }))) return;
     if (entry.imageUrl) await deleteAdminFileByPublicUrl(entry.imageUrl).catch(() => undefined);
-    updateEntry(entry.id, { imageUrl: undefined });
   }
 
   async function deleteGuestbookEntry(entry: GuestbookEntry) {
+    if (!(await saveEntries(entries.filter((item) => item.id !== entry.id)))) return;
     if (entry.imageUrl) await deleteAdminFileByPublicUrl(entry.imageUrl).catch(() => undefined);
-    saveEntries(entries.filter((item) => item.id !== entry.id));
   }
 
   async function addGoogleReview() {
@@ -2862,7 +2892,7 @@ function GuestbookPanel({
       setUploadingImageId("");
       return;
     }
-    saveEntries([
+    const saved = await saveEntries([
       {
         id,
         author: draft.author.trim(),
@@ -2876,6 +2906,12 @@ function GuestbookPanel({
       },
       ...entries,
     ]);
+    if (!saved) {
+      if (imageUrl) await deleteAdminFileByPublicUrl(imageUrl).catch(() => undefined);
+      setImageError("L'avis n'a pas pu être enregistré. Réessayez.");
+      setUploadingImageId("");
+      return;
+    }
     setDraft({ author: "", message: "", rating: 5 });
     setDraftImage(null);
     setUploadingImageId("");
@@ -4454,7 +4490,7 @@ function SeatingAreasEditor({
         {areas.map((area) => (
           <div
             key={area.id}
-            className="grid gap-3 rounded-2xl border border-border bg-card p-4 md:grid-cols-[1fr_10rem_10rem_10rem_auto] md:items-end"
+            className="grid min-w-0 gap-3 rounded-2xl border border-border bg-card p-4 md:grid-cols-2 2xl:grid-cols-4 md:items-end"
           >
             <Field
               label="Nom"
@@ -4671,7 +4707,7 @@ function NumberField({
   onChange: (value: number) => void;
 }) {
   return (
-    <label className="rounded-2xl border border-border bg-background p-4">
+    <label className="min-w-0 rounded-2xl border border-border bg-background p-4">
       <span className="mb-2 block text-sm font-medium">{label}</span>
       <div className="flex items-center gap-2">
         <input
@@ -4679,9 +4715,9 @@ function NumberField({
           min={0}
           value={value}
           onChange={(event) => onChange(Number(event.target.value))}
-          className="w-28 rounded-xl border border-input bg-background px-3 py-2 text-sm"
+          className="min-w-0 w-28 max-w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
         />
-        <span className="text-sm text-muted-foreground">{suffix}</span>
+        <span className="min-w-0 text-sm text-muted-foreground">{suffix}</span>
       </div>
     </label>
   );

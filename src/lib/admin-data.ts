@@ -113,7 +113,7 @@ export function useStoredList<T extends { id: string }>(
     if (remoteTable && isSupabaseConfigured()) {
       loadRemoteList<T>(remoteTable, remoteAuthLoad, remoteHasSortOrder !== false)
         .then((remoteList) => {
-          if (!alive || (remoteList.length === 0 && !remoteAuthLoad)) return;
+          if (!alive) return;
           writeStore(key, remoteList);
           setList(remoteList);
         })

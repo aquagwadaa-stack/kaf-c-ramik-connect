@@ -424,10 +424,10 @@ function ReserverPage() {
                     aria-label="Nombre total de personnes"
                     type="number"
                     min={1}
-                    max={15}
+                    max={10}
                     value={people}
                     onChange={(event) => {
-                      const value = Math.min(15, Math.max(1, Number(event.target.value) || 1));
+                      const value = Math.min(10, Math.max(1, Number(event.target.value) || 1));
                       setPeople(value);
                       setDate("");
                       setSlot("");
@@ -437,9 +437,9 @@ function ReserverPage() {
                   <button
                     type="button"
                     aria-label="Ajouter une personne"
-                    disabled={people >= 15}
+                    disabled={people >= 10}
                     onClick={() => {
-                      setPeople((current) => Math.min(15, current + 1));
+                      setPeople((current) => Math.min(10, current + 1));
                       setDate("");
                       setSlot("");
                     }}
@@ -449,8 +449,14 @@ function ReserverPage() {
                   </button>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Jusqu'à 15 personnes par réservation. À partir de 10 personnes, l'équipe valide la
-                  demande.
+                  Jusqu'à 10 personnes en ligne. Au-delà,{" "}
+                  <a
+                    className="underline underline-offset-4"
+                    href={`tel:${settings.contactPhone.replace(/\s/g, "")}`}
+                  >
+                    appelle le Kafé
+                  </a>
+                  .
                 </p>
               </div>
 

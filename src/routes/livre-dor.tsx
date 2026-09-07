@@ -119,7 +119,7 @@ function LivreDorPage() {
             <div>
               <div className="font-display text-2xl">Vos souvenirs vivent ici.</div>
               <p className="mt-1 text-sm text-ink/70">
-                Chaque message est lu par l'équipe après publication.
+                Chaque message est relu par l'équipe avant publication.
               </p>
             </div>
           </div>

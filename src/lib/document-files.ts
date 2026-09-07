@@ -49,7 +49,6 @@ function withTimeout<T>(task: Promise<T>, ms: number) {
   });
 }
 
-
 export interface StoredDocumentFile {
   attachmentUrl?: string;
   attachmentDataUrl?: string;
@@ -155,7 +154,8 @@ export async function storeDocumentFile(
   const base = `${safeName(scope)}/${stamp}-${safeName(file.name)}`;
 
   if (isSupabaseConfigured()) {
-    const attachmentUrl = await uploadAdminFile("kafe-documents", `${base}/original`, file, {
+    const upload = file.type === attachmentType ? file : new Blob([file], { type: attachmentType });
+    const attachmentUrl = await uploadAdminFile("kafe-documents", `${base}/original`, upload, {
       contentDocumentId: options.contentDocumentId,
       contentResourceId: options.contentResourceId,
       originalFileName: file.name,

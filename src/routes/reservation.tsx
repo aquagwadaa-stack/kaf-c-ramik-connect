@@ -136,9 +136,9 @@ function ReservationPortalPage() {
               <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-5">
                 <div>
                   <p className="text-sm text-muted-foreground">Réservation de</p>
-                  <h1 className="mt-1 font-display text-3xl">
+                  <h2 className="mt-1 break-words font-display text-3xl">
                     {data.reservation.firstName} {data.reservation.lastName}
-                  </h1>
+                  </h2>
                 </div>
                 <span className="rounded-full bg-secondary px-3 py-1.5 text-sm font-medium">
                   {statusLabel(data.reservation.status)}
@@ -198,20 +198,21 @@ function ReservationPortalPage() {
                     </button>
                   </div>
                 )}
-              {experienceUsesCeramicGuide(data.reservation.experience) && (
-                <Link
-                  to="/guide"
-                  className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 hover:border-primary/50 hover:bg-secondary/40"
-                >
-                  <BookOpenText className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                  <span>
-                    <span className="block font-medium">Relire le guide</span>
-                    <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                      Toutes les consignes utiles avant ton atelier.
+              {data.reservation.status !== "cancelled" &&
+                experienceUsesCeramicGuide(data.reservation.experience) && (
+                  <Link
+                    to="/guide"
+                    className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 hover:border-primary/50 hover:bg-secondary/40"
+                  >
+                    <BookOpenText className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                    <span>
+                      <span className="block font-medium">Relire le guide</span>
+                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                        Toutes les consignes utiles avant ton atelier.
+                      </span>
                     </span>
-                  </span>
-                </Link>
-              )}
+                  </Link>
+                )}
 
               {data.reservation.status !== "cancelled" && (
                 <div className="rounded-2xl border border-border bg-card p-4">

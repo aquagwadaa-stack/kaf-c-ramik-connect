@@ -161,6 +161,8 @@ export function SiteHeader() {
       </div>
 
       <div
+        inert={!open}
+        aria-hidden={!open}
         className={`absolute right-4 top-[calc(100%+0.5rem)] w-[min(92vw,330px)] overflow-hidden rounded-xl border-2 border-ink bg-[#fffdf8] shadow-[6px_6px_0_#2f1620] lg:hidden transition-all duration-200 ease-out ${
           open
             ? "translate-y-0 scale-100 opacity-100"

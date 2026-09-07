@@ -5,8 +5,18 @@ async function imageToPngDataUrl(source: string) {
   const image = new Image();
   image.crossOrigin = "anonymous";
   await new Promise<void>((resolve, reject) => {
-    image.onload = () => resolve();
-    image.onerror = () => reject(new Error("Le document est inaccessible."));
+    const timer = window.setTimeout(() => {
+      image.src = "";
+      reject(new Error("Le document met trop de temps à charger. Réessayez."));
+    }, 30_000);
+    image.onload = () => {
+      window.clearTimeout(timer);
+      resolve();
+    };
+    image.onerror = () => {
+      window.clearTimeout(timer);
+      reject(new Error("Le document est inaccessible."));
+    };
     image.src = source;
   });
   const canvas = document.createElement("canvas");
@@ -30,6 +40,9 @@ function safeFilename(value: string) {
 export async function downloadSignedWaiver(signature: WaiverSignature, fallbackBody: string) {
   const pdf = new jsPDF({ unit: "mm", format: "a4" });
   const preview = signature.documentPreviewUrl;
+  const signedDate = new Date(signature.signedAt).toLocaleDateString("fr-FR", {
+    timeZone: "America/Guadeloupe",
+  });
 
   if (preview) {
     const image = await imageToPngDataUrl(preview);
@@ -39,7 +52,7 @@ export async function downloadSignedWaiver(signature: WaiverSignature, fallbackB
     pdf.setFontSize(9);
     pdf.text(signature.lastName.toUpperCase(), 44, 183, { align: "center", maxWidth: 46 });
     pdf.text(signature.firstName, 105, 183, { align: "center", maxWidth: 46 });
-    pdf.text(new Date(signature.signedAt).toLocaleDateString("fr-FR"), 166, 183, {
+    pdf.text(signedDate, 166, 183, {
       align: "center",
       maxWidth: 42,
     });
@@ -65,7 +78,7 @@ export async function downloadSignedWaiver(signature: WaiverSignature, fallbackB
     pdf.text(pdf.splitTextToSize(signature.acceptanceText ?? fallbackBody, 170), 20, 45);
     pdf.text(`Nom : ${signature.lastName}`, 20, 115);
     pdf.text(`Prénom : ${signature.firstName}`, 20, 126);
-    pdf.text(`Date : ${new Date(signature.signedAt).toLocaleDateString("fr-FR")}`, 20, 137);
+    pdf.text(`Date : ${signedDate}`, 20, 137);
     if (signature.signatureDataUrl)
       pdf.addImage(signature.signatureDataUrl, "PNG", 20, 150, 95, 36);
   }

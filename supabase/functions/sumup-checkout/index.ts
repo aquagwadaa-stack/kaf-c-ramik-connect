@@ -8,6 +8,10 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const sumupApiKey = Deno.env.get("SUMUP_API_KEY") ?? "";
 const sumupMerchantCode = Deno.env.get("SUMUP_MERCHANT_CODE") ?? "";
+const canonicalSiteUrl = (Deno.env.get("KAFE_SITE_URL") ?? "https://kafeceramik.fr").replace(
+  /\/$/,
+  "",
+);
 
 type CheckoutStatus = "PENDING" | "PAID" | "FAILED" | "EXPIRED";
 
@@ -120,6 +124,14 @@ async function readPaymentByReservation(reservationId: string) {
 async function createReservationCheckout(token: string, siteUrl: string) {
   if (!sumupApiKey || !sumupMerchantCode) {
     return json({ ok: true, configured: false, reason: "SumUp n'est pas encore configuré." });
+  }
+  const settings = await readSettings();
+  if (settings.sumupPaymentsEnabled !== true) {
+    return json({
+      ok: true,
+      configured: false,
+      reason: "Le paiement des acomptes n'est pas activé.",
+    });
   }
 
   const reservation = await readReservationByToken(token);
@@ -343,32 +355,31 @@ async function processReservationPayment(checkout: SumUpCheckout, payment: Payme
   if (!reservation) return;
 
   if (checkout.status === "PAID" && !reservation.value.depositPaid) {
-    const nextValue = {
-      ...reservation.value,
-      depositPaid: true,
-      depositPaidAt: new Date().toISOString(),
-      sumupCheckoutId: checkout.id,
-      status: "deposit_paid",
-    };
-    await db<void>(`/rest/v1/kafe_reservations?id=eq.${encodeURIComponent(reservation.id)}`, {
-      method: "PATCH",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({
-        status: "deposit_paid",
-        value: nextValue,
-        updated_at: new Date().toISOString(),
-      }),
+    const result = await db<{
+      changed: boolean;
+      status: string;
+      value: Record<string, unknown>;
+    } | null>("/rest/v1/rpc/apply_kafe_deposit_payment", {
+      method: "POST",
+      body: JSON.stringify({ p_id: reservation.id, p_checkout_id: checkout.id, p_status: "PAID" }),
     });
+    if (!result?.changed) return;
+    const nextStatus = result.status;
+    reservation.value = result.value;
     await db<void>("/rest/v1/kafe_admin_notifications", {
       method: "POST",
       headers: { Prefer: "return=minimal" },
       body: JSON.stringify({
         kind: "deposit_paid",
-        title: "Acompte reçu",
+        title:
+          nextStatus === "cancelled"
+            ? "Acompte reçu après annulation : remboursement à vérifier"
+            : "Acompte reçu",
         body: `${reservation.value.firstName ?? ""} ${reservation.value.lastName ?? ""} · ${checkout.amount} €`,
         reservation_id: reservation.id,
       }),
     });
+    if (nextStatus === "cancelled") return;
     await fetch(`${supabaseUrl}/functions/v1/kafe-emails`, {
       method: "POST",
       headers: apiHeaders(),
@@ -381,18 +392,12 @@ async function processReservationPayment(checkout: SumUpCheckout, payment: Payme
   }
 
   if (checkout.status === "EXPIRED" && reservation.status === "pending") {
-    await db<void>(`/rest/v1/kafe_reservations?id=eq.${encodeURIComponent(reservation.id)}`, {
-      method: "PATCH",
-      headers: { Prefer: "return=minimal" },
+    await db<void>("/rest/v1/rpc/apply_kafe_deposit_payment", {
+      method: "POST",
       body: JSON.stringify({
-        status: "cancelled",
-        value: {
-          ...reservation.value,
-          status: "cancelled",
-          cancelledAt: new Date().toISOString(),
-          cancelledBy: "payment_timeout",
-        },
-        updated_at: new Date().toISOString(),
+        p_id: reservation.id,
+        p_checkout_id: checkout.id,
+        p_status: "EXPIRED",
       }),
     });
   }
@@ -485,13 +490,10 @@ Deno.serve(async (request) => {
     }
     if (body.action === "create") {
       if (!body.managementToken) return json({ error: "Missing management token" }, 400);
-      return await createReservationCheckout(
-        body.managementToken,
-        body.siteUrl ?? "https://kafeceramik.fr",
-      );
+      return await createReservationCheckout(body.managementToken, canonicalSiteUrl);
     }
     if (body.action === "create-gift") {
-      return await createGiftCheckout(body, body.siteUrl ?? "https://kafeceramik.fr");
+      return await createGiftCheckout(body, canonicalSiteUrl);
     }
     if (body.action === "gift-status") {
       if (!body.managementToken) return json({ error: "Missing management token" }, 400);

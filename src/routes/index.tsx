@@ -378,7 +378,7 @@ function HomePage() {
       <section className="mx-auto max-w-6xl px-4 pb-6 pt-10">
         <div className="grid gap-3 sm:grid-cols-3">
           <InfoTile icon={MapPin} title="Adresse" body={settings.contactAddress} />
-          <InfoTile icon={Clock} title="Horaires atelier" body={schedule.inline} />
+          <InfoTile icon={Clock} title="Horaires du Kafé" body={schedule.inline} />
           <InfoTile icon={Phone} title="Téléphone" body={settings.contactPhone} />
         </div>
       </section>

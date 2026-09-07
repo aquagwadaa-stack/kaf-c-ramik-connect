@@ -24,6 +24,7 @@ import {
 } from "@/lib/admin-data";
 import {
   formatReservationDate,
+  experienceUsesCeramicGuide,
   updateStatus,
   useReservations,
   type Reservation,
@@ -115,7 +116,10 @@ function SigningWorkspace({ validatedBy }: { validatedBy?: string }) {
     const [hours, minutes] = getKafeTime(now).split(":").map(Number);
     const oneHourAgoMinutes = hours * 60 + minutes - 60;
     const active = reservations
-      .filter((reservation) => reservation.status !== "cancelled")
+      .filter(
+        (reservation) =>
+          reservation.status !== "cancelled" && experienceUsesCeramicGuide(reservation.experience),
+      )
       .sort((a, b) => `${a.date}-${a.slot}`.localeCompare(`${b.date}-${b.slot}`));
     const earlierToday = active.filter(
       (reservation) =>

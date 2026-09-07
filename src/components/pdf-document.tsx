@@ -121,6 +121,13 @@ function RenderedPdf({
   useEffect(() => {
     let cancelled = false;
     const objectUrls: string[] = [];
+    let loadingTask: import("pdfjs-dist").PDFDocumentLoadingTask | undefined;
+    const timeout = window.setTimeout(() => {
+      cancelled = true;
+      setError("Le chargement prend trop de temps.");
+      setLoading(false);
+      void loadingTask?.destroy().catch(() => undefined);
+    }, 45_000);
 
     async function render() {
       setLoading(true);
@@ -132,8 +139,10 @@ function RenderedPdf({
           import("pdfjs-dist"),
           import("pdfjs-dist/build/pdf.worker.min.mjs?url"),
         ]);
+        if (cancelled) return;
         pdfjs.GlobalWorkerOptions.workerSrc = workerModule.default;
-        const pdf = await pdfjs.getDocument({ url: href }).promise;
+        loadingTask = pdfjs.getDocument({ url: href });
+        const pdf = await loadingTask.promise;
         const renderedPages: string[] = [];
         const targetWidth = Math.min(
           1800,
@@ -141,6 +150,7 @@ function RenderedPdf({
         );
 
         for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+          if (cancelled) return;
           const page = await pdf.getPage(pageNumber);
           const baseViewport = page.getViewport({ scale: 1 });
           const viewport = page.getViewport({ scale: targetWidth / baseViewport.width });
@@ -157,6 +167,10 @@ function RenderedPdf({
               0.92,
             );
           });
+          canvas.width = 0;
+          canvas.height = 0;
+          page.cleanup();
+          if (cancelled) return;
           const objectUrl = URL.createObjectURL(blob);
           objectUrls.push(objectUrl);
           renderedPages.push(objectUrl);
@@ -167,6 +181,8 @@ function RenderedPdf({
         console.error("PDF display failed", renderError);
         if (!cancelled) setError("Le document n'a pas pu être affiché directement.");
       } finally {
+        window.clearTimeout(timeout);
+        void loadingTask?.destroy().catch(() => undefined);
         if (!cancelled) setLoading(false);
       }
     }
@@ -174,6 +190,8 @@ function RenderedPdf({
     void render();
     return () => {
       cancelled = true;
+      window.clearTimeout(timeout);
+      void loadingTask?.destroy().catch(() => undefined);
       objectUrls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [href]);

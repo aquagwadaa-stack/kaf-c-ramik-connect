@@ -94,6 +94,10 @@ const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const resendApiKey = Deno.env.get("RESEND_API_KEY") ?? "";
 const emailFrom = Deno.env.get("KAFE_EMAIL_FROM") ?? "";
+const canonicalSiteUrl = (Deno.env.get("KAFE_SITE_URL") ?? "https://kafeceramik.fr").replace(
+  /\/$/,
+  "",
+);
 const replyTo = Deno.env.get("KAFE_REPLY_TO") ?? "";
 const cronSecret = Deno.env.get("KAFE_CRON_SECRET") ?? "";
 const vapidPublicKey = Deno.env.get("KAFE_VAPID_PUBLIC_KEY") ?? "";
@@ -645,13 +649,11 @@ function details(
 }
 
 async function markReservation(row: ReservationRow, patch: Partial<ReservationValue>) {
-  const value = { ...row.value, ...patch };
-  await api<void>(`/rest/v1/kafe_reservations?id=eq.${encodeURIComponent(row.id)}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ value, updated_at: new Date().toISOString() }),
+  const value = await api<ReservationValue | null>("/rest/v1/rpc/mark_kafe_reservation_email", {
+    method: "POST",
+    body: JSON.stringify({ p_id: row.id, p_patch: patch }),
   });
-  row.value = value;
+  if (value) row.value = value;
 }
 
 async function requireAdmin(request: Request) {
@@ -813,7 +815,7 @@ async function processReminders(settings: SettingsValue, siteUrl: string) {
   const fromDate = today.toISOString().slice(0, 10);
   const toDate = end.toISOString().slice(0, 10);
   const rows = await api<ReservationRow[]>(
-    `/rest/v1/kafe_reservations?select=id,value,date,slot,people,status&status=in.(confirmed,deposit_paid)&date=gte.${fromDate}&date=lte.${toDate}`,
+    `/rest/v1/kafe_reservations?select=id,value,date,slot,people,status&status=eq.confirmed&date=gte.${fromDate}&date=lte.${toDate}`,
   );
   let sent = 0;
   for (const row of rows) {
@@ -822,11 +824,15 @@ async function processReminders(settings: SettingsValue, siteUrl: string) {
     const hoursUntil = (slotDate.getTime() - Date.now()) / (60 * 60 * 1000);
     if (hoursUntil <= 0 || hoursUntil > 24) continue;
     const isBrunch = row.value.experience === "brunch_atelier";
+    const localToday = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guadeloupe" }).format(
+      today,
+    );
+    const dayLabel = row.date === localToday ? "aujourd'hui" : "demain";
     const delivered = await sendEmail(
       [row.value.email],
-      `Rappel : ${isBrunch ? "ton brunch" : "ton atelier"} demain – Kafé Céramik`,
+      `Rappel : ${isBrunch ? "ton brunch" : "ton atelier"} ${dayLabel} – Kafé Céramik`,
       shell(
-        `${isBrunch ? "Ton brunch" : "Ton atelier"}, c'est demain`,
+        `${isBrunch ? "Ton brunch" : "Ton atelier"}, c'est ${dayLabel}`,
         `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Petit rappel pour ${isBrunch ? "ton brunch" : "ton atelier"} au Kafé Céramik.</p>${details(row, settings, siteUrl)}<p>À très vite !</p>`,
       ),
     );
@@ -852,7 +858,7 @@ Deno.serve(async (request) => {
       siteUrl?: string;
     };
     const action = body.action ?? "";
-    const siteUrl = (body.siteUrl ?? "https://kafeceramik.fr").replace(/\/$/, "");
+    const siteUrl = canonicalSiteUrl;
     const settings = await readSettings();
 
     if (action === "gift-card-paid") {

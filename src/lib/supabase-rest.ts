@@ -51,7 +51,7 @@ export function readAdminSession(): SupabaseSession | null {
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     const session = JSON.parse(raw) as SupabaseSession;
-    if (session.expires_at && session.expires_at * 1000 < Date.now()) {
+    if (session.expires_at && session.expires_at * 1000 < Date.now() && !session.refresh_token) {
       localStorage.removeItem(SESSION_KEY);
       return null;
     }
@@ -66,6 +66,47 @@ function saveAdminSession(session: SupabaseSession | null) {
   if (session) localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   else localStorage.removeItem(SESSION_KEY);
   window.dispatchEvent(new Event(AUTH_EVENT));
+}
+
+let sessionRefresh: Promise<SupabaseSession | null> | undefined;
+
+async function validAdminSession() {
+  const session = readAdminSession();
+  if (
+    !session?.refresh_token ||
+    !session.expires_at ||
+    session.expires_at * 1000 > Date.now() + 60_000
+  ) {
+    return session;
+  }
+  // Several panels refresh together: rotate the refresh token only once.
+  if (!sessionRefresh) {
+    sessionRefresh = (async () => {
+      const response = await fetch(`${baseUrl()}/auth/v1/token?grant_type=refresh_token`, {
+        method: "POST",
+        headers: { apikey: anonKey(), "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: session.refresh_token }),
+        signal: AbortSignal.timeout(20_000),
+      });
+      if (!response.ok) {
+        if (response.status === 400 || response.status === 401) saveAdminSession(null);
+        throw new Error("La session n'a pas pu être renouvelée. Reconnectez-vous si nécessaire.");
+      }
+      const data = (await response.json()) as SupabaseSession & { expires_in?: number };
+      if (!data.access_token) throw new Error("Session administrateur invalide.");
+      const refreshed = {
+        ...data,
+        expires_at: data.expires_at ?? Math.floor(Date.now() / 1000) + (data.expires_in ?? 3600),
+      };
+      // Do not reconnect somebody who signed out while the request was in flight.
+      if (readAdminSession()?.refresh_token !== session.refresh_token) return readAdminSession();
+      saveAdminSession(refreshed);
+      return refreshed;
+    })().finally(() => {
+      sessionRefresh = undefined;
+    });
+  }
+  return sessionRefresh;
 }
 
 export function useAdminSession() {
@@ -192,7 +233,7 @@ async function errorMessage(response: Response) {
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   if (!isSupabaseConfigured()) throw new Error("Supabase is not configured");
 
-  const session = readAdminSession();
+  const session = options.auth ? await validAdminSession() : null;
   const token = options.auth ? session?.access_token : undefined;
   if (options.auth && !token) throw new Error("Admin session required");
 
@@ -215,6 +256,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     method: options.method ?? "GET",
     headers,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    signal: AbortSignal.timeout(30_000),
   });
 
   if (!response.ok) throw new Error(await errorMessage(response));
@@ -323,7 +365,7 @@ export async function invokeEdgeFunction<T>(
   auth = false,
 ) {
   if (!isSupabaseConfigured()) throw new Error("Supabase is not configured");
-  const session = readAdminSession();
+  const session = auth ? await validAdminSession() : null;
   if (auth && !session?.access_token) throw new Error("Admin session required");
 
   const headers: Record<string, string> = {
@@ -336,6 +378,7 @@ export async function invokeEdgeFunction<T>(
     method: "POST",
     headers,
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(60_000),
   });
   if (!response.ok) throw new Error(await errorMessage(response));
   return (await response.json()) as T;
@@ -354,7 +397,7 @@ export async function uploadAdminFile(
   options: AdminFileUploadOptions = {},
 ) {
   if (!isSupabaseConfigured()) throw new Error("Supabase is not configured");
-  const session = readAdminSession();
+  const session = await validAdminSession();
   if (!session?.access_token) throw new Error("Admin session required");
   const accessToken = session.access_token;
   if (bucket !== "kafe-documents") {
@@ -445,7 +488,7 @@ export async function uploadPublicFile(bucket: string, path: string, file: Blob)
       method: "POST",
       headers: {
         apikey: anonKey(),
-        Authorization: `Bearer ${anonKey()}`,
+        ...(!isOpaqueKey(anonKey()) ? { Authorization: `Bearer ${anonKey()}` } : {}),
         "Content-Type": file.type || "application/octet-stream",
         "x-upsert": "false",
       },
@@ -458,7 +501,7 @@ export async function uploadPublicFile(bucket: string, path: string, file: Blob)
 
 export async function deleteAdminFileByPublicUrl(fileUrl: string) {
   if (!isSupabaseConfigured() || !fileUrl) return;
-  const session = readAdminSession();
+  const session = await validAdminSession();
   if (!session?.access_token) throw new Error("Admin session required");
 
   const marker = "/storage/v1/object/public/";
