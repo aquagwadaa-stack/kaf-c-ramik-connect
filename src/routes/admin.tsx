@@ -1396,7 +1396,14 @@ function AdminLogin() {
             </label>
           </div>
 
-          {error && <div className="mt-4 text-sm text-destructive">{error}</div>}
+          {error && (
+            <div
+              role="alert"
+              className="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm font-medium text-destructive"
+            >
+              {error}
+            </div>
+          )}
           {notice && (
             <div className="mt-4 rounded-xl border border-sage/35 bg-sage/10 p-3 text-sm">
               {notice}
