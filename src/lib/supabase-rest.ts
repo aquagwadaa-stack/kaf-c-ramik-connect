@@ -187,7 +187,21 @@ export async function signInAdmin(email: string, password: string) {
     },
     body: JSON.stringify({ email, password }),
   });
-  if (!response.ok) throw new Error(await errorMessage(response));
+  if (!response.ok) {
+    const raw = await errorMessage(response);
+    if (/invalid login credentials/i.test(raw)) {
+      throw new Error(
+        "Adresse e-mail ou mot de passe incorrect. Vérifiez l'adresse utilisée, ou demandez la réinitialisation du mot de passe.",
+      );
+    }
+    if (/email not confirmed/i.test(raw)) {
+      throw new Error("Cette adresse n'a pas encore été confirmée. Ouvrez l'e-mail de confirmation.");
+    }
+    if (response.status === 429) {
+      throw new Error("Trop de tentatives. Patientez quelques minutes avant de réessayer.");
+    }
+    throw new Error(raw);
+  }
   const data = (await response.json()) as SupabaseSession & { expires_in?: number };
   const session: SupabaseSession = {
     ...data,
