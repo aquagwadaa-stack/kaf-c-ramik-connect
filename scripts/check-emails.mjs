@@ -238,6 +238,7 @@ await run(
     assert.equal(sent.length, 0);
     assert.equal(values.size, 0);
     for (const mail of suite) {
+      assert.match(mail.html, /charset="utf-8"/);
       if (mail.key.startsWith("equipe")) {
         assert.match(mail.html, /Ouvrir les réservations/);
         assert.doesNotMatch(mail.html, /Accéder à ma réservation|guide de peinture/);

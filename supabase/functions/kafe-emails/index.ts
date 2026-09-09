@@ -683,7 +683,7 @@ async function sendGiftCard(order: GiftOrderRow, force = false, preview?: Previe
 
 function shell(title: string, content: string) {
   return `<!doctype html>
-  <html lang="fr"><body style="margin:0;background:#f6e7e7;font-family:Arial,sans-serif;color:#302525">
+  <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="margin:0;background:#f6e7e7;font-family:Arial,sans-serif;color:#302525">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:24px 12px">
       <tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#fff8ef;border:1px solid #dfc7c4;border-radius:20px;overflow:hidden">
         <tr><td style="background:#efcfd3;padding:26px 30px"><div style="font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#8c4939">Kafé Céramik</div><h1 style="margin:8px 0 0;font-size:28px">${escapeHtml(title)}</h1></td></tr>
