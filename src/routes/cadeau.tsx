@@ -17,6 +17,10 @@ import {
   type GiftCardVisual,
 } from "@/lib/admin-data";
 import { createGiftCardCheckout, readGiftCardStatus, type GiftCardOrder } from "@/lib/gift-cards";
+import {
+  formatGiftExpiry,
+  giftExpiryFromPurchase,
+} from "../../supabase/functions/_shared/gift-validity";
 
 export const Route = createFileRoute("/cadeau")({
   ssr: false,
@@ -187,7 +191,7 @@ function CadeauPage() {
               </h2>
               <p className="mt-1 text-sm leading-6">
                 {returnedOrder.status === "paid"
-                  ? `La carte ${returnedOrder.code} a été envoyée à ${returnedOrder.recipientEmail}.`
+                  ? `Tu recevras le PDF de la carte à ${returnedOrder.recipientEmail}.`
                   : "La confirmation peut prendre quelques instants. Le PDF sera envoyé automatiquement dès validation du paiement."}
               </p>
             </div>
@@ -323,8 +327,8 @@ function CadeauPage() {
 
             <div className="mt-6 rounded-2xl bg-secondary/45 p-4 text-sm leading-6 text-muted-foreground">
               La carte est valable {settings.giftCardValidityMonths} mois à compter de son achat et
-              peut être utilisée au Kafé Céramik comme chez Mala Madre. Son code, son montant et sa
-              date d'expiration apparaîtront dans le PDF.
+              peut être utilisée au Kafé Céramik comme chez Mala Madre. Son montant et sa date
+              d'expiration apparaîtront dans le PDF, à présenter à l'équipe lors de la venue.
             </div>
 
             {notice && (
@@ -452,7 +456,10 @@ function GiftPreview({
         <div className="space-y-2 text-[10px] sm:text-xs">
           <div className="break-words">Pour {recipient || "..."}</div>
           <div className="break-words">De {sender || "..."}</div>
-          <div className="pt-1 text-[9px] text-muted-foreground">Valable {validityMonths} mois</div>
+          <div className="pt-1 text-[10px] text-muted-foreground">
+            Valable jusqu'au {formatGiftExpiry(giftExpiryFromPurchase(new Date(), validityMonths))}{" "}
+            pour un achat aujourd'hui
+          </div>
         </div>
       </div>
     </div>

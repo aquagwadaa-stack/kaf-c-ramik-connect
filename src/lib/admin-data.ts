@@ -647,6 +647,7 @@ export interface KafeSettings {
   depositFixedAmount: number;
   defaultCapacity: number;
   slotDurationMinutes: number;
+  cafeClosingTime: string;
   slotIntervalMinutes: number;
   slots: string[];
   scheduleRules: ScheduleRule[];
@@ -851,10 +852,11 @@ export const settingsSeed: KafeSettings = {
   configurationVersion: 13,
   reservationsEnabled: true,
   reservationPauseMessage: "",
-  depositThreshold: 10,
+  depositThreshold: 8,
   depositFixedAmount: 100,
   defaultCapacity: 60,
-  slotDurationMinutes: 120,
+  slotDurationMinutes: 180,
+  cafeClosingTime: "18:30",
   slotIntervalMinutes: 60,
   slots: ["09:30", "10:30", "11:30", "12:30", "13:30", "14:30", "15:30", "16:30"],
   scheduleRules: [
@@ -892,7 +894,7 @@ export const settingsSeed: KafeSettings = {
     childrenAgesRequired: false,
     messageRequired: false,
   },
-  manualConfirmationThreshold: 10,
+  manualConfirmationThreshold: 8,
   groupOutsideFoodNotice:
     "Pour les groupes, les boissons et la nourriture provenant de l'extérieur ne peuvent pas être consommées au Kafé.",
   signatureRequiredOnArrival: true,

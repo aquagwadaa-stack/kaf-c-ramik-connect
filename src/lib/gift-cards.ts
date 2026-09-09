@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invokeEdgeFunction, isSupabaseConfigured, selectRows } from "./supabase-rest";
 import type { GiftCardVisual } from "./admin-data";
 
@@ -44,36 +44,82 @@ function fromRow(row: GiftCardOrderRow): GiftCardOrder {
   };
 }
 
-export function useAdminGiftCardOrders() {
+export function giftOrdersQuery(activeOnly: boolean, search: string, offset = 0, now = new Date()) {
+  const query = new URLSearchParams({
+    select: "id,code,value,status,paid_at,expires_at,pdf_email_sent_at,created_at",
+    order: activeOnly ? "expires_at.asc,id.asc" : "created_at.desc,id.asc",
+    limit: "100",
+    offset: String(offset),
+  });
+  if (activeOnly) {
+    query.set("status", "eq.paid");
+    query.set("expires_at", `gte.${now.toISOString()}`);
+  }
+  const term = search
+    .replace(/[*,()%"\\]/g, " ")
+    .trim()
+    .slice(0, 100);
+  if (term)
+    query.set(
+      "or",
+      `(value->>recipientName.ilike.*${term}*,value->>senderName.ilike.*${term}*,value->>recipientEmail.ilike.*${term}*)`,
+    );
+  return `?${query.toString()}`;
+}
+
+export function useAdminGiftCardOrders(activeOnly = true, search = "") {
   const [orders, setOrders] = useState<GiftCardOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [hasMore, setHasMore] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(search);
+  const requestId = useRef(0);
 
-  const refresh = useCallback(async () => {
-    if (!isSupabaseConfigured()) {
-      setOrders([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const rows = await selectRows<GiftCardOrderRow>(
-        "kafe_gift_card_orders",
-        "?select=id,code,value,status,paid_at,expires_at,pdf_email_sent_at,created_at&order=created_at.desc&limit=100",
-        true,
-      );
-      setOrders(rows.map(fromRow));
-    } catch {
-      setOrders([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSearchTerm(search), 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  const fetchPage = useCallback(
+    async (offset = 0) => {
+      const id = ++requestId.current;
+      if (!isSupabaseConfigured()) {
+        setOrders([]);
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError("");
+      try {
+        const rows = await selectRows<GiftCardOrderRow>(
+          "kafe_gift_card_orders",
+          giftOrdersQuery(activeOnly, searchTerm, offset),
+          true,
+        );
+        if (id !== requestId.current) return;
+        setOrders((previous) => (offset ? [...previous, ...rows.map(fromRow)] : rows.map(fromRow)));
+        setHasMore(rows.length === 100);
+      } catch (cause) {
+        if (id !== requestId.current) return;
+        setError(
+          cause instanceof Error ? cause.message : "Impossible de charger les cartes cadeaux.",
+        );
+      } finally {
+        if (id === requestId.current) setLoading(false);
+      }
+    },
+    [activeOnly, searchTerm],
+  );
+  const refresh = useCallback(() => fetchPage(), [fetchPage]);
 
   useEffect(() => {
     void refresh();
+    return () => {
+      requestId.current += 1;
+    };
   }, [refresh]);
 
-  return { orders, loading, refresh };
+  return { orders, loading, error, hasMore, refresh, loadMore: () => fetchPage(orders.length) };
 }
 
 export async function createGiftCardCheckout(input: {

@@ -53,7 +53,7 @@ export function getPublicSchedule(settings: KafeSettings) {
   }
 
   const primary = rules[0];
-  const closing = toMinutes(primary.endTime) + Math.max(0, settings.slotDurationMinutes || 0);
+  const closing = toMinutes(settings.cafeClosingTime || "18:30");
   const days = formatWeekdays(primary.weekdays);
   const hours = `${formatTime(toMinutes(primary.startTime))} – ${formatTime(closing)}`;
   return { days, hours, inline: `${days} · ${hours}` };

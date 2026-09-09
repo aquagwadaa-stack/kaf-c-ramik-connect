@@ -804,7 +804,7 @@ export function getSeatingAvailability(
   seatingPreference: SeatingPreference = "indifferent",
 ): SeatingAvailability {
   const units = expandSeatingUnits(settings);
-  const duration = Math.max(15, settings.slotDurationMinutes || 120);
+  const duration = Math.max(15, settings.slotDurationMinutes || 180);
   const localIds = new Set(reservations.map((reservation) => reservation.id));
   const active: {
     id: string;

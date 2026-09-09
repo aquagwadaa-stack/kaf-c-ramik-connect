@@ -8,7 +8,7 @@ const source = readFileSync(
   "utf8",
 );
 const compiled = ts.transpileModule(source, {
-  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None },
+  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
 }).outputText;
 for (const current of ["pending", "cancelled", "confirmed", "arrived"]) {
   const changes = [];
@@ -47,7 +47,7 @@ for (const current of ["pending", "cancelled", "confirmed", "arrived"]) {
       serve: () => {},
     },
   });
-  vm.runInContext(compiled, context);
+  vm.runInContext(compiled.replace(/^import .*;$/gm, ""), context);
   await vm.runInContext(
     `processReservationPayment({id:'checkout-test',status:'PAID',amount:100},{reservation_id:'test'})`,
     context,

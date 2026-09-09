@@ -1,3 +1,5 @@
+import { giftExpiryFromPurchase } from "../_shared/gift-validity.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type",
@@ -408,14 +410,15 @@ async function processGiftPayment(checkout: SumUpCheckout, order: GiftOrderRow) 
   const now = new Date();
   const settings = await readSettings();
   const validityMonths = Math.max(1, Number(settings.giftCardValidityMonths ?? 6));
-  const expiresAt = order.expires_at ? new Date(order.expires_at) : new Date(now);
-  if (!order.expires_at) expiresAt.setUTCMonth(expiresAt.getUTCMonth() + validityMonths);
+  const expiresAt =
+    order.expires_at ??
+    giftExpiryFromPurchase((order.value.paidAt as string) || now, validityMonths);
   const firstPaidConfirmation = checkout.status === "PAID" && order.status !== "paid";
   const nextValue = {
     ...order.value,
     status,
     ...(checkout.status === "PAID"
-      ? { paidAt: now.toISOString(), expiresAt: expiresAt.toISOString() }
+      ? { paidAt: order.value.paidAt ?? now.toISOString(), expiresAt }
       : {}),
   };
 
@@ -427,7 +430,7 @@ async function processGiftPayment(checkout: SumUpCheckout, order: GiftOrderRow) 
       value: nextValue,
       updated_at: now.toISOString(),
       ...(checkout.status === "PAID"
-        ? { paid_at: now.toISOString(), expires_at: expiresAt.toISOString() }
+        ? { paid_at: order.value.paidAt ?? now.toISOString(), expires_at: expiresAt }
         : {}),
     }),
   });

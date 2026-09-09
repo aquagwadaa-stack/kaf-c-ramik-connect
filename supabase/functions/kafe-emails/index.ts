@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from "npm:pdf-lib@1.17.1";
 import webpush from "npm:web-push@3.6.7";
+import { formatGiftExpiry } from "../_shared/gift-validity.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,6 +29,7 @@ type ReservationValue = {
   groupQuoteNumber?: string;
   decisionMessage?: string;
   reservationCreatedEmailSentAt?: string;
+  depositReceiptEmailSentAt?: string;
   adminAlertEmailSentAt?: string;
   adminPushSentAt?: string;
   cancellationEmailSentAt?: string;
@@ -81,6 +83,9 @@ type EmailAttachment = {
   filename: string;
   content: string;
 };
+
+type PreviewEmail = { to: string[]; subject: string; html: string; attachments: EmailAttachment[] };
+type PreviewContext = { messages: PreviewEmail[] };
 
 type PushSubscriptionRow = {
   id: string;
@@ -161,7 +166,8 @@ async function readGiftOrder(id: string) {
   return rows[0] ?? null;
 }
 
-async function adminRecipients(settings: SettingsValue) {
+async function adminRecipients(settings: SettingsValue, preview?: PreviewContext) {
+  if (preview) return ["equipe@example.invalid"];
   const profiles = await api<{ email: string | null }[]>(
     "/rest/v1/kafe_admin_profiles?select=email&email=not.is.null",
   );
@@ -178,7 +184,11 @@ async function adminRecipients(settings: SettingsValue) {
   return [...new Set(profiles.map((profile) => profile.email ?? "").filter(Boolean))];
 }
 
-async function sendAdminPush(payload: { title: string; body: string; url: string; tag: string }) {
+async function sendAdminPush(
+  payload: { title: string; body: string; url: string; tag: string },
+  preview?: PreviewContext,
+) {
+  if (preview) return 0;
   if (!vapidPublicKey || !vapidPrivateKey) return 0;
 
   webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
@@ -222,13 +232,32 @@ async function sendEmail(
   subject: string,
   html: string,
   attachments: EmailAttachment[] = [],
+  preview?: PreviewContext,
+  eventKey?: string,
 ) {
+  if (preview) {
+    preview.messages.push({ to, subject, html, attachments });
+    return true;
+  }
+  const key = eventKey
+    ? Array.from(
+        new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(eventKey))),
+      )
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("")
+    : undefined;
+  return Boolean(await deliverEmail({ to, subject, html, attachments }, key));
+}
+
+async function deliverEmail(mail: PreviewEmail, idempotencyKey?: string) {
+  const { to, subject, html, attachments } = mail;
   if (!resendApiKey || !emailFrom || to.length === 0) return false;
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${resendApiKey}`,
       "Content-Type": "application/json",
+      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
     },
     body: JSON.stringify({
       from: emailFrom,
@@ -243,7 +272,7 @@ async function sendEmail(
     console.error("Resend error", response.status, await response.text());
     return false;
   }
-  return true;
+  return (await response.json()) as { id: string };
 }
 
 function formatDate(date: string) {
@@ -269,6 +298,42 @@ function bytesToBase64(bytes: Uint8Array) {
   return btoa(binary);
 }
 
+function pdfText(value: string, font: Awaited<ReturnType<PDFDocument["embedFont"]>>) {
+  return Array.from(value.normalize("NFC"))
+    .map((character) => {
+      try {
+        font.encodeText(character);
+        return character;
+      } catch {
+        return "";
+      }
+    })
+    .join("")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function fittedText(
+  page: ReturnType<PDFDocument["addPage"]>,
+  value: string,
+  font: Awaited<ReturnType<PDFDocument["embedFont"]>>,
+  x: number,
+  y: number,
+  width: number,
+  size: number,
+  color: ReturnType<typeof rgb>,
+) {
+  const text = pdfText(value, font);
+  const measured = font.widthOfTextAtSize(text, size);
+  page.drawText(text, {
+    x,
+    y,
+    font,
+    color,
+    size: measured > width ? (size * width) / measured : size,
+  });
+}
+
 async function createGroupQuote(row: ReservationRow) {
   const ceramicRate = Number(row.value.groupCeramicRatePerPerson ?? 0);
   const mealRate = Number(row.value.groupMealRatePerPerson ?? 0);
@@ -284,6 +349,10 @@ async function createGroupQuote(row: ReservationRow) {
   const mealTotal = mealRate * row.people;
   const total = ceramicTotal + mealTotal;
   const pdf = await PDFDocument.create();
+  // Stable PDF metadata keeps retries compatible with the email idempotency key.
+  const documentDate = new Date(`${row.date}T12:00:00-04:00`);
+  pdf.setCreationDate(documentDate);
+  pdf.setModificationDate(documentDate);
   const page = pdf.addPage([595.28, 841.89]);
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
@@ -331,20 +400,26 @@ async function createGroupQuote(row: ReservationRow) {
     font: regular,
     color: muted,
   });
-  page.drawText(`Client : ${row.value.firstName} ${row.value.lastName}`, {
-    x: 320,
-    y: 711,
-    size: 10,
-    font: bold,
-    color: ink,
-  });
-  page.drawText(`Venue : ${formatDate(row.date)} a ${row.slot}`, {
-    x: 320,
-    y: 695,
-    size: 9,
-    font: regular,
-    color: muted,
-  });
+  fittedText(
+    page,
+    `Client : ${row.value.firstName} ${row.value.lastName}`,
+    bold,
+    320,
+    711,
+    231,
+    10,
+    ink,
+  );
+  fittedText(
+    page,
+    `Venue : ${formatDate(row.date)} a ${row.slot}`,
+    regular,
+    320,
+    695,
+    231,
+    9,
+    muted,
+  );
   page.drawText(`Participants : ${row.people}`, {
     x: 320,
     y: 679,
@@ -459,6 +534,9 @@ function drawRoundedPanel(
 
 async function createGiftCardPdf(order: GiftOrderRow) {
   const pdf = await PDFDocument.create();
+  const documentDate = new Date(order.paid_at ?? order.expires_at ?? "");
+  pdf.setCreationDate(documentDate);
+  pdf.setModificationDate(documentDate);
   const page = pdf.addPage([841.89, 595.28]);
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
@@ -521,21 +599,15 @@ async function createGiftCardPdf(order: GiftOrderRow) {
     color: green,
   });
   page.drawText("CARTE CADEAU", { x: 110, y: 398, size: 42, font: serif, color: ink });
-  page.drawText(`${Math.round(order.amount)} EUR`, {
-    x: 585,
-    y: 400,
-    size: 34,
-    font: serif,
-    color: brown,
-  });
+  fittedText(page, formatMoney(order.amount), serif, 565, 400, 162, 30, brown);
 
   page.drawText("POUR", { x: 112, y: 345, size: 9, font: bold, color: green });
-  page.drawText(order.value.recipientName, { x: 112, y: 315, size: 22, font: bold, color: ink });
+  fittedText(page, order.value.recipientName, bold, 112, 315, 610, 22, ink);
   page.drawText("DE LA PART DE", { x: 112, y: 270, size: 9, font: bold, color: green });
-  page.drawText(order.value.senderName, { x: 112, y: 240, size: 18, font: regular, color: ink });
+  fittedText(page, order.value.senderName, regular, 112, 240, 610, 18, ink);
 
   if (order.value.message?.trim()) {
-    const compactMessage = order.value.message.trim().slice(0, 170);
+    const compactMessage = pdfText(order.value.message.trim().slice(0, 240), regular);
     const words = compactMessage.split(/\s+/);
     const lines = words.reduce<string[]>((result, word) => {
       const currentLine = result.at(-1) ?? "";
@@ -552,22 +624,18 @@ async function createGiftCardPdf(order: GiftOrderRow) {
     }, []);
 
     lines.slice(0, 3).forEach((line, index) => {
-      page.drawText(line, {
-        x: 112,
-        y: 192 - index * 15,
-        size: 11,
-        font: regular,
-        color: ink,
-      });
+      fittedText(page, line, regular, 112, 192 - index * 15, 610, 11, ink);
     });
   }
 
   page.drawLine({ start: { x: 112, y: 145 }, end: { x: 728, y: 145 }, color: pink, thickness: 2 });
-  page.drawText(`Code : ${order.code}`, { x: 112, y: 116, size: 11, font: bold, color: brown });
-  page.drawText(
-    `Valable jusqu'au ${new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(order.expires_at ?? Date.now()))}`,
-    { x: 485, y: 116, size: 10, font: regular, color: ink },
-  );
+  page.drawText(`Valable jusqu'au ${formatGiftExpiry(order.expires_at || "")}`, {
+    x: 112,
+    y: 116,
+    size: 12,
+    font: bold,
+    color: ink,
+  });
   page.drawText("Montant utilisable librement au Kafe Ceramik ou chez Mala Madre.", {
     x: 112,
     y: 91,
@@ -583,22 +651,24 @@ async function createGiftCardPdf(order: GiftOrderRow) {
   } satisfies EmailAttachment;
 }
 
-async function sendGiftCard(order: GiftOrderRow, force = false) {
+async function sendGiftCard(order: GiftOrderRow, force = false, preview?: PreviewContext) {
   if (order.status !== "paid") return { delivered: false, reason: "Paiement non confirme." };
   if (order.pdf_email_sent_at && !force) return { delivered: true, alreadySent: true };
 
   const attachment = await createGiftCardPdf(order);
   const delivered = await sendEmail(
     [order.value.recipientEmail],
-    `Ta carte cadeau Kafe Ceramik - ${Math.round(order.amount)} EUR`,
+    `Ta carte cadeau Kafé Céramik - ${formatMoney(order.amount)}`,
     shell(
-      "Une parenthese creative t'attend",
-      `<p>Bonjour ${escapeHtml(order.value.recipientName)},</p><p><strong>${escapeHtml(order.value.senderName)}</strong> t'offre une carte cadeau Kafe Ceramik d'une valeur de <strong>${escapeHtml(formatMoney(order.amount))}</strong>.</p>${order.value.message?.trim() ? `<div style="margin:18px 0;padding:16px;background:#f4dddd;border-radius:14px">${escapeHtml(order.value.message)}</div>` : ""}<p>Ta carte personnalisee est jointe a cet e-mail au format PDF. Elle est valable jusqu'au <strong>${escapeHtml(new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "long", year: "numeric" }).format(new Date(order.expires_at ?? Date.now())))}</strong> et son montant peut etre utilise librement au Kafe Ceramik ou chez Mala Madre.</p><p>Code de la carte : <strong>${escapeHtml(order.code)}</strong></p>`,
+      "Une parenthèse créative t'attend",
+      `<p>Bonjour ${escapeHtml(order.value.recipientName)},</p><p><strong>${escapeHtml(order.value.senderName)}</strong> t'offre une carte cadeau Kafé Céramik d'une valeur de <strong>${escapeHtml(formatMoney(order.amount))}</strong>.</p>${order.value.message?.trim() ? `<div style="margin:18px 0;padding:16px;background:#f4dddd;border-radius:14px">${escapeHtml(order.value.message)}</div>` : ""}<p>Ta carte personnalisée est jointe à cet e-mail au format PDF. Elle est valable jusqu'au <strong>${escapeHtml(formatGiftExpiry(order.expires_at || "", true))}</strong> et son montant peut être utilisé librement au Kafé Céramik ou chez Mala Madre.</p><p>Présente ta carte à l'équipe lors de ta venue.</p>`,
     ),
     [attachment],
+    preview,
+    `gift-${order.id}-${force ? crypto.randomUUID() : "paid"}`,
   );
 
-  if (delivered) {
+  if (delivered && !preview) {
     await api<void>(`/rest/v1/kafe_gift_card_orders?id=eq.${encodeURIComponent(order.id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
@@ -627,16 +697,21 @@ function details(
   row: ReservationRow,
   settings: SettingsValue,
   siteUrl: string,
-  options: { includeGuideReminder?: boolean } = {},
+  options: { includeGuideReminder?: boolean; audience?: "customer" | "admin" } = {},
 ) {
   const { includeGuideReminder = true } = options;
   const guideReminder =
-    !includeGuideReminder || row.value.experience === "brunch_atelier"
+    !includeGuideReminder ||
+    options.audience === "admin" ||
+    row.value.experience === "brunch_atelier"
       ? ""
       : `<p><strong>Avant de venir :</strong> prends quelques minutes pour relire le <a href="${escapeHtml(siteUrl)}/guide" style="color:#914735">guide de peinture</a>. Ses consignes sont importantes pour la cuisson et la récupération de ta création.</p>`;
-  const reservationPortal = row.value.managementToken
-    ? `<p style="margin:22px 0"><a href="${escapeHtml(siteUrl)}/reservation?token=${encodeURIComponent(row.value.managementToken)}" style="display:inline-block;background:#914735;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:999px;font-weight:700">Accéder à ma réservation</a></p>`
-    : "";
+  const reservationPortal =
+    options.audience === "admin"
+      ? `<p style="margin:22px 0"><a href="${escapeHtml(siteUrl)}/admin" style="display:inline-block;background:#914735;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:999px;font-weight:700">Ouvrir les réservations</a></p>`
+      : row.value.managementToken
+        ? `<p style="margin:22px 0"><a href="${escapeHtml(siteUrl)}/reservation?token=${encodeURIComponent(row.value.managementToken)}" style="display:inline-block;background:#914735;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:999px;font-weight:700">Accéder à ma réservation</a></p>`
+        : "";
   return `
     <div style="margin:20px 0;padding:18px;background:#f4dddd;border-radius:14px">
       <strong>${escapeHtml(formatDate(row.date))} à ${escapeHtml(row.slot)}</strong><br>
@@ -648,7 +723,15 @@ function details(
     ${reservationPortal}`;
 }
 
-async function markReservation(row: ReservationRow, patch: Partial<ReservationValue>) {
+async function markReservation(
+  row: ReservationRow,
+  patch: Partial<ReservationValue>,
+  preview?: PreviewContext,
+) {
+  if (preview) {
+    row.value = { ...row.value, ...patch };
+    return;
+  }
   const value = await api<ReservationValue | null>("/rest/v1/rpc/mark_kafe_reservation_email", {
     method: "POST",
     body: JSON.stringify({ p_id: row.id, p_patch: patch }),
@@ -672,7 +755,13 @@ async function requireAdmin(request: Request) {
   return profiles.length > 0;
 }
 
-async function reservationCreated(row: ReservationRow, settings: SettingsValue, siteUrl: string) {
+async function reservationCreated(
+  row: ReservationRow,
+  settings: SettingsValue,
+  siteUrl: string,
+  preview?: PreviewContext,
+) {
+  if (!["pending", "deposit_paid", "confirmed", "arrived"].includes(row.status)) return false;
   const isGroup =
     row.value.experience !== "brunch_atelier" &&
     (row.value.isGroupRequest ||
@@ -698,19 +787,47 @@ async function reservationCreated(row: ReservationRow, settings: SettingsValue, 
       isGroup ? "Ta demande de groupe – Kafé Céramik" : "Ta réservation – Kafé Céramik",
       shell(title, `${intro}${quoteSummary}${details(row, settings, siteUrl)}`),
       attachments,
+      preview,
+      `${row.id}-created-customer`,
     );
     if (customerDelivered) {
-      await markReservation(row, {
-        reservationCreatedEmailSentAt: new Date().toISOString(),
-        ...(groupQuote
-          ? { groupQuoteNumber: groupQuote.quoteNumber, groupQuoteTotal: groupQuote.total }
-          : {}),
-      });
+      await markReservation(
+        row,
+        {
+          reservationCreatedEmailSentAt: new Date().toISOString(),
+          ...(row.value.depositPaid ? { depositReceiptEmailSentAt: new Date().toISOString() } : {}),
+          ...(groupQuote
+            ? { groupQuoteNumber: groupQuote.quoteNumber, groupQuoteTotal: groupQuote.total }
+            : {}),
+        },
+        preview,
+      );
     }
   }
 
+  if (
+    isGroup &&
+    customerDelivered &&
+    row.value.depositPaid &&
+    !row.value.depositReceiptEmailSentAt
+  ) {
+    const received = await sendEmail(
+      [row.value.email],
+      "Ton acompte est bien reçu – Kafé Céramik",
+      shell(
+        "Acompte reçu",
+        `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Ton acompte de <strong>${escapeHtml(row.value.depositAmount ?? 100)} €</strong> est bien reçu.${row.status === "confirmed" || row.status === "arrived" ? " Ta réservation est confirmée." : " Ta demande reste en attente de validation par l'équipe."}</p>${details(row, settings, siteUrl)}`,
+      ),
+      [],
+      preview,
+      `${row.id}-deposit-receipt`,
+    );
+    if (received)
+      await markReservation(row, { depositReceiptEmailSentAt: new Date().toISOString() }, preview);
+  }
+
   if (!adminDelivered) {
-    const recipients = await adminRecipients(settings);
+    const recipients = await adminRecipients(settings, preview);
     adminDelivered = await sendEmail(
       recipients,
       isGroup
@@ -718,25 +835,33 @@ async function reservationCreated(row: ReservationRow, settings: SettingsValue, 
         : `Nouvelle réservation – ${row.people} personne${row.people > 1 ? "s" : ""}`,
       shell(
         isGroup ? "Nouvelle demande à valider" : "Nouvelle réservation",
-        `<p><strong>${escapeHtml(row.value.firstName)} ${escapeHtml(row.value.lastName)}</strong> souhaite réserver pour ${row.people} personnes.</p>${quoteSummary}${details(row, settings, siteUrl)}${isGroup ? "<p>Ouvrez l'espace équipe pour accepter ou refuser la demande.</p>" : "<p>Aucune validation n'est nécessaire.</p>"}`,
+        `<p><strong>${escapeHtml(row.value.firstName)} ${escapeHtml(row.value.lastName)}</strong> souhaite réserver pour ${row.people} personnes.</p>${quoteSummary}${details(row, settings, siteUrl, { audience: "admin" })}${isGroup ? `<p>Acompte : ${row.value.depositPaid ? "payé" : "en attente"}. Ouvrez l'espace équipe pour accepter ou refuser la demande.</p>` : "<p>Aucune validation n'est nécessaire.</p>"}`,
       ),
       attachments,
+      preview,
+      `${row.id}-created-admin`,
     );
     if (adminDelivered) {
-      await markReservation(row, { adminAlertEmailSentAt: new Date().toISOString() });
+      await markReservation(row, { adminAlertEmailSentAt: new Date().toISOString() }, preview);
     }
   }
 
   if (!row.value.adminPushSentAt) {
-    const pushed = await sendAdminPush({
-      title: isGroup ? "Nouvelle demande de groupe" : "Nouvelle réservation",
-      body: `${row.value.firstName} ${row.value.lastName} · ${row.people} pers. · ${formatDate(row.date)} à ${row.slot}`,
-      url: `${siteUrl}/admin`,
-      tag: `reservation-${row.id}`,
-    });
-    if (pushed > 0) await markReservation(row, { adminPushSentAt: new Date().toISOString() });
+    const pushed = await sendAdminPush(
+      {
+        title: isGroup ? "Nouvelle demande de groupe" : "Nouvelle réservation",
+        body: `${row.value.firstName} ${row.value.lastName} · ${row.people} pers. · ${formatDate(row.date)} à ${row.slot}`,
+        url: `${siteUrl}/admin`,
+        tag: `reservation-${row.id}`,
+      },
+      preview,
+    );
+    if (pushed > 0)
+      await markReservation(row, { adminPushSentAt: new Date().toISOString() }, preview);
   }
 
+  if (customerDelivered && row.status === "confirmed")
+    await sendReminder(row, settings, siteUrl, new Date(), preview);
   return customerDelivered && adminDelivered;
 }
 
@@ -746,7 +871,10 @@ async function groupDecision(
   siteUrl: string,
   approved: boolean,
   message: string,
+  preview?: PreviewContext,
 ) {
+  if (approved ? row.status !== "confirmed" || !row.value.depositPaid : row.status !== "cancelled")
+    return false;
   if (row.value.decisionEmailSentAt) return true;
   const reason = message.trim() || row.value.decisionMessage?.trim() || "";
   const content = approved
@@ -756,12 +884,24 @@ async function groupDecision(
     [row.value.email],
     approved ? "Ta demande de groupe est validée" : "Réponse à ta demande de groupe",
     shell(approved ? "Demande validée" : "Demande non retenue", content),
+    [],
+    preview,
+    `${row.id}-decision-${approved ? "approved" : "rejected"}`,
   );
-  if (delivered) await markReservation(row, { decisionEmailSentAt: new Date().toISOString() });
+  if (delivered) {
+    await markReservation(row, { decisionEmailSentAt: new Date().toISOString() }, preview);
+    if (approved) await sendReminder(row, settings, siteUrl, new Date(), preview);
+  }
   return delivered;
 }
 
-async function reservationCancelled(row: ReservationRow, settings: SettingsValue, siteUrl: string) {
+async function reservationCancelled(
+  row: ReservationRow,
+  settings: SettingsValue,
+  siteUrl: string,
+  preview?: PreviewContext,
+) {
+  if (row.status !== "cancelled") return false;
   let customerDelivered = Boolean(row.value.cancellationEmailSentAt);
   let adminDelivered = Boolean(row.value.adminCancellationAlertEmailSentAt);
 
@@ -773,36 +913,53 @@ async function reservationCancelled(row: ReservationRow, settings: SettingsValue
         "Réservation annulée",
         `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Ta réservation au Kafé Céramik a bien été annulée.</p>${details(row, settings, siteUrl, { includeGuideReminder: false })}<p>Pour toute question, tu peux contacter le Kafé au ${escapeHtml(settings.contactPhone ?? "0690 28 47 88")}.</p>`,
       ),
+      [],
+      preview,
+      `${row.id}-cancelled-customer`,
     );
     if (customerDelivered) {
-      await markReservation(row, { cancellationEmailSentAt: new Date().toISOString() });
+      await markReservation(row, { cancellationEmailSentAt: new Date().toISOString() }, preview);
     }
   }
 
   if (!adminDelivered) {
-    const recipients = await adminRecipients(settings);
+    const recipients = await adminRecipients(settings, preview);
     adminDelivered = await sendEmail(
       recipients,
       `Réservation annulée – ${row.people} personne${row.people > 1 ? "s" : ""}`,
       shell(
         "Réservation annulée",
-        `<p>La réservation de <strong>${escapeHtml(row.value.firstName)} ${escapeHtml(row.value.lastName)}</strong> est annulée.</p>${details(row, settings, siteUrl, { includeGuideReminder: false })}`,
+        `<p>La réservation de <strong>${escapeHtml(row.value.firstName)} ${escapeHtml(row.value.lastName)}</strong> est annulée.</p>${details(row, settings, siteUrl, { includeGuideReminder: false, audience: "admin" })}`,
       ),
+      [],
+      preview,
+      `${row.id}-cancelled-admin`,
     );
     if (adminDelivered) {
-      await markReservation(row, { adminCancellationAlertEmailSentAt: new Date().toISOString() });
+      await markReservation(
+        row,
+        { adminCancellationAlertEmailSentAt: new Date().toISOString() },
+        preview,
+      );
     }
   }
 
   if (!row.value.adminCancellationPushSentAt) {
-    const pushed = await sendAdminPush({
-      title: "Réservation annulée",
-      body: `${row.value.firstName} ${row.value.lastName} · ${row.people} pers. · ${formatDate(row.date)} à ${row.slot}`,
-      url: `${siteUrl}/admin`,
-      tag: `cancellation-${row.id}`,
-    });
+    const pushed = await sendAdminPush(
+      {
+        title: "Réservation annulée",
+        body: `${row.value.firstName} ${row.value.lastName} · ${row.people} pers. · ${formatDate(row.date)} à ${row.slot}`,
+        url: `${siteUrl}/admin`,
+        tag: `cancellation-${row.id}`,
+      },
+      preview,
+    );
     if (pushed > 0) {
-      await markReservation(row, { adminCancellationPushSentAt: new Date().toISOString() });
+      await markReservation(
+        row,
+        { adminCancellationPushSentAt: new Date().toISOString() },
+        preview,
+      );
     }
   }
 
@@ -812,36 +969,197 @@ async function reservationCancelled(row: ReservationRow, settings: SettingsValue
 async function processReminders(settings: SettingsValue, siteUrl: string) {
   const today = new Date();
   const end = new Date(today.getTime() + 48 * 60 * 60 * 1000);
-  const fromDate = today.toISOString().slice(0, 10);
+  const fromDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guadeloupe" }).format(
+    today,
+  );
   const toDate = end.toISOString().slice(0, 10);
   const rows = await api<ReservationRow[]>(
     `/rest/v1/kafe_reservations?select=id,value,date,slot,people,status&status=eq.confirmed&date=gte.${fromDate}&date=lte.${toDate}`,
   );
   let sent = 0;
   for (const row of rows) {
-    if (row.value.reminderEmailSentAt || !row.value.email) continue;
-    const slotDate = new Date(`${row.date}T${row.slot}:00-04:00`);
-    const hoursUntil = (slotDate.getTime() - Date.now()) / (60 * 60 * 1000);
-    if (hoursUntil <= 0 || hoursUntil > 24) continue;
-    const isBrunch = row.value.experience === "brunch_atelier";
-    const localToday = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guadeloupe" }).format(
-      today,
-    );
-    const dayLabel = row.date === localToday ? "aujourd'hui" : "demain";
-    const delivered = await sendEmail(
-      [row.value.email],
-      `Rappel : ${isBrunch ? "ton brunch" : "ton atelier"} ${dayLabel} – Kafé Céramik`,
-      shell(
-        `${isBrunch ? "Ton brunch" : "Ton atelier"}, c'est ${dayLabel}`,
-        `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Petit rappel pour ${isBrunch ? "ton brunch" : "ton atelier"} au Kafé Céramik.</p>${details(row, settings, siteUrl)}<p>À très vite !</p>`,
-      ),
-    );
-    if (delivered) {
-      sent += 1;
-      await markReservation(row, { reminderEmailSentAt: new Date().toISOString() });
-    }
+    if (await sendReminder(row, settings, siteUrl, today)) sent += 1;
   }
   return sent;
+}
+
+async function sendReminder(
+  row: ReservationRow,
+  settings: SettingsValue,
+  siteUrl: string,
+  today = new Date(),
+  preview?: PreviewContext,
+) {
+  if (row.status !== "confirmed" || row.value.reminderEmailSentAt || !row.value.email) return false;
+  const slotDate = new Date(`${row.date}T${row.slot}:00-04:00`);
+  const hoursUntil = (slotDate.getTime() - today.getTime()) / (60 * 60 * 1000);
+  if (hoursUntil <= 0 || hoursUntil > 24) return false;
+  const isBrunch = row.value.experience === "brunch_atelier";
+  const localToday = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guadeloupe" }).format(
+    today,
+  );
+  const dayLabel = row.date === localToday ? "aujourd'hui" : "demain";
+  const delivered = await sendEmail(
+    [row.value.email],
+    `Rappel : ${isBrunch ? "ton brunch" : "ton atelier"} ${dayLabel} – Kafé Céramik`,
+    shell(
+      `${isBrunch ? "Ton brunch" : "Ton atelier"}, c'est ${dayLabel}`,
+      `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Petit rappel pour ${isBrunch ? "ton brunch" : "ton atelier"} au Kafé Céramik.</p>${details(row, settings, siteUrl)}<p>À très vite !</p>`,
+    ),
+    [],
+    preview,
+    `${row.id}-reminder`,
+  );
+  if (delivered) {
+    await markReservation(row, { reminderEmailSentAt: new Date().toISOString() }, preview);
+  }
+  return delivered;
+}
+
+async function buildEmailPreviewSuite(settings: SettingsValue) {
+  const result: (PreviewEmail & { key: string })[] = [];
+  const base = (
+    patch: Partial<ReservationRow> = {},
+    value: Partial<ReservationValue> = {},
+  ): ReservationRow => ({
+    id: "preview-only",
+    date: "2026-10-15",
+    slot: "10:30",
+    people: 2,
+    status: "confirmed",
+    ...patch,
+    value: {
+      id: "preview-only",
+      firstName: "Camille",
+      lastName: "Exemple",
+      email: "client@example.invalid",
+      phone: "0000000000",
+      experience: "cafe_atelier",
+      people: patch.people ?? 2,
+      date: "2026-10-15",
+      slot: "10:30",
+      status: patch.status ?? "confirmed",
+      managementToken: "preview-no-reservation",
+      ...value,
+    },
+  });
+  const collect = async (keys: string[], run: (preview: PreviewContext) => Promise<unknown>) => {
+    const preview: PreviewContext = { messages: [] };
+    await run(preview);
+    if (keys.length !== preview.messages.length)
+      throw new Error("Unexpected preview template count");
+    preview.messages.forEach((mail, index) => result.push({ ...mail, key: keys[index] }));
+  };
+  const site = canonicalSiteUrl;
+  await collect(["client-confirmation-atelier", "equipe-reservation-atelier"], (p) =>
+    reservationCreated(base(), settings, site, p),
+  );
+  await collect(["client-confirmation-brunch", "equipe-reservation-brunch"], (p) =>
+    reservationCreated(base({}, { experience: "brunch_atelier" }), settings, site, p),
+  );
+  await collect(["client-groupe-en-attente", "equipe-groupe-a-valider"], (p) =>
+    reservationCreated(
+      base(
+        { people: 8, status: "pending" },
+        {
+          isGroupRequest: true,
+          depositRequired: true,
+          depositAmount: 100,
+          groupCeramicRatePerPerson: 35,
+          groupMealRatePerPerson: 20,
+        },
+      ),
+      settings,
+      site,
+      p,
+    ),
+  );
+  await collect(["client-groupe-acompte-recu", "equipe-groupe-acompte-recu"], (p) =>
+    reservationCreated(
+      base(
+        { people: 8, status: "deposit_paid" },
+        { isGroupRequest: true, depositRequired: true, depositPaid: true, depositAmount: 100 },
+      ),
+      settings,
+      site,
+      p,
+    ),
+  );
+  await collect(["client-recu-apres-paiement"], (p) =>
+    reservationCreated(
+      base(
+        { people: 8, status: "deposit_paid" },
+        {
+          isGroupRequest: true,
+          depositRequired: true,
+          depositPaid: true,
+          depositAmount: 100,
+          reservationCreatedEmailSentAt: "2026-09-08",
+          adminAlertEmailSentAt: "2026-09-08",
+        },
+      ),
+      settings,
+      site,
+      p,
+    ),
+  );
+  await collect(["client-groupe-accepte"], (p) =>
+    groupDecision(base({ people: 8 }, { depositPaid: true }), settings, site, true, "", p),
+  );
+  await collect(["client-groupe-refuse"], (p) =>
+    groupDecision(
+      base({ people: 8, status: "cancelled" }, { depositPaid: true }),
+      settings,
+      site,
+      false,
+      "Nous ne pouvons pas accueillir ce groupe à l'horaire demandé. Appelle-nous pour choisir un autre créneau.",
+      p,
+    ),
+  );
+  await collect(["client-annulation", "equipe-annulation"], (p) =>
+    reservationCancelled(base({ status: "cancelled" }), settings, site, p),
+  );
+  await collect(["client-rappel-atelier-24h"], (p) =>
+    sendReminder(base(), settings, site, new Date("2026-10-14T10:30:00-04:00"), p),
+  );
+  await collect(["client-rappel-brunch-24h"], (p) =>
+    sendReminder(
+      base({}, { experience: "brunch_atelier" }),
+      settings,
+      site,
+      new Date("2026-10-14T10:30:00-04:00"),
+      p,
+    ),
+  );
+  await collect(["client-rappel-jour-meme"], (p) =>
+    sendReminder(base(), settings, site, new Date("2026-10-15T08:00:00-04:00"), p),
+  );
+  for (const visual of ["rose", "tropical", "confetti"] as const) {
+    await collect([`beneficiaire-cadeau-${visual}`], (p) =>
+      sendGiftCard(
+        {
+          id: `preview-${visual}`,
+          code: "EXEMPLE-NON-VALABLE",
+          value: {
+            recipientName: "Camille Exemple",
+            recipientEmail: "beneficiaire@example.invalid",
+            senderName: "Louis Exemple",
+            message:
+              "Pour un joli moment créatif. Ceci est une carte de démonstration sans valeur.",
+            visual,
+          },
+          amount: 60,
+          status: "paid",
+          paid_at: "2026-09-08T15:30:00Z",
+          expires_at: "2027-03-09T03:59:59.999Z",
+          pdf_email_sent_at: null,
+        },
+        false,
+        p,
+      ),
+    );
+  }
+  return result;
 }
 
 Deno.serve(async (request) => {
@@ -856,8 +1174,43 @@ Deno.serve(async (request) => {
       managementToken?: string;
       message?: string;
       siteUrl?: string;
+      previewKey?: string;
     };
     const action = body.action ?? "";
+    if (action === "preview-list" || action === "send-preview") {
+      if (!serviceRoleKey || request.headers.get("Authorization") !== `Bearer ${serviceRoleKey}`)
+        return json({ error: "Unauthorized" }, 401);
+      const previews = await buildEmailPreviewSuite(await readSettings());
+      if (action === "preview-list")
+        return json({
+          previews: previews.map(({ key, subject, attachments }) => ({
+            key,
+            subject,
+            attachments: attachments.map((a) => a.filename),
+          })),
+        });
+      const mail = previews.find((item) => item.key === body.previewKey);
+      if (!mail) return json({ error: "Unknown preview" }, 400);
+      const recipient = "gwada.web.studio@gmail.com";
+      const receipt = await deliverEmail(
+        {
+          ...mail,
+          to: [recipient],
+          subject: `[TEST Kafé · ${mail.key}] ${mail.subject}`,
+          html: mail.html.replace(
+            /<body([^>]*)>/,
+            `<body$1><p style="padding:12px;font:14px Arial;color:#302525;background:#fff">TEST POUR LOUIS : données fictives, aucune réservation ni carte utilisable. Les liens de réservation de cet exemple ne correspondent pas à un dossier réel.</p>`,
+          ),
+        },
+        `kafe-preview-20260908-v1-${mail.key}`,
+      );
+      return json({
+        accepted: Boolean(receipt),
+        id: receipt ? receipt.id : null,
+        recipient,
+        key: mail.key,
+      });
+    }
     const siteUrl = canonicalSiteUrl;
     const settings = await readSettings();
 

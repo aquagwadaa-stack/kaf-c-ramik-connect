@@ -30,6 +30,7 @@ import {
   PackageOpen,
   Plus,
   QrCode,
+  RefreshCw,
   Search,
   Settings,
   ShieldCheck,
@@ -86,6 +87,7 @@ import {
 } from "@/lib/admin-data";
 import { useAdminGuestbookEntries, type GuestbookEntry } from "@/lib/guestbook";
 import { resendGiftCardPdf, useAdminGiftCardOrders, type GiftCardOrder } from "@/lib/gift-cards";
+import { formatGiftExpiry, giftIsValid } from "../../supabase/functions/_shared/gift-validity";
 import { storeDocumentFile } from "@/lib/document-files";
 import {
   deleteAdminFileByPublicUrl,
@@ -3269,8 +3271,102 @@ function GiftCardsPanel({
   settings: KafeSettings;
   saveSettings: (next: KafeSettings) => void;
 }) {
-  const { orders, loading, refresh } = useAdminGiftCardOrders();
+  const [showHistory, setShowHistory] = useState(false);
+  const [search, setSearch] = useState("");
+  const { orders, loading, error, hasMore, refresh, loadMore } = useAdminGiftCardOrders(
+    !showHistory,
+    search,
+  );
   const [resendingId, setResendingId] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const orderList = (
+    <section className="mb-6 border-b border-border pb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="font-display text-xl">
+          {showHistory ? "Historique des cartes" : "Cartes cadeaux encore valables"}
+        </h3>
+        <button
+          type="button"
+          onClick={() => void refresh()}
+          disabled={loading}
+          title="Actualiser les cartes"
+          aria-label="Actualiser les cartes"
+          className="grid h-10 w-10 place-items-center rounded-full border border-border disabled:opacity-45"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+        </button>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <Field
+          label="Rechercher un bénéficiaire, un acheteur ou un email"
+          value={search}
+          onChange={setSearch}
+        />
+        <ToggleRow label="Afficher l'historique" checked={showHistory} onChange={setShowHistory} />
+      </div>
+      {error && (
+        <p role="alert" className="mt-3 text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p role="status" className="mt-3 text-sm">
+          {notice}
+        </p>
+      )}
+      <div className="mt-4 grid gap-3">
+        {loading && (
+          <p role="status" className="text-sm text-muted-foreground">
+            Chargement des cartes cadeaux...
+          </p>
+        )}
+        {!loading && !error && orders.length === 0 && (
+          <EmptyState
+            text={
+              search
+                ? "Aucune carte ne correspond à cette recherche."
+                : showHistory
+                  ? "Aucune carte cadeau achetée pour le moment."
+                  : "Aucune carte cadeau encore valable."
+            }
+          />
+        )}
+        {orders.map((order) => (
+          <GiftCardOrderCard
+            key={order.id}
+            order={order}
+            resending={resendingId === order.id}
+            onResend={async () => {
+              setResendingId(order.id);
+              setNotice("");
+              try {
+                const result = await resendGiftCardPdf(order.id);
+                if (!result.delivered)
+                  throw new Error(result.reason || "Le PDF n'a pas pu être envoyé.");
+                setNotice("Le PDF a été envoyé au bénéficiaire.");
+                await refresh();
+              } catch (cause) {
+                setNotice(cause instanceof Error ? cause.message : "Impossible d'envoyer le PDF.");
+              } finally {
+                setResendingId("");
+              }
+            }}
+          />
+        ))}
+      </div>
+      {hasMore && (
+        <button
+          type="button"
+          onClick={() => void loadMore()}
+          disabled={loading}
+          className="mt-4 inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm disabled:opacity-45"
+        >
+          <ChevronDown className="h-4 w-4" /> Voir plus
+        </button>
+      )}
+    </section>
+  );
 
   function update(patch: Partial<KafeSettings>) {
     saveSettings({ ...settings, ...patch });
@@ -3303,8 +3399,9 @@ function GiftCardsPanel({
   return (
     <Panel
       title="Cartes cadeaux"
-      desc="Configurez l'offre publique et retrouvez les cartes achetées après leur paiement SumUp."
+      desc="Retrouvez les bénéficiaires et la validité de leurs cartes, puis gérez l'offre publique."
     >
+      {orderList}
       <div className="grid gap-4 md:grid-cols-2">
         <Field
           label="Email de contact affiché si le paiement est indisponible"
@@ -3427,47 +3524,6 @@ function GiftCardsPanel({
         ))}
       </div>
 
-      <div className="mt-6 border-t border-border pt-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="font-display text-xl">Cartes achetées</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Le code, la validité et l'envoi du PDF sont enregistrés après paiement.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => void refresh()}
-            className="rounded-full border border-border bg-background px-4 py-2 text-sm hover:bg-secondary"
-          >
-            Actualiser
-          </button>
-        </div>
-
-        <div className="mt-4 grid gap-3">
-          {loading && <EmptyState text="Chargement des cartes cadeaux..." />}
-          {!loading && orders.length === 0 && (
-            <EmptyState text="Aucune carte cadeau achetée pour le moment." />
-          )}
-          {orders.map((order) => (
-            <GiftCardOrderCard
-              key={order.id}
-              order={order}
-              resending={resendingId === order.id}
-              onResend={async () => {
-                setResendingId(order.id);
-                try {
-                  await resendGiftCardPdf(order.id);
-                  await refresh();
-                } finally {
-                  setResendingId("");
-                }
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
       <div className="mt-5 rounded-2xl border border-mustard/40 bg-mustard/10 p-4 text-sm leading-6">
         N'activez le paiement qu'après le test du compte SumUp du Kafé. Une fois activé, chaque
         paiement génère une carte personnalisée valable {settings.giftCardValidityMonths} mois et
@@ -3493,23 +3549,28 @@ function GiftCardOrderCard({
     expired: "Paiement expiré",
   };
   return (
-    <article className="rounded-2xl border border-border bg-background p-4">
+    <article className="min-w-0 rounded-2xl border border-border bg-background p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0 flex-1 break-words">
           <div className="font-medium">
-            {order.code} · {order.amount} €
+            {order.recipientName} · {order.amount} €
           </div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            Pour {order.recipientName} · {order.recipientEmail}
+          <div className="mt-1 break-words text-sm text-muted-foreground">
+            De {order.senderName} · {order.recipientEmail}
           </div>
           <div className="mt-1 text-xs text-muted-foreground">
-            Achetée le {new Date(order.createdAt).toLocaleDateString("fr-FR")}
-            {order.expiresAt &&
-              ` · valable jusqu'au ${new Date(order.expiresAt).toLocaleDateString("fr-FR")}`}
+            Achetée le {formatGiftExpiry(order.paidAt || order.createdAt)}
+            {order.expiresAt && ` · valable jusqu'au ${formatGiftExpiry(order.expiresAt)}`}
           </div>
         </div>
-        <InfoPill tone={order.status === "paid" ? "success" : undefined}>
-          {labels[order.status]}
+        <InfoPill tone={giftIsValid(order) ? "success" : undefined}>
+          {order.status === "paid"
+            ? giftIsValid(order)
+              ? "Valable"
+              : order.expiresAt
+                ? "Validité expirée"
+                : "Validité à vérifier"
+            : labels[order.status]}
         </InfoPill>
       </div>
       {order.status === "paid" && (
@@ -4060,10 +4121,10 @@ function SettingsPanel({
               onChange={(value) => update({ depositFixedAmount: value })}
             />
             <NumberField
-              label="Durée minimale d'un créneau"
+              label="Durée de blocage d'une table"
               value={settings.slotDurationMinutes}
               suffix="minutes"
-              onChange={(value) => update({ slotDurationMinutes: value })}
+              onChange={(value) => update({ slotDurationMinutes: Math.max(15, Math.round(value)) })}
             />
             <IntervalField
               value={settings.slotIntervalMinutes}
@@ -4074,6 +4135,11 @@ function SettingsPanel({
               value={settings.maximumVisitHours}
               suffix="heures"
               onChange={(maximumVisitHours) => update({ maximumVisitHours })}
+            />
+            <TimeField
+              label="Fermeture du Kafé"
+              value={settings.cafeClosingTime}
+              onChange={(cafeClosingTime) => update({ cafeClosingTime })}
             />
             <TimeField
               label="Fermeture de la cuisine"
