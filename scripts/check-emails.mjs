@@ -263,7 +263,11 @@ await run(
       fs.writeFileSync(
         path.join(folder, "index.json"),
         JSON.stringify(
-          suite.map(({ key, subject }) => ({ key, subject })),
+          suite.map(({ key, subject, attachments }) => ({
+            key,
+            subject,
+            attachments: attachments.map((a) => `${key}-${a.filename}`),
+          })),
           null,
           2,
         ),
