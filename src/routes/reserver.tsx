@@ -9,7 +9,6 @@ import {
   ChevronRight,
   Coffee,
   CroissantIcon,
-  MapPin,
   Minus,
   Palette,
   Plus,
@@ -36,7 +35,6 @@ import {
   useReservations,
   type ExperienceType,
   type Reservation,
-  type SeatingPreference,
   type SlotOccupancy,
 } from "@/lib/reservations";
 
@@ -83,7 +81,6 @@ function ReserverPage() {
   const [step, setStep] = useState(1);
   const [experience, setExperience] = useState<ExperienceType>("cafe_atelier");
   const [people, setPeople] = useState(2);
-  const [seatingPreference, setSeatingPreference] = useState<SeatingPreference>("indifferent");
   const [date, setDate] = useState("");
   const [slot, setSlot] = useState("");
   const [form, setForm] = useState({
@@ -212,15 +209,7 @@ function ReserverPage() {
       return;
     }
 
-    const placement = getSlotPlacement(
-      reservations,
-      occupancies,
-      date,
-      slot,
-      people,
-      settings,
-      seatingPreference,
-    );
+    const placement = getSlotPlacement(reservations, occupancies, date, slot, people, settings);
     if (!placement.unitId) {
       setErrors({
         slot:
@@ -270,7 +259,7 @@ function ReserverPage() {
         guideAccepted: isCeramicBooking ? guideAccepted : false,
         seatingUnitId: placement.unitId,
         seatingAllocations: placement.allocations,
-        seatingPreference,
+        seatingPreference: "indifferent",
         depositPaid: false,
         depositRequired,
         depositAmount: deposit,
@@ -445,42 +434,6 @@ function ReserverPage() {
                 </p>
               </div>
 
-              <div className="mt-6">
-                <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-                  <MapPin className="h-4 w-4 text-primary" />
-                  Où préfères-tu t'installer ?
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {[
-                    ["indifferent", "Peu importe"],
-                    ["interieur", "Intérieur"],
-                    ["exterieur", "Extérieur"],
-                    ["carbet", "Carbet"],
-                  ].map(([value, label]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => {
-                        setSeatingPreference(value as SeatingPreference);
-                        setDate("");
-                        setSlot("");
-                      }}
-                      className={`min-h-11 rounded-xl border px-3 py-2 text-sm transition ${
-                        seatingPreference === value
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-background hover:bg-secondary"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                  Le système choisira ensuite automatiquement la ou les tables les mieux adaptées
-                  dans la zone sélectionnée.
-                </p>
-              </div>
-
               {requiresManualReview && (
                 <div className="mt-4 rounded-xl bg-rose/20 p-3 text-sm">
                   Cette demande passera en validation équipe avant confirmation définitive.
@@ -493,7 +446,6 @@ function ReserverPage() {
             <Step title="Choisis un créneau">
               <WeekPlanner
                 people={people}
-                seatingPreference={seatingPreference}
                 reservations={reservations}
                 occupancies={occupancies}
                 settings={settings}
@@ -946,7 +898,6 @@ function Stepper({ step }: { step: number }) {
 
 function WeekPlanner({
   people,
-  seatingPreference,
   reservations,
   occupancies,
   settings,
@@ -955,7 +906,6 @@ function WeekPlanner({
   onSelect,
 }: {
   people: number;
-  seatingPreference: SeatingPreference;
   reservations: Reservation[];
   occupancies: SlotOccupancy[];
   settings: KafeSettings;
@@ -1045,7 +995,6 @@ function WeekPlanner({
                         reservations,
                         occupancies,
                         settings,
-                        seatingPreference,
                       );
                       const selected = selectedDate === iso && selectedSlot === slotOption;
                       return (
@@ -1106,7 +1055,6 @@ function getSlotAvailability(
   reservations: Reservation[],
   occupancies: SlotOccupancy[],
   settings: KafeSettings,
-  seatingPreference: SeatingPreference,
 ) {
   const date = toISODate(day);
   const guadeloupeNow = getGuadeloupeNow();
@@ -1132,15 +1080,7 @@ function getSlotAvailability(
     return { disabled: true, label: "", hideLabel: true };
   }
 
-  const placement = getSlotPlacement(
-    reservations,
-    occupancies,
-    date,
-    slot,
-    people,
-    settings,
-    seatingPreference,
-  );
+  const placement = getSlotPlacement(reservations, occupancies, date, slot, people, settings);
   if (!placement.unitId && placement.totalRemaining <= 0) {
     return { disabled: true, label: "complet" };
   }
