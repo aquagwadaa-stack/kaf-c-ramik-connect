@@ -13,6 +13,8 @@ import {
 import { PageHeader, PageShell } from "@/components/page-shell";
 import {
   cancelReservationFromPortal,
+  createSumUpCheckout,
+  refreshSumUpPayment,
   experienceLabel,
   experienceUsesCeramicGuide,
   formatReservationDate,
@@ -40,6 +42,8 @@ function ReservationPortalPage() {
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [paying, setPaying] = useState(false);
+  const [refreshAttempt, setRefreshAttempt] = useState(0);
 
   const token =
     typeof window === "undefined"
@@ -53,9 +57,30 @@ function ReservationPortalPage() {
       setLoading(false);
       return;
     }
-    getReservationPortal(token)
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const returnedFromPayment =
+      new URLSearchParams(window.location.search).get("payment") === "return";
+    async function load() {
+      if (returnedFromPayment) {
+        await refreshSumUpPayment(token).catch(() => {
+          if (alive) setNotice("Le paiement est en vérification. Ne règle pas une seconde fois.");
+        });
+      }
+      return getReservationPortal(token);
+    }
+    load()
       .then((result) => {
-        if (alive) setData(result);
+        if (alive) {
+          setData(result);
+          if (
+            returnedFromPayment &&
+            !result.reservation.depositPaid &&
+            result.reservation.status === "pending" &&
+            refreshAttempt < 24
+          ) {
+            timer = setTimeout(() => setRefreshAttempt((value) => value + 1), 2500);
+          }
+        }
       })
       .catch(() => {
         if (alive) setError("Cette réservation est introuvable ou le lien n'est plus valide.");
@@ -65,8 +90,28 @@ function ReservationPortalPage() {
       });
     return () => {
       alive = false;
+      if (timer) clearTimeout(timer);
     };
-  }, [token]);
+  }, [token, refreshAttempt]);
+
+  async function payDeposit() {
+    if (paying || !token) return;
+    setPaying(true);
+    setError("");
+    try {
+      const result = await createSumUpCheckout(token);
+      if (result.paid) {
+        setData(await getReservationPortal(token));
+        return;
+      }
+      if (!result.configured || !result.checkoutUrl) throw new Error("PAYMENT_UNAVAILABLE");
+      window.location.assign(result.checkoutUrl);
+    } catch {
+      setError("Le paiement n'a pas pu être ouvert. Réessaie ou contacte le Kafé.");
+    } finally {
+      setPaying(false);
+    }
+  }
 
   async function cancelReservation() {
     if (!data?.canCancel || !token) return;
@@ -157,7 +202,6 @@ function ReservationPortalPage() {
 
             <aside className="space-y-4">
               {data.paymentEnabled &&
-                data.paymentUrl &&
                 data.reservation.depositRequired &&
                 !data.reservation.depositPaid &&
                 data.reservation.status !== "cancelled" && (
@@ -165,18 +209,32 @@ function ReservationPortalPage() {
                     <h2 className="font-medium">Acompte à régler</h2>
                     <p className="mt-2 text-xs leading-5 text-muted-foreground">
                       Le règlement de {`${data.reservation.depositAmount ?? 100}\u00a0€`} est
-                      nécessaire pour confirmer ta réservation. Indique le même nom que sur ta
-                      réservation dans SumUp. L'équipe vérifiera le règlement et t'enverra la
-                      confirmation.
+                      nécessaire pour confirmer ta réservation.{" "}
+                      {data.paymentMode === "sumup"
+                        ? "La confirmation sera envoyée automatiquement après validation du paiement par SumUp."
+                        : "Indique le même nom que sur ta réservation dans SumUp. L'équipe vérifiera le règlement et t'enverra la confirmation."}
                     </p>
-                    <a
-                      href={data.paymentUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-4 block w-full rounded-full bg-primary px-4 py-2.5 text-center text-sm font-medium text-primary-foreground"
-                    >
-                      Payer l'acompte pour confirmer la réservation
-                    </a>
+                    {data.paymentMode === "sumup" ? (
+                      <button
+                        type="button"
+                        disabled={paying}
+                        onClick={() => void payDeposit()}
+                        className="mt-4 block w-full rounded-full bg-primary px-4 py-2.5 text-center text-sm font-medium text-primary-foreground disabled:opacity-50"
+                      >
+                        {paying
+                          ? "Ouverture du paiement…"
+                          : "Payer l'acompte pour confirmer la réservation"}
+                      </button>
+                    ) : (
+                      <a
+                        href={data.paymentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-4 block w-full rounded-full bg-primary px-4 py-2.5 text-center text-sm font-medium text-primary-foreground"
+                      >
+                        Payer l'acompte pour confirmer la réservation
+                      </a>
+                    )}
                   </div>
                 )}
               {data.reservation.status !== "cancelled" &&

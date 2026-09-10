@@ -75,6 +75,15 @@ const ctx = vm.createContext({
     },
   },
   fetch: async (url, init = {}) => {
+    if (url.includes("/functions/v1/sumup-checkout")) {
+      const body = JSON.parse(init.body);
+      assert.equal(body.action, "create");
+      assert.equal(body.managementToken, "local-token");
+      return Response.json({
+        configured: true,
+        checkoutUrl: "https://checkout.sumup.com/pay/test-checkout",
+      });
+    }
     if (url === "https://api.resend.com/emails") {
       sent.push(JSON.parse(init.body));
       return Response.json({ id: "simulated" });
@@ -229,6 +238,35 @@ await run("unapproved, past or cancelled groups cannot receive payment requests"
     await ctx.groupDecision(row(patch), settings, "https://kafeceramik.fr", true, "");
   assert.equal(sent.length, 0);
 });
+await run(
+  "API approval email uses the booking checkout and automatic confirmation wording",
+  async () => {
+    const booking = row({
+      people: 8,
+      status: "pending",
+      value: { groupApprovedAt: "2026-09-07", depositRequired: true },
+    });
+    await ctx.groupDecision(
+      booking,
+      { ...settings, sumupPaymentsEnabled: true },
+      "https://kafeceramik.fr",
+      true,
+      "",
+    );
+    assert.equal(sent.length, 1);
+    assert.match(sent[0].html, /href="https:\/\/checkout.sumup.com\/pay\/test-checkout"/);
+    assert.match(sent[0].html, /automatiquement rattaché/);
+    assert.doesNotMatch(sent[0].html, /Votre nom complet|équipe vérifiera/);
+    await ctx.groupDecision(
+      booking,
+      { ...settings, sumupPaymentsEnabled: true },
+      "https://kafeceramik.fr",
+      true,
+      "",
+    );
+    assert.equal(sent.length, 1);
+  },
+);
 await run("payment link rejects unexpected hosts and misleading URL credentials", async () => {
   for (const url of [
     "javascript:alert(1)",
@@ -380,4 +418,4 @@ await run("PDF attachments are identical across retries", async () => {
     JSON.stringify(retry.map((mail) => mail.attachments)),
   );
 });
-console.log("17 email checks passed; no message sent and no provider contacted");
+console.log("18 email checks passed; no message sent and no provider contacted");

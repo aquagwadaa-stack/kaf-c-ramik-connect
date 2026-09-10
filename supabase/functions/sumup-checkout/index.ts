@@ -29,6 +29,8 @@ type PaymentRow = {
   checkout_reference: string;
   status: CheckoutStatus;
   hosted_checkout_url: string | null;
+  amount: number;
+  currency: string;
 };
 
 type GiftOrderRow = {
@@ -120,7 +122,7 @@ async function readReservationByToken(token: string) {
 
 async function readPaymentByReservation(reservationId: string) {
   const rows = await db<PaymentRow[]>(
-    `/rest/v1/kafe_payments?select=reservation_id,provider_checkout_id,checkout_reference,status,hosted_checkout_url&reservation_id=eq.${encodeURIComponent(reservationId)}&limit=1`,
+    `/rest/v1/kafe_payments?select=reservation_id,provider_checkout_id,checkout_reference,status,hosted_checkout_url,amount,currency&reservation_id=eq.${encodeURIComponent(reservationId)}&limit=1`,
   );
   return rows[0] ?? null;
 }
@@ -142,9 +144,25 @@ async function createReservationCheckout(token: string, siteUrl: string) {
   if (!reservation) return json({ error: "Reservation not found" }, 404);
   if (!reservation.value.depositRequired) return json({ error: "Deposit not required" }, 400);
   if (reservation.value.depositPaid) return json({ ok: true, configured: true, paid: true });
-  if (reservation.status === "cancelled") return json({ error: "Reservation cancelled" }, 409);
+  if (reservation.status !== "pending" || !reservation.value.groupApprovedAt) {
+    return json({ error: "La demande doit d'abord être acceptée par l'équipe." }, 409);
+  }
+  const startsAt = new Date(
+    `${reservation.value.date}T${String(reservation.value.slot).slice(0, 5)}:00-04:00`,
+  );
+  if (!Number.isFinite(startsAt.getTime()) || startsAt <= new Date()) {
+    return json({ error: "Le créneau est déjà passé. Contacte le Kafé." }, 409);
+  }
 
   const existing = await readPaymentByReservation(reservation.id);
+  if (existing?.status === "PAID" && existing.provider_checkout_id) {
+    const checkout = await sumup<SumUpCheckout>(
+      `/v0.1/checkouts/${encodeURIComponent(existing.provider_checkout_id)}`,
+    );
+    await processReservationPayment(checkout, existing);
+    const refreshed = await readReservationByToken(token);
+    return json({ ok: true, configured: true, paid: Boolean(refreshed?.value.depositPaid) });
+  }
   if (existing?.status === "PENDING" && existing.hosted_checkout_url) {
     return json({
       ok: true,
@@ -155,22 +173,49 @@ async function createReservationCheckout(token: string, siteUrl: string) {
   }
 
   const amount = Number(reservation.value.depositAmount ?? 100);
-  const reference = `KAFE-${reservation.id}-${crypto.randomUUID()}`.slice(0, 90);
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("INVALID_DEPOSIT_AMOUNT");
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(reservation.id));
+  const reference = `ACOMPTE-${Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  )
+    .join("")
+    .slice(0, 48)}`;
   const cleanSiteUrl = siteUrl.replace(/\/$/, "");
   const webhookUrl = `${supabaseUrl}/functions/v1/sumup-checkout`;
-  const checkout = await sumup<SumUpCheckout>("/v0.1/checkouts", {
-    method: "POST",
-    body: JSON.stringify({
-      checkout_reference: reference,
-      amount,
-      currency: "EUR",
-      merchant_code: sumupMerchantCode,
-      description: `Acompte atelier Kafé Céramik - ${reservation.id}`,
-      return_url: webhookUrl,
-      redirect_url: `${cleanSiteUrl}/reservation?token=${encodeURIComponent(token)}&payment=return`,
-      hosted_checkout: { enabled: true },
-    }),
-  });
+  let checkout: SumUpCheckout;
+  try {
+    checkout = await sumup<SumUpCheckout>("/v0.1/checkouts", {
+      method: "POST",
+      body: JSON.stringify({
+        checkout_reference: reference,
+        amount,
+        currency: "EUR",
+        merchant_code: sumupMerchantCode,
+        description: `Acompte atelier Kafé Céramik - ${reservation.id}`,
+        return_url: webhookUrl,
+        redirect_url: `${cleanSiteUrl}/reservation?token=${encodeURIComponent(token)}&payment=return`,
+        hosted_checkout: { enabled: true },
+        valid_until: startsAt.toISOString(),
+      }),
+    });
+  } catch (error) {
+    // A stable reference reconciles concurrent clicks and ambiguous provider timeouts.
+    const matches = await sumup<SumUpCheckout[]>(
+      `/v0.1/checkouts?checkout_reference=${encodeURIComponent(reference)}`,
+    );
+    const previous = matches.find(
+      (item) => item.checkout_reference === reference && item.status === "PENDING",
+    );
+    if (!previous) throw error;
+    checkout = previous;
+  }
+  if (
+    checkout.amount !== amount ||
+    checkout.currency !== "EUR" ||
+    checkout.merchant_code !== sumupMerchantCode
+  ) {
+    throw new Error("SUMUP_CHECKOUT_MISMATCH");
+  }
   if (!checkout.hosted_checkout_url) throw new Error("SUMUP_HOSTED_CHECKOUT_URL_MISSING");
 
   await db<void>("/rest/v1/kafe_payments?on_conflict=reservation_id", {
@@ -360,6 +405,16 @@ async function readGiftStatus(managementToken: string) {
 }
 
 async function processReservationPayment(checkout: SumUpCheckout, payment: PaymentRow) {
+  if (
+    checkout.id !== payment.provider_checkout_id ||
+    checkout.checkout_reference !== payment.checkout_reference ||
+    checkout.merchant_code !== sumupMerchantCode ||
+    checkout.currency !== payment.currency ||
+    Math.round(checkout.amount * 100) !== Math.round(Number(payment.amount) * 100)
+  ) {
+    throw new Error("SUMUP_CHECKOUT_MISMATCH");
+  }
+  if (payment.status === "PAID" && checkout.status !== "PAID") return;
   await db<void>(
     `/rest/v1/kafe_payments?provider_checkout_id=eq.${encodeURIComponent(checkout.id)}`,
     {
@@ -380,7 +435,7 @@ async function processReservationPayment(checkout: SumUpCheckout, payment: Payme
   const reservation = reservations[0];
   if (!reservation) return;
 
-  if (checkout.status === "PAID" && !reservation.value.depositPaid) {
+  if (checkout.status === "PAID") {
     const result = await db<{
       changed: boolean;
       status: string;
@@ -389,32 +444,36 @@ async function processReservationPayment(checkout: SumUpCheckout, payment: Payme
       method: "POST",
       body: JSON.stringify({ p_id: reservation.id, p_checkout_id: checkout.id, p_status: "PAID" }),
     });
-    if (!result?.changed) return;
+    if (!result) return;
     const nextStatus = result.status;
     reservation.value = result.value;
-    await db<void>("/rest/v1/kafe_admin_notifications", {
-      method: "POST",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({
-        kind: "deposit_paid",
-        title:
-          nextStatus === "cancelled"
-            ? "Acompte reçu après annulation : remboursement à vérifier"
-            : "Acompte reçu",
-        body: `${reservation.value.firstName ?? ""} ${reservation.value.lastName ?? ""} · ${checkout.amount} €`,
-        reservation_id: reservation.id,
-      }),
-    });
+    if (result.changed)
+      await db<void>("/rest/v1/kafe_admin_notifications", {
+        method: "POST",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({
+          kind: "deposit_paid",
+          title:
+            nextStatus === "cancelled"
+              ? "Acompte reçu après annulation : remboursement à vérifier"
+              : "Acompte reçu",
+          body: `${reservation.value.firstName ?? ""} ${reservation.value.lastName ?? ""} · ${checkout.amount} €`,
+          reservation_id: reservation.id,
+        }),
+      }).catch((error) => console.error("Deposit notification error", error));
     if (nextStatus === "cancelled") return;
-    await fetch(`${supabaseUrl}/functions/v1/kafe-emails`, {
+    if (!result.changed && (nextStatus !== "confirmed" || result.value.decisionEmailSentAt)) return;
+    const response = await fetch(`${supabaseUrl}/functions/v1/kafe-emails`, {
       method: "POST",
       headers: apiHeaders(),
       body: JSON.stringify({
-        action: "reservation-created",
+        action: nextStatus === "confirmed" ? "group-approved" : "reservation-created",
         reservationId: reservation.id,
         managementToken: reservation.value.managementToken,
       }),
-    }).catch((error) => console.error("Post-payment email error", error));
+    });
+    const receipt = await response.json();
+    if (!response.ok || receipt.delivered !== true) throw new Error("DEPOSIT_EMAIL_RETRY_REQUIRED");
   }
 
   if (checkout.status === "EXPIRED" && reservation.status === "pending") {
@@ -477,7 +536,7 @@ async function handleWebhook(checkoutId: string) {
   if (!sumupApiKey) return json({ error: "SumUp is not configured" }, 503);
   const checkout = await sumup<SumUpCheckout>(`/v0.1/checkouts/${encodeURIComponent(checkoutId)}`);
   const payments = await db<PaymentRow[]>(
-    `/rest/v1/kafe_payments?select=reservation_id,provider_checkout_id,checkout_reference,status,hosted_checkout_url&provider_checkout_id=eq.${encodeURIComponent(checkout.id)}&limit=1`,
+    `/rest/v1/kafe_payments?select=reservation_id,provider_checkout_id,checkout_reference,status,hosted_checkout_url,amount,currency&provider_checkout_id=eq.${encodeURIComponent(checkout.id)}&limit=1`,
   );
   if (payments[0]) {
     await processReservationPayment(checkout, payments[0]);
@@ -511,6 +570,14 @@ Deno.serve(async (request) => {
     if (body.action === "create") {
       if (!body.managementToken) return json({ error: "Missing management token" }, 400);
       return await createReservationCheckout(body.managementToken, canonicalSiteUrl);
+    }
+    if (body.action === "reservation-status") {
+      if (!body.managementToken) return json({ error: "Missing management token" }, 400);
+      const reservation = await readReservationByToken(body.managementToken);
+      if (!reservation) return json({ error: "Reservation not found" }, 404);
+      const payment = await readPaymentByReservation(reservation.id);
+      if (payment?.provider_checkout_id) await handleWebhook(payment.provider_checkout_id);
+      return json({ ok: true });
     }
     if (body.action === "create-gift") {
       return await createGiftCheckout(body, canonicalSiteUrl);

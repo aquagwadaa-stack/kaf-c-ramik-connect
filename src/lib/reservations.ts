@@ -71,6 +71,7 @@ export type ReservationPortalData = {
   cancellationNoticeHours: number;
   paymentEnabled: boolean;
   paymentUrl?: string;
+  paymentMode?: "sumup" | "link";
 };
 
 export type SumUpCheckoutResult = {
@@ -689,6 +690,13 @@ export async function createSumUpCheckout(managementToken: string) {
     action: "create",
     managementToken,
     siteUrl: window.location.origin,
+  });
+}
+
+export async function refreshSumUpPayment(managementToken: string) {
+  return invokeEdgeFunction<{ ok: boolean }>("sumup-checkout", {
+    action: "reservation-status",
+    managementToken,
   });
 }
 

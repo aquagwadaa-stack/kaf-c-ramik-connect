@@ -59,6 +59,7 @@ type SettingsValue = {
   contactAddress?: string;
   depositFixedAmount?: number;
   depositPaymentLink?: string;
+  sumupPaymentsEnabled?: boolean;
   manualConfirmationThreshold?: number;
   kitchenClosingTime?: string;
   giftCardValidityMonths?: number;
@@ -884,15 +885,40 @@ async function groupDecision(
     !row.value.depositPaid &&
     row.value.depositRequired
   ) {
-    const paymentUrl = getDepositPaymentLink(settings);
-    if (!paymentUrl || new Date(`${row.date}T${row.slot}:00-04:00`) <= new Date()) return false;
+    if (new Date(`${row.date}T${row.slot}:00-04:00`) <= new Date()) return false;
     if (row.value.paymentRequestEmailSentAt) return true;
+    let paymentUrl = getDepositPaymentLink(settings);
+    if (settings.sumupPaymentsEnabled) {
+      paymentUrl = `${siteUrl}/reservation?token=${encodeURIComponent(row.value.managementToken ?? "")}`;
+      if (!preview) {
+        const response = await fetch(`${supabaseUrl}/functions/v1/sumup-checkout`, {
+          method: "POST",
+          headers: apiHeaders(),
+          body: JSON.stringify({ action: "create", managementToken: row.value.managementToken }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.configured || !result.checkoutUrl) return false;
+        const url = new URL(result.checkoutUrl);
+        if (
+          url.protocol !== "https:" ||
+          url.hostname !== "checkout.sumup.com" ||
+          url.username ||
+          url.password
+        )
+          return false;
+        paymentUrl = result.checkoutUrl;
+      }
+    }
+    if (!paymentUrl) return false;
+    const paymentInstructions = settings.sumupPaymentsEnabled
+      ? "Le paiement est automatiquement rattaché à ta réservation. Tu recevras la confirmation dès sa validation par SumUp. Si tu as déjà payé, ne règle pas une seconde fois : consulte ta réservation ou contacte le Kafé."
+      : `Dans le champ « Votre nom complet » sur SumUp, indique <strong>${escapeHtml(row.value.firstName)} ${escapeHtml(row.value.lastName)}</strong>, comme sur ta réservation. L'équipe vérifiera ton règlement et t'enverra la confirmation définitive. Si tu as déjà payé, ne règle pas une seconde fois : contacte le Kafé.`;
     const delivered = await sendEmail(
       [row.value.email],
       "Demande acceptée : règle ton acompte pour confirmer",
       shell(
         "Ta demande est acceptée",
-        `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Bonne nouvelle : l'équipe a accepté ta demande de groupe.</p><p>Pour confirmer ta réservation, règle l'acompte de <strong>${escapeHtml(row.value.depositAmount ?? settings.depositFixedAmount ?? 100)} €</strong> sur SumUp.</p><p style="margin:26px 0"><a href="${escapeHtml(paymentUrl)}" style="display:inline-block;max-width:100%;box-sizing:border-box;background:#864d3a;color:#ffffff;text-decoration:none;padding:15px 22px;border-radius:24px;font-weight:700">Payer l'acompte pour confirmer la réservation</a></p><p>Dans le champ « Votre nom complet » sur SumUp, indique <strong>${escapeHtml(row.value.firstName)} ${escapeHtml(row.value.lastName)}</strong>, comme sur ta réservation. L'équipe vérifiera ton règlement et t'enverra la confirmation définitive. Si tu as déjà payé, ne règle pas une seconde fois : contacte le Kafé.</p>${details(row, settings, siteUrl)}`,
+        `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Bonne nouvelle : l'équipe a accepté ta demande de groupe.</p><p>Pour confirmer ta réservation, règle l'acompte de <strong>${escapeHtml(row.value.depositAmount ?? settings.depositFixedAmount ?? 100)} €</strong> sur SumUp.</p><p style="margin:26px 0"><a href="${escapeHtml(paymentUrl)}" style="display:inline-block;max-width:100%;box-sizing:border-box;background:#864d3a;color:#ffffff;text-decoration:none;padding:15px 22px;border-radius:24px;font-weight:700">Payer l'acompte pour confirmer la réservation</a></p><p>${paymentInstructions}</p>${details(row, settings, siteUrl)}`,
       ),
       [],
       preview,
@@ -1305,7 +1331,9 @@ Deno.serve(async (request) => {
     }
 
     if (action === "group-approved" || action === "group-rejected") {
-      if (!(await requireAdmin(request))) return json({ error: "Unauthorized" }, 401);
+      const internalCall = request.headers.get("Authorization") === `Bearer ${serviceRoleKey}`;
+      if (!internalCall && !(await requireAdmin(request)))
+        return json({ error: "Unauthorized" }, 401);
       const approved = action === "group-approved";
       const delivered = await groupDecision(row, settings, siteUrl, approved, body.message ?? "");
       return json({

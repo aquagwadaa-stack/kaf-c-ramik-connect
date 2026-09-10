@@ -35,6 +35,25 @@ try {
   check("Month and year transitions", () => {
     assert.equal(time.addIsoDays("2026-12-31", 1), "2027-01-01");
   });
+  check("Zero-hour notice allows today but never a past start", () => {
+    const now = new Date("2026-09-10T14:00:00Z");
+    assert.equal(time.isBookingTimeAllowed("2026-09-10", "10:30", 0, now), true);
+    assert.equal(time.isBookingTimeAllowed("2026-09-10", "10:00", 0, now), false);
+    assert.equal(time.isBookingTimeAllowed("2026-09-09", "16:30", 0, now), false);
+  });
+  check("Advance notice respects exact hours and Guadeloupe midnight", () => {
+    const now = new Date("2026-09-10T14:00:00Z");
+    assert.equal(time.isBookingTimeAllowed("2026-09-10", "12:30", 3, now), false);
+    assert.equal(time.isBookingTimeAllowed("2026-09-10", "13:00", 3, now), true);
+    assert.equal(
+      time.isBookingTimeAllowed("2026-09-11", "00:30", 2, new Date("2026-09-11T03:00:00Z")),
+      false,
+    );
+    assert.equal(
+      time.isBookingTimeAllowed("2026-09-11", "09:30", 0, new Date("2026-09-11T03:00:00Z")),
+      true,
+    );
+  });
   check("Deposit and approval only for ceramic groups from eight people", () => {
     assert.equal(rules.getDepositAmount(7, settings, "cafe_atelier"), 0);
     assert.equal(rules.getDepositAmount(8, settings, "cafe_atelier"), 100);

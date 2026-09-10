@@ -17,7 +17,12 @@ import {
 import { PageShell, PageHeader } from "@/components/page-shell";
 import { useKafeSettings, type KafeSettings } from "@/lib/admin-data";
 import { formatPublicTime } from "@/lib/opening-hours";
-import { addIsoDays, getKafeDate, getKafeTime, kafeTodayAtLocalNoon } from "@/lib/kafe-time";
+import {
+  addIsoDays,
+  getKafeDate,
+  isBookingTimeAllowed,
+  kafeTodayAtLocalNoon,
+} from "@/lib/kafe-time";
 import {
   addReservation,
   experienceUsesCeramicGuide,
@@ -284,7 +289,7 @@ function ReserverPage() {
           : message.includes("KAFE_SLOT_FULL")
             ? "Ce créneau vient d'être rempli par une autre réservation. Choisis un autre horaire."
             : message.includes("KAFE_BOOKING_TOO_LATE")
-              ? `Les réservations pour le lendemain ferment à ${formatPublicTime(settings.bookingCutoffTime)}. Choisis une autre date.`
+              ? "Ce créneau est passé ou trop proche. Choisis un autre horaire."
               : schedulingConflict
                 ? "Ce créneau n'est plus réservable. Choisis une autre date ou un autre horaire."
                 : "La réservation n'a pas pu être enregistrée. Réessayez dans un instant.";
@@ -960,8 +965,9 @@ function WeekPlanner({
       </div>
 
       <p className="mt-4 text-sm text-muted-foreground">
-        Pour les réservations du lendemain, il faut s'y prendre la veille avant{" "}
-        {formatPublicTime(settings.bookingCutoffTime)}.
+        {settings.minimumBookingLeadHours > 0
+          ? `Réserve au moins ${settings.minimumBookingLeadHours} heure${settings.minimumBookingLeadHours > 1 ? "s" : ""} avant ta venue.`
+          : "Tu peux réserver pour aujourd'hui, selon les places disponibles."}
       </p>
 
       <div ref={scrollerRef} className="no-scrollbar mt-5 overflow-x-auto pb-2">
@@ -1057,26 +1063,7 @@ function getSlotAvailability(
   settings: KafeSettings,
 ) {
   const date = toISODate(day);
-  const guadeloupeNow = getGuadeloupeNow();
-  const minimumLeadDays = Math.max(1, settings.minimumBookingLeadDays ?? 1);
-  const earliestBookable = addIsoDays(guadeloupeNow.date, minimumLeadDays);
-  if (date < earliestBookable) return { disabled: true, label: "", hideLabel: true };
-  if (
-    minimumLeadDays === 1 &&
-    date === earliestBookable &&
-    guadeloupeNow.minutes >= timeToMinutes(settings.bookingCutoffTime || "18:00")
-  ) {
-    return {
-      disabled: true,
-      label: "",
-      hideLabel: true,
-    };
-  }
-
-  if (
-    date < guadeloupeNow.date ||
-    (date === guadeloupeNow.date && timeToMinutes(slot) <= guadeloupeNow.minutes)
-  ) {
+  if (!isBookingTimeAllowed(date, slot, settings.minimumBookingLeadHours ?? 0)) {
     return { disabled: true, label: "", hideLabel: true };
   }
 
@@ -1088,18 +1075,6 @@ function getSlotAvailability(
     return { disabled: true, label: "places restantes séparées" };
   }
   return { disabled: false, label: "disponible" };
-}
-
-function getGuadeloupeNow() {
-  return {
-    date: getKafeDate(),
-    minutes: timeToMinutes(getKafeTime()),
-  };
-}
-
-function timeToMinutes(value: string) {
-  const [hours, minutes] = value.split(":").map(Number);
-  return (hours || 0) * 60 + (minutes || 0);
 }
 
 function startOfWeek(date: Date) {

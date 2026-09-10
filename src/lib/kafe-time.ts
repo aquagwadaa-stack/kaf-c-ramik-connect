@@ -33,3 +33,9 @@ export function addIsoDays(date: string, count: number) {
 export function kafeTodayAtLocalNoon(date = new Date()) {
   return new Date(`${getKafeDate(date)}T12:00:00`);
 }
+
+export function isBookingTimeAllowed(date: string, slot: string, leadHours = 0, now = new Date()) {
+  const startsAt = new Date(`${date}T${slot.slice(0, 5)}:00-04:00`).getTime();
+  const lead = Number.isFinite(leadHours) ? Math.max(0, leadHours) : 0;
+  return startsAt > now.getTime() && startsAt >= now.getTime() + lead * 3600000;
+}

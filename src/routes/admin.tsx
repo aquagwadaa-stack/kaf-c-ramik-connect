@@ -1976,6 +1976,7 @@ function ReservationCard({
 }
 
 function GroupDecisionControls({ reservation }: { reservation: Reservation }) {
+  const [settings] = useKafeSettings();
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState<"approve" | "reject" | "deposit" | "email" | null>(null);
   const [notice, setNotice] = useState("");
@@ -2064,7 +2065,9 @@ function GroupDecisionControls({ reservation }: { reservation: Reservation }) {
       <div className="font-medium">Décision de l'équipe</div>
       <p className="mt-1 text-xs text-muted-foreground">
         {reservation.groupApprovedAt && !reservation.depositPaid
-          ? "Demande acceptée. Vérifie le règlement dans SumUp avant d'enregistrer l'acompte reçu."
+          ? settings.sumupPaymentsEnabled
+            ? "Demande acceptée. La réservation sera confirmée automatiquement après paiement sur SumUp."
+            : "Demande acceptée. Vérifie le règlement dans SumUp avant d'enregistrer l'acompte reçu."
           : reservation.depositPaid
             ? "L'acompte est reçu. Le client recevra automatiquement la décision par email."
             : "Accepte la demande pour envoyer le lien de paiement. La réservation sera confirmée après vérification de l'acompte dans SumUp."}
@@ -2096,7 +2099,11 @@ function GroupDecisionControls({ reservation }: { reservation: Reservation }) {
                   disabled={saving !== null}
                   className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
                 >
-                  {saving === "deposit" ? "Enregistrement…" : "Acompte reçu · confirmer"}
+                  {saving === "deposit"
+                    ? "Enregistrement…"
+                    : settings.sumupPaymentsEnabled
+                      ? "Enregistrer un paiement manuel"
+                      : "Acompte reçu · confirmer"}
                 </button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -4267,10 +4274,13 @@ function SettingsPanel({
               value={settings.kitchenClosingTime}
               onChange={(kitchenClosingTime) => update({ kitchenClosingTime })}
             />
-            <TimeField
-              label="Heure limite pour réserver le lendemain"
-              value={settings.bookingCutoffTime}
-              onChange={(bookingCutoffTime) => update({ bookingCutoffTime })}
+            <NumberField
+              label="Délai minimum avant une réservation (0 : sans délai)"
+              value={settings.minimumBookingLeadHours}
+              suffix="heures"
+              onChange={(minimumBookingLeadHours) =>
+                update({ minimumBookingLeadHours: Math.max(0, minimumBookingLeadHours) })
+              }
             />
             <NumberField
               label="Réservation libérée après une absence de"
