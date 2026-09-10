@@ -432,6 +432,15 @@ export type Database = {
         Args: { p_checkout_id: string; p_id: string; p_status: string }
         Returns: Json
       }
+      apply_kafe_gift_payment: {
+        Args: {
+          p_amount: number
+          p_checkout_id: string
+          p_expires_at: string
+          p_status: string
+        }
+        Returns: Json
+      }
       approve_kafe_admin_request: {
         Args: { p_request_id: string }
         Returns: Json
