@@ -875,8 +875,52 @@ export function getSeatingAvailability(
   settings: KafeSettings,
   seatingPreference: SeatingPreference = "indifferent",
 ): SeatingAvailability {
+  return calculateSeatingAvailability(
+    reservations,
+    occupancies,
+    date,
+    slot,
+    settings,
+    seatingPreference,
+    "stay",
+  );
+}
+
+export function getSeatingAvailabilityAtTime(
+  reservations: Reservation[],
+  occupancies: SlotOccupancy[],
+  date: string,
+  time: string,
+  settings: KafeSettings,
+): SeatingAvailability {
+  return calculateSeatingAvailability(
+    reservations,
+    occupancies,
+    date,
+    time,
+    settings,
+    "indifferent",
+    "instant",
+  );
+}
+
+function calculateSeatingAvailability(
+  reservations: Reservation[],
+  occupancies: SlotOccupancy[],
+  date: string,
+  slot: string,
+  settings: KafeSettings,
+  seatingPreference: SeatingPreference,
+  view: "stay" | "instant",
+): SeatingAvailability {
   const units = expandSeatingUnits(settings);
   const duration = Math.max(15, settings.slotDurationMinutes || 180);
+  const observedMinute = timeToMinutes(slot);
+  // The weekly planner observes one instant; new arrivals need the entire stay free.
+  const includesStart = (start: string) =>
+    view === "instant"
+      ? timeToMinutes(start) <= observedMinute && observedMinute < timeToMinutes(start) + duration
+      : overlaps(start, slot, duration);
   const localIds = new Set(reservations.map((reservation) => reservation.id));
   const active: {
     id: string;
@@ -889,7 +933,7 @@ export function getSeatingAvailability(
         (occupancy) =>
           !localIds.has(occupancy.reservation_id) &&
           occupancy.date === date &&
-          overlaps(occupancy.slot, slot, duration),
+          includesStart(occupancy.slot),
       )
       .map((occupancy) => ({
         id: occupancy.reservation_id,
@@ -901,7 +945,7 @@ export function getSeatingAvailability(
         (reservation) =>
           reservation.status !== "cancelled" &&
           reservation.date === date &&
-          overlaps(reservation.slot, slot, duration),
+          includesStart(reservation.slot),
       )
       .map((reservation) => ({
         id: reservation.id,

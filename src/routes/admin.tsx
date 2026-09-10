@@ -63,7 +63,9 @@ import {
   experienceLabel,
   experienceUsesCeramicGuide,
   formatReservationDate,
+  formatDuration,
   getSeatingAvailability,
+  getSeatingAvailabilityAtTime,
   getSlotsForDate,
   removeReservation,
   seatingAllocationLabel,
@@ -1015,7 +1017,7 @@ function WeeklyCapacityPlanner({
   return (
     <Panel
       title="Planning de la semaine"
-      desc="Visualisez les places encore disponibles pour chaque créneau, réservations en ligne et ajouts sur place compris."
+      desc="Places libres à l'heure indiquée, selon les réservations prévues et les ajouts sur place."
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-sm font-medium">
@@ -1090,7 +1092,7 @@ function WeeklyCapacityPlanner({
                 ) : (
                   <div className="mt-3 grid gap-1.5">
                     {slots.map((slot) => {
-                      const availability = getSeatingAvailability(
+                      const availability = getSeatingAvailabilityAtTime(
                         reservations,
                         occupancies,
                         iso,
@@ -1210,8 +1212,8 @@ function WalkInAvailability({
 
   return (
     <Panel
-      title="Places disponibles sur place"
-      desc="Consultez chaque espace séparément pour accueillir un groupe sans le répartir entre plusieurs tables."
+      title="Accueillir un groupe sur place"
+      desc={`Places disponibles pendant ${formatDuration(settings.slotDurationMinutes)} à partir de l'arrivée. Les réservations à venir sont prises en compte.`}
     >
       <div className="grid gap-3 sm:grid-cols-2">
         <label>
@@ -1224,7 +1226,7 @@ function WalkInAvailability({
           />
         </label>
         <label>
-          <span className="mb-1.5 block text-sm font-medium">Heure observée</span>
+          <span className="mb-1.5 block text-sm font-medium">Heure d'arrivée</span>
           <select
             value={timeChoice}
             onChange={(event) => setTimeChoice(event.target.value)}
@@ -1252,7 +1254,8 @@ function WalkInAvailability({
               <Clock3 className="h-4 w-4 text-primary" /> {observedTime}
             </span>
             <span>
-              <strong>{availability.totalRemaining}</strong> places libres au total
+              <strong>{availability.totalRemaining}</strong> places disponibles sur{" "}
+              {formatDuration(settings.slotDurationMinutes)}
             </span>
             <span>
               plus grand groupe installable : <strong>{availability.maxGroupSize}</strong>

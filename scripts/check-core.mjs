@@ -72,6 +72,79 @@ try {
       "carbet-1",
     );
   });
+  check("Weekly occupancy starts at arrival and ends exactly three hours later", () => {
+    const busy = [reservation("morning", "11:00", 2, "table-2-1")];
+    for (const [slot, remaining] of [
+      ["09:30", 60],
+      ["10:30", 60],
+      ["11:00", 58],
+      ["13:30", 58],
+      ["14:00", 60],
+    ]) {
+      assert.equal(
+        rules.getSeatingAvailabilityAtTime(busy, [], date, slot, settings).totalRemaining,
+        remaining,
+        slot,
+      );
+    }
+  });
+  check("A new stay still checks the full interval, including future arrivals", () => {
+    const busy = [reservation("morning", "11:00", 2, "table-2-1")];
+    assert.equal(at(busy, "08:00", 2).totalRemaining, 60);
+    assert.equal(at(busy, "09:30", 2).totalRemaining, 58);
+    assert.equal(at(busy, "13:30", 2).totalRemaining, 58);
+    assert.equal(at(busy, "14:00", 2).totalRemaining, 60);
+  });
+  check("Instant occupancy respects the configurable duration", () => {
+    const busy = [reservation("morning", "09:30", 2, "table-2-1")];
+    for (const [minutes, lastOccupied, firstFree] of [
+      [120, "11:29", "11:30"],
+      [180, "12:29", "12:30"],
+      [240, "13:29", "13:30"],
+    ]) {
+      const config = { ...settings, slotDurationMinutes: minutes };
+      assert.equal(
+        rules.getSeatingAvailabilityAtTime(busy, [], date, lastOccupied, config).totalRemaining,
+        58,
+      );
+      assert.equal(
+        rules.getSeatingAvailabilityAtTime(busy, [], date, firstFree, config).totalRemaining,
+        60,
+      );
+    }
+  });
+  check("Instant occupancy deduplicates remote rows and ignores cancelled bookings", () => {
+    const remote = [
+      { reservation_id: "morning", date, slot: "11:00", people: 2, seating_unit_id: "table-2-1" },
+    ];
+    const busy = [reservation("morning", "11:00", 2, "table-2-1")];
+    assert.equal(
+      rules.getSeatingAvailabilityAtTime([], remote, date, "10:30", settings).totalRemaining,
+      60,
+    );
+    assert.equal(
+      rules.getSeatingAvailabilityAtTime([], remote, date, "11:00", settings).totalRemaining,
+      58,
+    );
+    assert.equal(
+      rules.getSeatingAvailabilityAtTime(busy, remote, date, "11:00", settings).totalRemaining,
+      58,
+    );
+    assert.equal(
+      rules.getSeatingAvailabilityAtTime(
+        [{ ...busy[0], status: "cancelled" }],
+        remote,
+        date,
+        "11:00",
+        settings,
+      ).totalRemaining,
+      60,
+    );
+    assert.equal(
+      rules.getSeatingAvailabilityAtTime([], remote, date, "14:00", settings).totalRemaining,
+      60,
+    );
+  });
   check("Cancelled bookings release capacity", () => {
     assert.equal(
       at([reservation("one", "09:30", 12, "carbet-1", "cancelled")], "09:30", 2, "carbet").unitId,
