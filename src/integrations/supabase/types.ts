@@ -520,6 +520,7 @@ export type Database = {
         Args: { p_id: string; p_patch: Json }
         Returns: Json
       }
+      record_kafe_group_deposit: { Args: { p_id: string }; Returns: Json }
       reject_kafe_admin_request: {
         Args: { p_request_id: string }
         Returns: Json
