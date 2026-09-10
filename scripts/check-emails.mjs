@@ -99,9 +99,18 @@ const shared = ts.transpileModule(
   { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } },
 ).outputText;
 vm.runInContext(shared.replace(/^export /gm, ""), ctx);
+vm.runInContext(
+  ts
+    .transpileModule(fs.readFileSync("supabase/functions/_shared/deposit-payment.ts", "utf8"), {
+      compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+    })
+    .outputText.replace(/^export /gm, ""),
+  ctx,
+);
 vm.runInContext(outputText.replace(/^export \{\};?$/m, ""), ctx);
 const settings = {
   manualConfirmationThreshold: 8,
+  depositPaymentLink: "https://pay.sumup.com/b2c/Q0XPSRZ3",
   adminNotificationEmail: "team@example.invalid",
 };
 function row(patch = {}) {
@@ -154,7 +163,7 @@ await run("group request is not presented as confirmed", async () => {
     settings,
     "https://kafeceramik.fr",
   );
-  assert.match(sent[0].html, /après validation/);
+  assert.match(sent[0].html, /[Aa]près validation/);
   assert.match(sent[0].html, /100/);
 });
 await run("cancellation omits all before-visit guide reminders", async () => {
@@ -183,6 +192,53 @@ await run("group approval includes confirmed booking portal", async () => {
   );
   assert.match(sent[0].html, /demande de groupe est <strong>validée/);
   assert.match(sent[0].html, /Accéder à ma réservation/);
+});
+await run("approval requests payment once without confirming or reminding", async () => {
+  const r = row({
+    people: 8,
+    status: "pending",
+    date: "2026-09-08",
+    value: { groupApprovedAt: "2026-09-07", depositRequired: true },
+  });
+  await ctx.groupDecision(r, settings, "https://kafeceramik.fr", true, "");
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].html, /href="https:\/\/pay.sumup.com\/b2c\/Q0XPSRZ3"/);
+  assert.match(sent[0].html, /Payer l'acompte pour confirmer la réservation/);
+  assert.doesNotMatch(sent[0].html, /acompte.*bien rattaché|réservation est confirmée/);
+  await ctx.groupDecision(r, settings, "https://kafeceramik.fr", true, "");
+  assert.equal(sent.length, 1);
+  assert.ok(values.get(r.id).paymentRequestEmailSentAt);
+  assert.equal(values.get(r.id).decisionEmailSentAt, undefined);
+  r.status = "confirmed";
+  r.value.depositPaid = true;
+  await ctx.groupDecision(r, settings, "https://kafeceramik.fr", true, "");
+  assert.equal(sent.length, 3, "Final confirmation and short-notice reminder follow payment");
+  assert.doesNotMatch(sent[1].html, /pay.sumup.com/);
+  assert.ok(values.get(r.id).decisionEmailSentAt);
+});
+await run("unapproved, past or cancelled groups cannot receive payment requests", async () => {
+  for (const patch of [
+    { status: "pending", value: { depositRequired: true } },
+    { status: "cancelled", value: { groupApprovedAt: "2026-09-07", depositRequired: true } },
+    {
+      status: "pending",
+      date: "2026-09-06",
+      value: { groupApprovedAt: "2026-09-05", depositRequired: true },
+    },
+  ])
+    await ctx.groupDecision(row(patch), settings, "https://kafeceramik.fr", true, "");
+  assert.equal(sent.length, 0);
+});
+await run("payment link rejects unexpected hosts and misleading URL credentials", async () => {
+  for (const url of [
+    "javascript:alert(1)",
+    "https://pay.sumup.com.evil.test/b2c/test",
+    "https://evil.test@pay.sumup.com/b2c/test",
+    "https://pay.sumup.com/b2c/test?redirect=bad",
+  ]) {
+    assert.equal(ctx.getDepositPaymentLink({ depositPaymentLink: url }), "");
+  }
+  assert.equal(ctx.getDepositPaymentLink(settings), settings.depositPaymentLink);
 });
 await run("reminders use confirmed filter, 24h window, local day and sent marker", async () => {
   rows = [
@@ -234,7 +290,7 @@ await run(
   "all preview templates use the real renderers without database writes or delivery",
   async () => {
     const suite = await ctx.buildEmailPreviewSuite(settings);
-    assert.equal(suite.length, 19);
+    assert.equal(suite.length, 20);
     assert.equal(sent.length, 0);
     assert.equal(values.size, 0);
     for (const mail of suite) {
@@ -324,4 +380,4 @@ await run("PDF attachments are identical across retries", async () => {
     JSON.stringify(retry.map((mail) => mail.attachments)),
   );
 });
-console.log("14 email checks passed; no message sent and no provider contacted");
+console.log("17 email checks passed; no message sent and no provider contacted");

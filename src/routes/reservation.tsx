@@ -13,7 +13,6 @@ import {
 import { PageHeader, PageShell } from "@/components/page-shell";
 import {
   cancelReservationFromPortal,
-  createSumUpCheckout,
   experienceLabel,
   experienceUsesCeramicGuide,
   formatReservationDate,
@@ -39,7 +38,6 @@ function ReservationPortalPage() {
   const [data, setData] = useState<ReservationPortalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
-  const [openingPayment, setOpeningPayment] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -94,28 +92,6 @@ function ReservationPortalPage() {
     }
   }
 
-  async function openPayment() {
-    if (!token) return;
-    setOpeningPayment(true);
-    setError("");
-    try {
-      const checkout = await createSumUpCheckout(token);
-      if (checkout.paid) {
-        setNotice("Ton acompte est déjà enregistré.");
-        return;
-      }
-      if (checkout.checkoutUrl) {
-        window.location.assign(checkout.checkoutUrl);
-        return;
-      }
-      setError("Le paiement en ligne n'est pas encore activé. Contacte le Kafé si nécessaire.");
-    } catch {
-      setError("Le paiement n'a pas pu être ouvert. Réessaie dans un instant.");
-    } finally {
-      setOpeningPayment(false);
-    }
-  }
-
   return (
     <PageShell>
       <PageHeader
@@ -141,7 +117,9 @@ function ReservationPortalPage() {
                   </h2>
                 </div>
                 <span className="rounded-full bg-secondary px-3 py-1.5 text-sm font-medium">
-                  {statusLabel(data.reservation.status)}
+                  {data.reservation.groupApprovedAt && data.reservation.status === "pending"
+                    ? "Acceptée · acompte en attente"
+                    : statusLabel(data.reservation.status)}
                 </span>
               </div>
 
@@ -179,6 +157,7 @@ function ReservationPortalPage() {
 
             <aside className="space-y-4">
               {data.paymentEnabled &&
+                data.paymentUrl &&
                 data.reservation.depositRequired &&
                 !data.reservation.depositPaid &&
                 data.reservation.status !== "cancelled" && (
@@ -186,16 +165,18 @@ function ReservationPortalPage() {
                     <h2 className="font-medium">Acompte à régler</h2>
                     <p className="mt-2 text-xs leading-5 text-muted-foreground">
                       Le règlement de {`${data.reservation.depositAmount ?? 100}\u00a0€`} est
-                      nécessaire avant la validation définitive par l'équipe.
+                      nécessaire pour confirmer ta réservation. Indique le même nom que sur ta
+                      réservation dans SumUp. L'équipe vérifiera le règlement et t'enverra la
+                      confirmation.
                     </p>
-                    <button
-                      type="button"
-                      onClick={openPayment}
-                      disabled={openingPayment}
-                      className="mt-4 w-full rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                    <a
+                      href={data.paymentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-4 block w-full rounded-full bg-primary px-4 py-2.5 text-center text-sm font-medium text-primary-foreground"
                     >
-                      {openingPayment ? "Ouverture…" : "Payer l'acompte"}
-                    </button>
+                      Payer l'acompte pour confirmer la réservation
+                    </a>
                   </div>
                 )}
               {data.reservation.status !== "cancelled" &&

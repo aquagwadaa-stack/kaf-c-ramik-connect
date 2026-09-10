@@ -44,8 +44,21 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import {
   addWalkInReservation,
   decideGroupReservation,
+  recordGroupDeposit,
+  retryGroupEmail,
   useReservations,
   experienceLabel,
   experienceUsesCeramicGuide,
@@ -749,6 +762,7 @@ function OverviewPanel({
   const pendingGroups = activeReservations.filter(
     (reservation) =>
       reservation.isGroupRequest &&
+      !reservation.groupApprovedAt &&
       (reservation.status === "pending" || reservation.status === "deposit_paid"),
   );
   const pendingDeposits = activeReservations.filter(
@@ -1831,7 +1845,11 @@ function ReservationCard({
             {reservation.eventType && ` · ${reservation.eventType}`}
           </div>
         </div>
-        <StatusBadge status={reservation.status} />
+        {reservation.groupApprovedAt && reservation.status === "pending" ? (
+          <InfoPill tone="warning">Acceptée · acompte en attente</InfoPill>
+        ) : (
+          <StatusBadge status={reservation.status} />
+        )}
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
@@ -1956,9 +1974,38 @@ function ReservationCard({
 
 function GroupDecisionControls({ reservation }: { reservation: Reservation }) {
   const [message, setMessage] = useState("");
-  const [saving, setSaving] = useState<"approve" | "reject" | null>(null);
+  const [saving, setSaving] = useState<"approve" | "reject" | "deposit" | "email" | null>(null);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+
+  async function confirmDeposit() {
+    setSaving("deposit");
+    setError("");
+    try {
+      const result = await recordGroupDeposit(reservation.id);
+      setNotice(
+        result.delivered
+          ? "Acompte enregistré, réservation confirmée et email envoyé."
+          : "Acompte enregistré et réservation confirmée. L'email reste à envoyer : utilise Réessayer l'email.",
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Le paiement n'a pas pu être enregistré.");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function resendDecision() {
+    setSaving("email");
+    setError("");
+    const result = await retryGroupEmail(reservation.id, reservation.status !== "cancelled");
+    setNotice(
+      result.delivered
+        ? "Email envoyé."
+        : "L'email n'a pas pu être envoyé. Réessaie dans un instant.",
+    );
+    setSaving(null);
+  }
 
   async function decide(approved: boolean) {
     setSaving(approved ? "approve" : "reject");
@@ -1983,10 +2030,28 @@ function GroupDecisionControls({ reservation }: { reservation: Reservation }) {
   }
 
   if (reservation.status !== "pending" && reservation.status !== "deposit_paid") {
-    if (!notice && !reservation.decisionMessage) return null;
+    if (
+      !notice &&
+      !reservation.decisionMessage &&
+      (!reservation.decisionAt || reservation.decisionEmailSentAt)
+    )
+      return null;
     return (
       <div className="mt-3 rounded-xl bg-secondary/45 px-3 py-2 text-xs text-muted-foreground">
-        {notice || `Motif transmis au client : ${reservation.decisionMessage}`}
+        {notice ||
+          (reservation.decisionMessage
+            ? `Motif transmis au client : ${reservation.decisionMessage}`
+            : "Confirmation enregistrée. L'email reste à envoyer.")}
+        {reservation.decisionAt && !reservation.decisionEmailSentAt && (
+          <button
+            type="button"
+            disabled={saving !== null}
+            onClick={() => void resendDecision()}
+            className="ml-3 underline"
+          >
+            Réessayer l'email
+          </button>
+        )}
       </div>
     );
   }
@@ -1995,9 +2060,11 @@ function GroupDecisionControls({ reservation }: { reservation: Reservation }) {
     <div className="mt-4 rounded-2xl border border-primary/25 bg-primary/5 p-4">
       <div className="font-medium">Décision de l'équipe</div>
       <p className="mt-1 text-xs text-muted-foreground">
-        {reservation.depositPaid
-          ? "L'acompte est reçu. Le client recevra automatiquement la décision par email."
-          : "La demande reste bloquée jusqu'à la confirmation du paiement de l'acompte."}
+        {reservation.groupApprovedAt && !reservation.depositPaid
+          ? "Demande acceptée. Vérifie le règlement dans SumUp avant d'enregistrer l'acompte reçu."
+          : reservation.depositPaid
+            ? "L'acompte est reçu. Le client recevra automatiquement la décision par email."
+            : "Accepte la demande pour envoyer le lien de paiement. La réservation sera confirmée après vérification de l'acompte dans SumUp."}
       </p>
       <textarea
         value={message}
@@ -2007,14 +2074,58 @@ function GroupDecisionControls({ reservation }: { reservation: Reservation }) {
         className="mt-3 w-full resize-y rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
       />
       <div className="mt-3 flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={saving !== null || !reservation.depositPaid}
-          onClick={() => void decide(true)}
-          className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-        >
-          {saving === "approve" ? "Validation…" : "Valider la demande"}
-        </button>
+        {!reservation.groupApprovedAt && (
+          <button
+            type="button"
+            disabled={saving !== null}
+            onClick={() => void decide(true)}
+            className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          >
+            {saving === "approve" ? "Validation…" : "Accepter la demande"}
+          </button>
+        )}
+        {reservation.groupApprovedAt && !reservation.depositPaid && (
+          <>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  type="button"
+                  disabled={saving !== null}
+                  className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                >
+                  {saving === "deposit" ? "Enregistrement…" : "Acompte reçu · confirmer"}
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Enregistrer l'acompte reçu ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Vérifie dans SumUp le paiement de {reservation.depositAmount ?? 100} € pour{" "}
+                    {reservation.firstName} {reservation.lastName}, le{" "}
+                    {formatReservationDate(reservation.date)} à {reservation.slot}. La réservation
+                    sera confirmée et un email sera envoyé au client.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Retour</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => void confirmDeposit()}>
+                    Paiement vérifié · confirmer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            {!reservation.paymentRequestEmailSentAt && (
+              <button
+                type="button"
+                disabled={saving !== null}
+                onClick={() => void resendDecision()}
+                className="rounded-full border px-4 py-2 text-sm"
+              >
+                Réessayer l'email de paiement
+              </button>
+            )}
+          </>
+        )}
         <button
           type="button"
           disabled={saving !== null}

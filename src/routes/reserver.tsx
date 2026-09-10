@@ -21,7 +21,6 @@ import { formatPublicTime } from "@/lib/opening-hours";
 import { addIsoDays, getKafeDate, getKafeTime, kafeTodayAtLocalNoon } from "@/lib/kafe-time";
 import {
   addReservation,
-  createSumUpCheckout,
   experienceUsesCeramicGuide,
   experienceLabel,
   formatDuration,
@@ -311,20 +310,6 @@ function ReserverPage() {
       setSubmitting(false);
       return;
     }
-    if (depositRequired && settings.sumupPaymentsEnabled && reservation.managementToken) {
-      try {
-        const checkout = await createSumUpCheckout(reservation.managementToken);
-        if (checkout.configured && checkout.checkoutUrl) {
-          window.location.assign(checkout.checkoutUrl);
-          return;
-        }
-      } catch (error) {
-        console.warn("SumUp checkout unavailable:", error);
-        setSubmitError(
-          "La demande est enregistrée, mais le paiement n'a pas pu s'ouvrir. Tu pourras le relancer depuis ta réservation.",
-        );
-      }
-    }
     const emailDispatch = await sendReservationCreatedEmails(
       reservation.id,
       reservation.managementToken,
@@ -342,7 +327,7 @@ function ReserverPage() {
           ? "Ta demande est enregistrée. Tu as reçu un email récapitulatif et l'équipe te recontactera après validation."
           : "Ta réservation est confirmée. Un email récapitulatif vient de t'être envoyé."
         : requiresManualReview
-          ? "Ta demande est enregistrée. L'équipe du Kafé confirmera le créneau dès validation."
+          ? "Ta demande est enregistrée. Après acceptation par l'équipe, tu pourras régler l'acompte pour confirmer ta réservation."
           : settings.confirmationEmailText,
     );
     setStep(4);
@@ -628,8 +613,8 @@ function ReserverPage() {
                     <div className="text-sm">
                       <div className="font-medium">Acompte nécessaire : {`${deposit}\u00a0€`}</div>
                       <p className="mt-1 text-muted-foreground">
-                        Il devra être réglé en ligne avant que l'équipe valide définitivement la
-                        demande.
+                        Après acceptation par l'équipe, tu recevras par email le lien pour régler
+                        l'acompte et confirmer ta réservation.
                       </p>
                     </div>
                   </div>
@@ -927,7 +912,7 @@ function Row({ k, v }: { k: string; v: string }) {
 }
 
 function Stepper({ step }: { step: number }) {
-  const labels = ["Formule", "Planning", "Infos", "Confirmé"];
+  const labels = ["Formule", "Planning", "Infos", "Enregistré"];
   return (
     <div className="grid grid-cols-4 gap-2">
       {labels.map((label, index) => {

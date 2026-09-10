@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { addIsoDays, getKafeDate } from "./kafe-time";
+import { getDepositPaymentLink } from "../../supabase/functions/_shared/deposit-payment";
 import { settingsSeed, type KafeSettings, type SeatingZone } from "./admin-data";
 import {
   callRpc,
@@ -55,6 +56,9 @@ export interface Reservation {
   walkInLabel?: string;
   decisionMessage?: string;
   decisionAt?: string;
+  groupApprovedAt?: string;
+  paymentRequestEmailSentAt?: string;
+  decisionEmailSentAt?: string;
   reservationCreatedEmailSentAt?: string;
   reminderEmailSentAt?: string;
   managementToken?: string;
@@ -66,6 +70,7 @@ export type ReservationPortalData = {
   cancellationDeadline: string;
   cancellationNoticeHours: number;
   paymentEnabled: boolean;
+  paymentUrl?: string;
 };
 
 export type SumUpCheckoutResult = {
@@ -421,6 +426,23 @@ export async function decideGroupReservation(
   approved: boolean,
   message = "",
 ): Promise<EmailDispatchResult> {
+  if (!isSupabaseConfigured()) {
+    const current = read().find((item) => item.id === id);
+    if (!current?.isGroupRequest || !["pending", "deposit_paid"].includes(current.status))
+      throw new Error("Cette demande ne peut plus être modifiée.");
+    const decision: Reservation = {
+      ...current,
+      status: approved ? (current.depositPaid ? "confirmed" : "pending") : "cancelled",
+      groupApprovedAt: approved
+        ? (current.groupApprovedAt ?? new Date().toISOString())
+        : current.groupApprovedAt,
+      decisionAt: new Date().toISOString(),
+      decisionMessage: approved ? "" : message.trim(),
+    };
+    write(read().map((item) => (item.id === id ? decision : item)));
+    refreshReservationOccupancies();
+    return { ok: true, delivered: false, reason: "Mode local : aucun email envoyé." };
+  }
   const decision = await callRpc<Reservation>(
     "decide_kafe_group_reservation",
     {
@@ -430,7 +452,7 @@ export async function decideGroupReservation(
     },
     true,
   );
-  const nextStatus: ReservationStatus = approved ? "confirmed" : "cancelled";
+  const nextStatus: ReservationStatus = decision.status;
   let dispatch: EmailDispatchResult;
   try {
     dispatch = await invokeEdgeFunction<EmailDispatchResult>(
@@ -465,6 +487,47 @@ export async function decideGroupReservation(
   write(list);
   refreshReservationOccupancies();
   return dispatch;
+}
+
+export async function recordGroupDeposit(id: string): Promise<EmailDispatchResult> {
+  if (!isSupabaseConfigured()) {
+    const current = read().find((item) => item.id === id);
+    if (
+      !current?.groupApprovedAt ||
+      !["pending", "deposit_paid", "confirmed"].includes(current.status)
+    )
+      throw new Error("Cette demande ne peut plus être confirmée.");
+    write(
+      read().map((item) =>
+        item.id === id ? { ...item, status: "confirmed", depositPaid: true } : item,
+      ),
+    );
+    refreshReservationOccupancies();
+    return { ok: true, delivered: false, reason: "Mode local : aucun email envoyé." };
+  }
+  const reservation = await callRpc<Reservation>("record_kafe_group_deposit", { p_id: id }, true);
+  write(read().map((item) => (item.id === id ? { ...item, ...reservation } : item)));
+  refreshReservationOccupancies();
+  return retryGroupEmail(id, true);
+}
+
+export async function retryGroupEmail(id: string, approved: boolean): Promise<EmailDispatchResult> {
+  try {
+    return await invokeEdgeFunction<EmailDispatchResult>(
+      "kafe-emails",
+      {
+        action: approved ? "group-approved" : "group-rejected",
+        reservationId: id,
+      },
+      true,
+    );
+  } catch (error) {
+    return {
+      ok: false,
+      delivered: false,
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 export async function addWalkInReservation(input: {
@@ -573,7 +636,16 @@ export async function getReservationPortal(managementToken: string) {
         new Date() <= cancellationDeadline,
       cancellationDeadline: cancellationDeadline.toISOString(),
       cancellationNoticeHours,
-      paymentEnabled: settings.sumupPaymentsEnabled,
+      paymentEnabled: Boolean(
+        reservation.groupApprovedAt &&
+        reservation.status === "pending" &&
+        !reservation.depositPaid &&
+        getDepositPaymentLink(settings),
+      ),
+      paymentUrl:
+        reservation.groupApprovedAt && reservation.status === "pending" && !reservation.depositPaid
+          ? getDepositPaymentLink(settings)
+          : "",
     } satisfies ReservationPortalData;
   }
   return callRpc<ReservationPortalData>("get_kafe_reservation_by_token", {

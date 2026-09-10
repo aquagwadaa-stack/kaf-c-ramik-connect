@@ -4,8 +4,10 @@ import path from "node:path";
 const folder = process.env.KAFE_PREVIEW_OUTPUT;
 if (!folder) throw new Error("Set KAFE_PREVIEW_OUTPUT to the generated preview folder.");
 const previews = JSON.parse(await fs.readFile(path.join(folder, "index.json"), "utf8"));
-if (previews.length !== 19 || new Set(previews.map((p) => p.key)).size !== 19)
-  throw new Error("Expected exactly 19 distinct preview templates.");
+if (previews.length !== 20 || new Set(previews.map((p) => p.key)).size !== 20)
+  throw new Error(
+    "Expected exactly 20 distinct preview templates. Regenerate the current templates first.",
+  );
 const send = process.argv.includes("--send");
 const recipient = "gwada.web.studio@gmail.com";
 if (send && (!process.env.RESEND_API_KEY || !process.env.KAFE_EMAIL_FROM))
@@ -50,7 +52,7 @@ for (const preview of previews) {
     headers: {
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       "Content-Type": "application/json",
-      "Idempotency-Key": `kafe-preview-20260908-v1-${preview.key}`,
+      "Idempotency-Key": `kafe-preview-20260910-v2-${preview.key}`,
     },
     body: JSON.stringify(mail),
     signal: AbortSignal.timeout(30000),

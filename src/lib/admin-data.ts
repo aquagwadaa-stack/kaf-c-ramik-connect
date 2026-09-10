@@ -694,6 +694,7 @@ export interface KafeSettings {
   groupMealRateMin: number;
   groupMealRateMax: number;
   sumupPaymentsEnabled: boolean;
+  depositPaymentLink: string;
   creationInspirations: CreationInspiration[];
   pageImages: PageImageSetting[];
 }
@@ -961,6 +962,7 @@ export const settingsSeed: KafeSettings = {
   groupMealRateMin: 15,
   groupMealRateMax: 25,
   sumupPaymentsEnabled: false,
+  depositPaymentLink: "https://pay.sumup.com/b2c/Q0XPSRZ3",
   creationInspirations: creationInspirationsSeed,
   pageImages: pageImagesSeed,
 };

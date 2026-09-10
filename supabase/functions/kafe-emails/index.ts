@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from "npm:pdf-lib@1.17.1";
 import webpush from "npm:web-push@3.6.7";
 import { formatGiftExpiry } from "../_shared/gift-validity.ts";
+import { getDepositPaymentLink } from "../_shared/deposit-payment.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,6 +29,8 @@ type ReservationValue = {
   groupQuoteTotal?: number;
   groupQuoteNumber?: string;
   decisionMessage?: string;
+  groupApprovedAt?: string;
+  paymentRequestEmailSentAt?: string;
   reservationCreatedEmailSentAt?: string;
   depositReceiptEmailSentAt?: string;
   adminAlertEmailSentAt?: string;
@@ -55,6 +58,7 @@ type SettingsValue = {
   contactPhone?: string;
   contactAddress?: string;
   depositFixedAmount?: number;
+  depositPaymentLink?: string;
   manualConfirmationThreshold?: number;
   kitchenClosingTime?: string;
   giftCardValidityMonths?: number;
@@ -780,7 +784,7 @@ async function reservationCreated(
     const intro = isGroup
       ? row.value.depositPaid
         ? `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Ton acompte de <strong>${escapeHtml(row.value.depositAmount ?? settings.depositFixedAmount ?? 100)} €</strong> est bien reçu. Ta demande a été transmise à l'équipe et ton créneau sera confirmé après validation.</p>`
-        : `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Ta demande a bien été transmise à l'équipe. Ton créneau sera confirmé après validation.</p><p>Pour ce groupe, un acompte fixe de <strong>${escapeHtml(row.value.depositAmount ?? settings.depositFixedAmount ?? 100)} €</strong> est nécessaire avant la validation définitive.</p>`
+        : `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Ta demande a bien été transmise à l'équipe. Après validation de ta demande, tu recevras un lien de paiement pour régler l'acompte de <strong>${escapeHtml(row.value.depositAmount ?? settings.depositFixedAmount ?? 100)} €</strong>.</p><p>Ta réservation sera confirmée une fois le règlement vérifié par l'équipe.</p>`
       : `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Ta réservation est bien enregistrée. Nous avons hâte de t'accueillir ${row.value.experience === "brunch_atelier" ? "autour d'un brunch" : "pour ce moment créatif"}.</p>`;
     customerDelivered = await sendEmail(
       [row.value.email],
@@ -873,6 +877,31 @@ async function groupDecision(
   message: string,
   preview?: PreviewContext,
 ) {
+  if (
+    approved &&
+    row.status === "pending" &&
+    row.value.groupApprovedAt &&
+    !row.value.depositPaid &&
+    row.value.depositRequired
+  ) {
+    const paymentUrl = getDepositPaymentLink(settings);
+    if (!paymentUrl || new Date(`${row.date}T${row.slot}:00-04:00`) <= new Date()) return false;
+    if (row.value.paymentRequestEmailSentAt) return true;
+    const delivered = await sendEmail(
+      [row.value.email],
+      "Demande acceptée : règle ton acompte pour confirmer",
+      shell(
+        "Ta demande est acceptée",
+        `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Bonne nouvelle : l'équipe a accepté ta demande de groupe.</p><p>Pour confirmer ta réservation, règle l'acompte de <strong>${escapeHtml(row.value.depositAmount ?? settings.depositFixedAmount ?? 100)} €</strong> sur SumUp.</p><p style="margin:26px 0"><a href="${escapeHtml(paymentUrl)}" style="display:inline-block;max-width:100%;box-sizing:border-box;background:#864d3a;color:#ffffff;text-decoration:none;padding:15px 22px;border-radius:24px;font-weight:700">Payer l'acompte pour confirmer la réservation</a></p><p>Dans le champ « Votre nom complet » sur SumUp, indique <strong>${escapeHtml(row.value.firstName)} ${escapeHtml(row.value.lastName)}</strong>, comme sur ta réservation. L'équipe vérifiera ton règlement et t'enverra la confirmation définitive. Si tu as déjà payé, ne règle pas une seconde fois : contacte le Kafé.</p>${details(row, settings, siteUrl)}`,
+      ),
+      [],
+      preview,
+      `${row.id}-payment-request`,
+    );
+    if (delivered)
+      await markReservation(row, { paymentRequestEmailSentAt: new Date().toISOString() }, preview);
+    return delivered;
+  }
   if (approved ? row.status !== "confirmed" || !row.value.depositPaid : row.status !== "cancelled")
     return false;
   if (row.value.decisionEmailSentAt) return true;
@@ -1105,6 +1134,24 @@ async function buildEmailPreviewSuite(settings: SettingsValue) {
   );
   await collect(["client-groupe-accepte"], (p) =>
     groupDecision(base({ people: 8 }, { depositPaid: true }), settings, site, true, "", p),
+  );
+  await collect(["client-groupe-accepte-paiement"], (p) =>
+    groupDecision(
+      base(
+        { people: 8, status: "pending" },
+        {
+          groupApprovedAt: "2026-09-10T10:00:00Z",
+          depositRequired: true,
+          depositPaid: false,
+          depositAmount: 100,
+        },
+      ),
+      settings,
+      site,
+      true,
+      "",
+      p,
+    ),
   );
   await collect(["client-groupe-refuse"], (p) =>
     groupDecision(
