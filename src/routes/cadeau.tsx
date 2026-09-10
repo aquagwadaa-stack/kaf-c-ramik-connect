@@ -7,6 +7,7 @@ import {
   Gift,
   LoaderCircle,
   Mail,
+  RefreshCw,
   Sparkles,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
@@ -61,6 +62,8 @@ function CadeauPage() {
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState("");
   const [returnedOrder, setReturnedOrder] = useState<PublicGiftStatus | null>(null);
+  const [statusAttempt, setStatusAttempt] = useState(0);
+  const [statusError, setStatusError] = useState(false);
   const selected = options.find((option) => option.id === selectedId);
   const amount = selected?.amount ?? customAmount;
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail.trim());
@@ -75,6 +78,7 @@ function CadeauPage() {
     const token = params.get("giftToken");
     if (token === null) return;
     const giftToken = token;
+    setStatusError(false);
     let stopped = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let attempts = 0;
@@ -85,11 +89,11 @@ function CadeauPage() {
         if (stopped) return;
         setReturnedOrder(result.order ?? null);
         attempts += 1;
-        if (result.order?.status === "pending" && attempts < 10) {
+        if (result.order?.status === "pending" && attempts < 24) {
           timer = setTimeout(() => void refreshStatus(), 2500);
         }
       } catch {
-        if (!stopped) setReturnedOrder(null);
+        if (!stopped) setStatusError(true);
       }
     }
 
@@ -98,7 +102,7 @@ function CadeauPage() {
       stopped = true;
       if (timer) clearTimeout(timer);
     };
-  }, []);
+  }, [statusAttempt]);
 
   const mailHref = useMemo(() => {
     const subject = encodeURIComponent(`Carte cadeau Kafé Céramik - ${amount} €`);
@@ -181,19 +185,34 @@ function CadeauPage() {
         <span className="bg-[#ffc1b6]" />
       </div>
 
-      {returnedOrder && (
+      {(returnedOrder || statusError) && (
         <section className="border-b border-border bg-[#d6ead4] px-4 py-6">
           <div className="mx-auto flex max-w-6xl items-start gap-3 rounded-3xl bg-[#fffaf1] p-5 text-[#301c1a]">
             <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-[#315d39]" />
             <div>
               <h2 className="font-display text-2xl">
-                {returnedOrder.status === "paid" ? "Paiement confirmé" : "Paiement en vérification"}
+                {returnedOrder?.status === "paid"
+                  ? "Paiement confirmé"
+                  : returnedOrder?.status === "failed" || returnedOrder?.status === "expired"
+                    ? "Paiement non finalisé"
+                    : "Paiement en vérification"}
               </h2>
               <p className="mt-1 text-sm leading-6">
-                {returnedOrder.status === "paid"
+                {returnedOrder?.status === "paid"
                   ? `Tu recevras le PDF de la carte à ${returnedOrder.recipientEmail}.`
-                  : "La confirmation peut prendre quelques instants. Le PDF sera envoyé automatiquement dès validation du paiement."}
+                  : returnedOrder?.status === "failed" || returnedOrder?.status === "expired"
+                    ? "Le paiement n'a pas été confirmé. Contacte le Kafé si tu as été débité."
+                    : "La confirmation peut prendre quelques instants. Ne repaie pas : actualise le statut ou contacte le Kafé."}
               </p>
+              {(statusError || returnedOrder?.status === "pending") && (
+                <button
+                  type="button"
+                  className="mt-3 inline-flex items-center gap-2 underline"
+                  onClick={() => setStatusAttempt((value) => value + 1)}
+                >
+                  <RefreshCw className="h-4 w-4" /> Actualiser le statut
+                </button>
+              )}
             </div>
           </div>
         </section>

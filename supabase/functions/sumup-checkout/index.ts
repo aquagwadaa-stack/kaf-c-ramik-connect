@@ -50,6 +50,7 @@ type SumUpCheckout = {
   hosted_checkout_url?: string;
   amount: number;
   currency: string;
+  merchant_code: string;
   [key: string]: unknown;
 };
 
@@ -92,13 +93,14 @@ async function db<T>(path: string, init: RequestInit = {}): Promise<T> {
 async function sumup<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`https://api.sumup.com${path}`, {
     ...init,
+    signal: AbortSignal.timeout(20000),
     headers: {
       Authorization: `Bearer ${sumupApiKey}`,
       "Content-Type": "application/json",
       ...(init.headers ?? {}),
     },
   });
-  if (!response.ok) throw new Error(`SUMUP_${response.status}: ${await response.text()}`);
+  if (!response.ok) throw new Error(`SUMUP_${response.status}`);
   return (await response.json()) as T;
 }
 
@@ -206,6 +208,17 @@ function giftCode() {
   return `KC-${new Date().getUTCFullYear()}-${crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase()}`;
 }
 
+function validateGiftCheckout(checkout: SumUpCheckout, order: GiftOrderRow) {
+  if (
+    checkout.id !== order.provider_checkout_id ||
+    checkout.currency !== "EUR" ||
+    checkout.merchant_code !== sumupMerchantCode ||
+    Math.round(checkout.amount * 100) !== Math.round(Number(order.amount) * 100) ||
+    (order.value.checkoutReference && checkout.checkout_reference !== order.value.checkoutReference)
+  )
+    throw new Error("SUMUP_CHECKOUT_MISMATCH");
+}
+
 async function createGiftCheckout(input: GiftInput, siteUrl: string) {
   const settings = await readSettings();
   if (settings.giftCardPaymentsEnabled !== true) {
@@ -232,6 +245,9 @@ async function createGiftCheckout(input: GiftInput, siteUrl: string) {
   if (!Number.isFinite(amount) || amount < minimum) {
     return json({ error: `Le montant minimum est de ${minimum} EUR.` }, 400);
   }
+  if (Math.abs(amount * 100 - Math.round(amount * 100)) > 0.000001) {
+    return json({ error: "Le montant doit comporter au maximum deux décimales." }, 400);
+  }
   if (recipientName.length < 2 || senderName.length < 2) {
     return json({ error: "Les noms du bénéficiaire et de l'acheteur sont requis." }, 400);
   }
@@ -243,6 +259,7 @@ async function createGiftCheckout(input: GiftInput, siteUrl: string) {
   const code = giftCode();
   const managementToken = crypto.randomUUID();
   const createdAt = new Date().toISOString();
+  const reference = `CADEAU-${crypto.randomUUID()}`;
   const value = {
     id,
     code,
@@ -254,6 +271,7 @@ async function createGiftCheckout(input: GiftInput, siteUrl: string) {
     visual,
     status: "pending",
     createdAt,
+    checkoutReference: reference,
   };
 
   await db<void>("/rest/v1/kafe_gift_card_orders", {
@@ -273,7 +291,6 @@ async function createGiftCheckout(input: GiftInput, siteUrl: string) {
 
   const cleanSiteUrl = siteUrl.replace(/\/$/, "");
   const webhookUrl = `${supabaseUrl}/functions/v1/sumup-checkout`;
-  const reference = `CADEAU-${code}-${crypto.randomUUID()}`.slice(0, 90);
   try {
     const checkout = await sumup<SumUpCheckout>("/v0.1/checkouts", {
       method: "POST",
@@ -320,8 +337,15 @@ async function readGiftStatus(managementToken: string) {
   const rows = await db<GiftOrderRow[]>(
     `/rest/v1/kafe_gift_card_orders?select=id,code,management_token,value,amount,status,provider_checkout_id,hosted_checkout_url,expires_at&management_token=eq.${encodeURIComponent(managementToken)}&limit=1`,
   );
-  const row = rows[0];
+  let row = rows[0];
   if (!row) return json({ error: "Gift card not found" }, 404);
+  // Recover a delayed webhook when the buyer returns from SumUp.
+  if (row.provider_checkout_id && (row.status === "pending" || row.status === "paid")) {
+    const checkout = await sumup<SumUpCheckout>(
+      `/v0.1/checkouts/${encodeURIComponent(row.provider_checkout_id)}`,
+    );
+    row = await processGiftPayment(checkout, row);
+  }
   return json({
     ok: true,
     order: {
@@ -406,36 +430,26 @@ async function processReservationPayment(checkout: SumUpCheckout, payment: Payme
 }
 
 async function processGiftPayment(checkout: SumUpCheckout, order: GiftOrderRow) {
-  const status = checkout.status.toLowerCase() as GiftOrderRow["status"];
-  const now = new Date();
+  validateGiftCheckout(checkout, order);
   const settings = await readSettings();
   const validityMonths = Math.max(1, Number(settings.giftCardValidityMonths ?? 6));
-  const expiresAt =
-    order.expires_at ??
-    giftExpiryFromPurchase((order.value.paidAt as string) || now, validityMonths);
-  const firstPaidConfirmation = checkout.status === "PAID" && order.status !== "paid";
-  const nextValue = {
-    ...order.value,
-    status,
-    ...(checkout.status === "PAID"
-      ? { paidAt: order.value.paidAt ?? now.toISOString(), expiresAt }
-      : {}),
-  };
+  const result = await db<{ firstPaid: boolean; order: GiftOrderRow }>(
+    "/rest/v1/rpc/apply_kafe_gift_payment",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        p_checkout_id: checkout.id,
+        p_amount: checkout.amount,
+        p_status: checkout.status,
+        p_expires_at: giftExpiryFromPurchase(
+          (order.value.paidAt as string) || new Date(),
+          validityMonths,
+        ),
+      }),
+    },
+  );
 
-  await db<void>(`/rest/v1/kafe_gift_card_orders?id=eq.${encodeURIComponent(order.id)}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({
-      status,
-      value: nextValue,
-      updated_at: now.toISOString(),
-      ...(checkout.status === "PAID"
-        ? { paid_at: order.value.paidAt ?? now.toISOString(), expires_at: expiresAt }
-        : {}),
-    }),
-  });
-
-  if (firstPaidConfirmation) {
+  if (result.firstPaid) {
     await db<void>("/rest/v1/kafe_admin_notifications", {
       method: "POST",
       headers: { Prefer: "return=minimal" },
@@ -447,13 +461,16 @@ async function processGiftPayment(checkout: SumUpCheckout, order: GiftOrderRow) 
     }).catch(() => undefined);
   }
 
-  if (checkout.status === "PAID") {
-    await fetch(`${supabaseUrl}/functions/v1/kafe-emails`, {
+  if (result.order.status === "paid") {
+    const response = await fetch(`${supabaseUrl}/functions/v1/kafe-emails`, {
       method: "POST",
       headers: apiHeaders(),
       body: JSON.stringify({ action: "gift-card-paid", giftOrderId: order.id }),
-    }).catch((error) => console.error("Gift card email error", error));
+    });
+    const receipt = await response.json();
+    if (!response.ok || receipt.delivered !== true) throw new Error("GIFT_EMAIL_RETRY_REQUIRED");
   }
+  return result.order;
 }
 
 async function handleWebhook(checkoutId: string) {
