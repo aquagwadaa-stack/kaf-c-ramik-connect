@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { CalendarHeart, Coffee, Phone, ShoppingBag } from "lucide-react";
 import { PdfDocument } from "@/components/pdf-document";
 import { PageShell, PageHeader } from "@/components/page-shell";
+import { formatPublicTime, getPublicSchedule } from "@/lib/opening-hours";
 import {
   getMenuDocument,
   getPageImage,
@@ -35,6 +36,7 @@ const foodPhotoKeys: PageImageKey[] = [
 
 function CartePage() {
   const [settings] = useKafeSettings();
+  const schedule = getPublicSchedule(settings);
   const foodPhotos = foodPhotoKeys.map((key) => getPageImage(settings, key));
   const [documents] = useContentDocuments();
   const menu = getMenuDocument(documents);
@@ -49,7 +51,7 @@ function CartePage() {
       <PageHeader
         eyebrow="Café, brunch & douceurs"
         title="La carte du Kafé"
-        description={`Le Kafé t'accueille du mardi au dimanche. Service continu jusqu'à ${settings.kitchenClosingTime.replace(":", "h")}. Réserve ta table pour garantir ta place.`}
+        description={`${schedule.days}. Service continu jusqu'à ${formatPublicTime(settings.kitchenClosingTime)}. Réserve ta table pour garantir ta place.`}
       >
         <Link
           to="/reserver"

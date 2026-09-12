@@ -599,6 +599,11 @@ function ReserverPage() {
                     {settings.groupOutsideFoodNotice}
                   </p>
                 )}
+                {settings.reservationConditionsText.trim() && (
+                  <p className="mt-2 whitespace-pre-line break-words text-muted-foreground">
+                    {settings.reservationConditionsText}
+                  </p>
+                )}
                 <p className="mt-2 text-muted-foreground">
                   Ta demande sort du cadre habituel ?{" "}
                   <Link

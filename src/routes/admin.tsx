@@ -4344,7 +4344,7 @@ function SettingsPanel({
               onChange={(consumptionMandatoryNotice) => update({ consumptionMandatoryNotice })}
             />
             <TextareaField
-              label="Conditions avant confirmation"
+              label="Conditions complémentaires avant confirmation (facultatif)"
               value={settings.reservationConditionsText}
               onChange={(value) => update({ reservationConditionsText: value })}
             />

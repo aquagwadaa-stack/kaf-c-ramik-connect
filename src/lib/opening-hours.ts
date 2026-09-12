@@ -32,18 +32,18 @@ function formatWeekdays(weekdays: number[]) {
   return ordered.map((day) => dayNames[day]).join(", ");
 }
 
-function selectCurrentRules(rules: ScheduleRule[]) {
-  const today = getKafeDate();
-  const current = rules.filter(
+function selectCurrentRules(rules: ScheduleRule[], now: Date) {
+  const today = getKafeDate(now);
+  return rules.filter(
     (rule) =>
       (!rule.validFrom || rule.validFrom <= today) &&
-      (!rule.validUntil || rule.validUntil >= today),
+      (!rule.validUntil || rule.validUntil >= today) &&
+      rule.weekdays.length > 0,
   );
-  return current.length ? current : rules;
 }
 
-export function getPublicSchedule(settings: KafeSettings) {
-  const rules = selectCurrentRules(settings.scheduleRules ?? []);
+export function getPublicSchedule(settings: KafeSettings, now = new Date()) {
+  const rules = selectCurrentRules(settings.scheduleRules ?? [], now);
   if (!rules.length) {
     return {
       days: "Horaires à confirmer",
@@ -52,9 +52,9 @@ export function getPublicSchedule(settings: KafeSettings) {
     };
   }
 
-  const primary = rules[0];
   const closing = toMinutes(settings.cafeClosingTime || "18:30");
-  const days = formatWeekdays(primary.weekdays);
-  const hours = `${formatTime(toMinutes(primary.startTime))} – ${formatTime(closing)}`;
+  const days = formatWeekdays(rules.flatMap((rule) => rule.weekdays));
+  const opening = Math.min(...rules.map((rule) => toMinutes(rule.startTime)));
+  const hours = `${formatTime(opening)} – ${formatTime(closing)}`;
   return { days, hours, inline: `${days} · ${hours}` };
 }

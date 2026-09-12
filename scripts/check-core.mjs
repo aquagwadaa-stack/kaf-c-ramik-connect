@@ -14,7 +14,8 @@ function check(name, run) {
 }
 try {
   const rules = await server.ssrLoadModule("/src/lib/reservations.ts");
-  const { settingsSeed } = await server.ssrLoadModule("/src/lib/admin-data.ts");
+  const { settingsSeed, normalizeKafeSettings } =
+    await server.ssrLoadModule("/src/lib/admin-data.ts");
   const time = await server.ssrLoadModule("/src/lib/kafe-time.ts");
   const settings = structuredClone(settingsSeed);
   const date = "2026-09-15";
@@ -204,6 +205,79 @@ try {
     assert.equal(rules.getSlotsForDate(date, { ...settings, slotIntervalMinutes: 30 }).length, 15);
   });
   const hours = await server.ssrLoadModule("/src/lib/opening-hours.ts");
+  check("Custom conditions remain editable without resetting numeric rules", () => {
+    const next = normalizeKafeSettings({
+      ...settings,
+      cancellationNoticeHours: 24,
+      reservationConditionsText: "Une consigne pour ta venue.\nUne seconde ligne.",
+    });
+    assert.equal(next.reservationConditionsText, "Une consigne pour ta venue.\nUne seconde ligne.");
+    assert.equal(next.cancellationNoticeHours, 24);
+    assert.equal(
+      normalizeKafeSettings({ ...next, reservationConditionsText: "" }).reservationConditionsText,
+      "",
+    );
+  });
+  check("Obsolete generated 48-hour conditions never contradict the live settings", () => {
+    const next = normalizeKafeSettings({
+      ...settings,
+      cancellationNoticeHours: 24,
+      reservationConditionsText:
+        "Annulation possible jusqu'à 48 h avant. Au-delà, merci d'appeler le Kafé. Une réservation est libérée après plus de 30 minutes de retard. Pour les groupes, l'acompte est conservé si l'annulation intervient moins de 24 h avant.",
+    });
+    assert.equal(next.reservationConditionsText, "");
+    assert.equal(next.cancellationNoticeHours, 24);
+  });
+  const scheduleNow = new Date("2026-09-15T12:00:00Z");
+  const currentRule = settings.scheduleRules[0];
+  check("Public days combine active rules instead of assuming Tuesday to Sunday", () => {
+    const next = {
+      ...settings,
+      scheduleRules: [
+        { ...currentRule, weekdays: [1, 3], startTime: "10:00" },
+        { ...currentRule, weekdays: [5], startTime: "09:00" },
+      ],
+    };
+    const schedule = hours.getPublicSchedule(next, scheduleNow);
+    assert.equal(schedule.days, "Lundi, Mercredi, Vendredi");
+    assert.equal(schedule.hours, "9h – 18h30");
+    assert.equal(
+      hours.getPublicSchedule(
+        { ...next, scheduleRules: [{ ...currentRule, weekdays: [0, 1, 2, 3, 4, 5, 6] }] },
+        scheduleNow,
+      ).days,
+      "Tous les jours",
+    );
+  });
+  check("Public days exclude expired, future and disabled schedule rules", () => {
+    const inactive = [
+      { ...currentRule, validUntil: "2026-09-14" },
+      { ...currentRule, validFrom: "2026-09-16" },
+      { ...currentRule, weekdays: [] },
+    ];
+    assert.equal(
+      hours.getPublicSchedule({ ...settings, scheduleRules: inactive }, scheduleNow).days,
+      "Horaires à confirmer",
+    );
+    assert.equal(
+      hours.getPublicSchedule(
+        { ...settings, scheduleRules: [...inactive, { ...currentRule, weekdays: [6] }] },
+        scheduleNow,
+      ).days,
+      "Samedi",
+    );
+  });
+  check("Public schedule changes period at Guadeloupe midnight", () => {
+    const next = {
+      ...settings,
+      scheduleRules: [{ ...currentRule, weekdays: [2], validUntil: "2026-09-14" }],
+    };
+    assert.equal(hours.getPublicSchedule(next, new Date("2026-09-15T03:59:59Z")).days, "Mardi");
+    assert.equal(
+      hours.getPublicSchedule(next, new Date("2026-09-15T04:00:00Z")).days,
+      "Horaires à confirmer",
+    );
+  });
   check("Occupancy duration does not change cafe closing time", () => {
     assert.equal(hours.getPublicSchedule(settings).hours, "9h30 – 18h30");
     assert.equal(

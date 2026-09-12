@@ -900,8 +900,7 @@ export const settingsSeed: KafeSettings = {
   walkInCafeEnabled: true,
   walkInNoticeText:
     "Réserve ta venue pour garantir ta place. Sans réservation, l'accueil reste possible uniquement selon les places disponibles, sans aucune garantie.",
-  reservationConditionsText:
-    "Annulation possible jusqu'à 48 h avant. Au-delà, merci d'appeler le Kafé. Une réservation est libérée après plus de 30 minutes de retard. Pour les groupes, l'acompte est conservé si l'annulation intervient moins de 24 h avant.",
+  reservationConditionsText: "",
   guideAcceptanceText:
     "J'ai pris connaissance du guide. Le Kafé ne pourra en aucun cas être tenu responsable des suites malheureuses d'un non-respect de ses consignes.",
   confirmationEmailText:
@@ -1001,7 +1000,10 @@ export function useWaiverSignatures() {
   });
 }
 
-function normalizeKafeSettings(value?: Partial<KafeSettings> | null): KafeSettings {
+const legacyReservationConditions =
+  "Annulation possible jusqu'à 48 h avant. Au-delà, merci d'appeler le Kafé. Une réservation est libérée après plus de 30 minutes de retard. Pour les groupes, l'acompte est conservé si l'annulation intervient moins de 24 h avant.";
+
+export function normalizeKafeSettings(value?: Partial<KafeSettings> | null): KafeSettings {
   const pageImages = pageImagesSeed.map((seedImage) => ({
     ...seedImage,
     ...value?.pageImages?.find((image) => image.id === seedImage.id),
@@ -1018,6 +1020,11 @@ function normalizeKafeSettings(value?: Partial<KafeSettings> | null): KafeSettin
     },
     giftCardOptions: value?.giftCardOptions ?? settingsSeed.giftCardOptions,
     pageImages,
+    // The former generated copy must not override the live numeric cancellation rules.
+    reservationConditionsText:
+      value?.reservationConditionsText?.trim() === legacyReservationConditions
+        ? ""
+        : (value?.reservationConditionsText ?? settingsSeed.reservationConditionsText),
   };
 
   if ((value?.configurationVersion ?? 0) >= settingsSeed.configurationVersion) {
