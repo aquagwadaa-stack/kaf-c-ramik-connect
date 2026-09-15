@@ -949,7 +949,7 @@ function WeekPlanner({
     } else {
       node.scrollTo({ left: 0, behavior: "auto" });
     }
-  }, [days]);
+  }, [days, settings]);
 
   return (
     <div>
