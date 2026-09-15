@@ -934,22 +934,15 @@ function WeekPlanner({
     const node = scrollerRef.current;
     if (!node) return;
     const todayIso = getKafeDate();
-    const firstOpenIndex = days.findIndex((day) => {
-      const iso = toISODate(day);
-      if (iso < todayIso) return false;
-      return getSlotsForDate(iso, settings).some((slotOption) =>
-        isBookingTimeAllowed(iso, slotOption, settings.minimumBookingLeadHours ?? 0),
-      );
-    });
     const todayIndex = days.findIndex((day) => toISODate(day) === todayIso);
-    const targetIndex = firstOpenIndex >= 0 ? firstOpenIndex : todayIndex >= 0 ? todayIndex : 0;
+    const targetIndex = todayIndex >= 0 ? todayIndex : 0;
     if (node.scrollWidth > node.clientWidth) {
       const columnWidth = node.scrollWidth / 7;
       node.scrollTo({ left: Math.max(0, targetIndex * columnWidth - 8), behavior: "auto" });
     } else {
       node.scrollTo({ left: 0, behavior: "auto" });
     }
-  }, [days, settings]);
+  }, [days]);
 
   return (
     <div>
@@ -1004,69 +997,53 @@ function WeekPlanner({
                     Fermé
                   </div>
                 ) : (
-                  (() => {
-                    const states = slots.map((slotOption) => ({
-                      slotOption,
-                      state: getSlotAvailability(
+                  <div className="mt-3 grid gap-1.5">
+                    {slots.map((slotOption) => {
+                      const state = getSlotAvailability(
                         day,
                         slotOption,
                         people,
                         reservations,
                         occupancies,
                         settings,
-                      ),
-                    }));
-                    const openStates = states.filter(({ state }) => !state.disabled);
-                    const onlyPassed =
-                      openStates.length === 0 && states.every(({ state }) => state.hideLabel);
-                    if (onlyPassed) {
-                      return (
-                        <div className="mt-4 rounded-xl bg-background/70 px-2 py-3 text-center text-xs text-muted-foreground">
-                          Horaires passés pour ce jour. Choisis un autre jour.
-                        </div>
                       );
-                    }
-                    const visibleStates = states.filter(({ state }) => !state.hideLabel);
-                    return (
-                      <div className="mt-3 grid gap-1.5">
-                        {visibleStates.map(({ slotOption, state }) => {
-                          const selected = selectedDate === iso && selectedSlot === slotOption;
-                          return (
-                            <button
-                              key={slotOption}
-                              disabled={state.disabled}
-                              onClick={() => onSelect(iso, slotOption)}
-                              className={`border text-left transition ${
-                                selected
-                                  ? "min-h-14 rounded-xl border-primary bg-primary px-2 py-2 text-primary-foreground"
-                                  : state.disabled
-                                    ? "h-8 rounded-md border-dashed border-border/70 bg-muted/45 px-2 text-muted-foreground"
-                                    : "min-h-14 rounded-xl border-border bg-card px-2 py-2 hover:border-primary/45 hover:bg-secondary/60"
-                              }`}
+                      const selected = selectedDate === iso && selectedSlot === slotOption;
+                      return (
+                        <button
+                          key={slotOption}
+                          disabled={state.disabled}
+                          onClick={() => onSelect(iso, slotOption)}
+                          className={`border text-left transition ${
+                            selected
+                              ? "min-h-14 rounded-xl border-primary bg-primary px-2 py-2 text-primary-foreground"
+                              : state.disabled
+                                ? "h-8 rounded-md border-dashed border-border/70 bg-muted/45 px-2 text-muted-foreground"
+                                : "min-h-14 rounded-xl border-border bg-card px-2 py-2 hover:border-primary/45 hover:bg-secondary/60"
+                          }`}
+                        >
+                          {state.disabled ? (
+                            <span
+                              className={`flex items-center gap-1 ${state.hideLabel ? "justify-center" : "justify-between"}`}
                             >
-                              {state.disabled ? (
-                                <span className="flex items-center justify-between gap-1">
-                                  <span className="text-xs font-medium line-through">
-                                    {slotOption}
-                                  </span>
-                                  <span className="truncate text-[10px]">{state.label}</span>
-                                </span>
-                              ) : (
-                                <>
-                                  <span className="block text-sm font-medium">{slotOption}</span>
-                                  <span
-                                    className={`block text-[11px] ${selected ? "text-primary-foreground/75" : "text-muted-foreground"}`}
-                                  >
-                                    {state.label}
-                                  </span>
-                                </>
+                              <span className="text-xs font-medium line-through">{slotOption}</span>
+                              {!state.hideLabel && (
+                                <span className="truncate text-[10px]">{state.label}</span>
                               )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()
+                            </span>
+                          ) : (
+                            <>
+                              <span className="block text-sm font-medium">{slotOption}</span>
+                              <span
+                                className={`block text-[11px] ${selected ? "text-primary-foreground/75" : "text-muted-foreground"}`}
+                              >
+                                {state.label}
+                              </span>
+                            </>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             );
