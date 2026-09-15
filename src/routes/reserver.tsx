@@ -934,8 +934,15 @@ function WeekPlanner({
     const node = scrollerRef.current;
     if (!node) return;
     const todayIso = getKafeDate();
+    const firstOpenIndex = days.findIndex((day) => {
+      const iso = toISODate(day);
+      if (iso < todayIso) return false;
+      return getSlotsForDate(iso, settings).some((slotOption) =>
+        isBookingTimeAllowed(iso, slotOption, settings.minimumBookingLeadHours ?? 0),
+      );
+    });
     const todayIndex = days.findIndex((day) => toISODate(day) === todayIso);
-    const targetIndex = todayIndex >= 0 ? todayIndex : 0;
+    const targetIndex = firstOpenIndex >= 0 ? firstOpenIndex : todayIndex >= 0 ? todayIndex : 0;
     if (node.scrollWidth > node.clientWidth) {
       const columnWidth = node.scrollWidth / 7;
       node.scrollTo({ left: Math.max(0, targetIndex * columnWidth - 8), behavior: "auto" });
