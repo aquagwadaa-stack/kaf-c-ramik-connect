@@ -1021,6 +1021,23 @@ async function reservationCancelled(
   return customerDelivered && adminDelivered;
 }
 
+async function reservationUpdated(row: ReservationRow, settings: SettingsValue, siteUrl: string) {
+  if (row.status === "cancelled" || !row.value.email) return false;
+  const stamp = row.value.updatedByAdminAt ?? new Date().toISOString();
+  return await sendEmail(
+    [row.value.email],
+    "Ta réservation a été modifiée – Kafé Céramik",
+    shell(
+      "Réservation modifiée",
+      `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>L'équipe du Kafé Céramik vient de mettre à jour ta réservation. Voici les nouvelles informations :</p>${details(row, settings, siteUrl)}<p>Si quelque chose ne te convient pas, contacte le Kafé au ${escapeHtml(settings.contactPhone ?? "0690 28 47 88")}.</p>`,
+    ),
+    [],
+    undefined,
+    `${row.id}-updated-${stamp}`,
+  );
+}
+
+
 async function processReminders(settings: SettingsValue, siteUrl: string) {
   const today = new Date();
   const end = new Date(today.getTime() + 48 * 60 * 60 * 1000);
