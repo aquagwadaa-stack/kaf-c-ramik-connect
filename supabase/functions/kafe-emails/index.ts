@@ -1360,6 +1360,17 @@ Deno.serve(async (request) => {
       });
     }
 
+    if (action === "reservation-updated") {
+      if (!(await requireAdmin(request))) return json({ error: "Unauthorized" }, 401);
+      const delivered = await reservationUpdated(row, settings, siteUrl);
+      return json({
+        ok: true,
+        delivered,
+        reason: delivered ? undefined : "Le fournisseur email reste à configurer.",
+      });
+    }
+
+
     if (action === "reservation-cancelled") {
       if (!(await requireAdmin(request))) return json({ error: "Unauthorized" }, 401);
       const delivered = await reservationCancelled(row, settings, siteUrl);
