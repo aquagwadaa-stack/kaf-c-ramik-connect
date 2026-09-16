@@ -41,6 +41,8 @@ type ReservationValue = {
   decisionEmailSentAt?: string;
   reminderEmailSentAt?: string;
   managementToken?: string;
+  updatedByAdminAt?: string;
+
 };
 
 type ReservationRow = {
