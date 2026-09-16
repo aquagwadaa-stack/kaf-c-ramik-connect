@@ -535,6 +535,16 @@ export type Database = {
         Returns: Json
       }
       revoke_kafe_admin_access: { Args: { p_user_id: string }; Returns: Json }
+      update_kafe_reservation: {
+        Args: {
+          p_date: string
+          p_id: string
+          p_people: number
+          p_reactivate?: boolean
+          p_slot: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
