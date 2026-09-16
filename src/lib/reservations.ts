@@ -1091,7 +1091,75 @@ export async function updateStatus(id: string, status: ReservationStatus) {
   refreshReservationOccupancies();
 }
 
+export async function updateReservationDetails(
+  id: string,
+  input: { date: string; slot: string; people: number; reactivate?: boolean; notify?: boolean },
+): Promise<EmailDispatchResult> {
+  const patch = {
+    date: input.date,
+    slot: input.slot,
+    people: input.people,
+  };
+
+  if (!isSupabaseConfigured()) {
+    const current = read().find((item) => item.id === id);
+    if (!current) throw new Error("Réservation introuvable.");
+    write(
+      read().map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              ...patch,
+              status: input.reactivate && item.status === "cancelled" ? "confirmed" : item.status,
+            }
+          : item,
+      ),
+    );
+    refreshReservationOccupancies();
+    return { ok: true, delivered: false, reason: "Mode local : aucun email envoyé." };
+  }
+
+  const result = await callRpc<{ status: ReservationStatus; value: Reservation }>(
+    "update_kafe_reservation",
+    {
+      p_id: id,
+      p_date: input.date,
+      p_slot: input.slot,
+      p_people: input.people,
+      p_reactivate: Boolean(input.reactivate),
+    },
+    true,
+  );
+
+  write(
+    read().map((item) =>
+      item.id === id ? { ...item, ...patch, ...result.value, status: result.status } : item,
+    ),
+  );
+  refreshReservationOccupancies();
+
+  if (!input.notify) return { ok: true, delivered: false };
+  try {
+    return await invokeEdgeFunction<EmailDispatchResult>(
+      "kafe-emails",
+      {
+        action: "reservation-updated",
+        reservationId: id,
+        siteUrl: window.location.origin,
+      },
+      true,
+    );
+  } catch (error) {
+    return {
+      ok: false,
+      delivered: false,
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 export async function removeReservation(id: string) {
+
   if (isSupabaseConfigured() && readAdminSession()) {
     await deleteRow("kafe_reservations", id, true);
   }
