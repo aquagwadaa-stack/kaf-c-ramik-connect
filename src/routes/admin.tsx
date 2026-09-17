@@ -1817,6 +1817,8 @@ function ReservationCard({
   settings: KafeSettings;
 }) {
   const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+
   const location = seatingAllocationLabel(reservation, settings);
   const preferenceLabels = {
     indifferent: "Peu importe",
