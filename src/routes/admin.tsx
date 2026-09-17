@@ -1820,12 +1820,6 @@ function ReservationCard({
   const [editing, setEditing] = useState(false);
 
   const location = seatingAllocationLabel(reservation, settings);
-  const preferenceLabels = {
-    indifferent: "Peu importe",
-    interieur: "Intérieur",
-    exterieur: "Extérieur",
-    carbet: "Carbet",
-  } as const;
   const groupRequest = Boolean(reservation.isGroupRequest);
   const pendingGroup =
     groupRequest && (reservation.status === "pending" || reservation.status === "deposit_paid");
@@ -1863,18 +1857,13 @@ function ReservationCard({
         <InfoPill tone={location ? "success" : "warning"}>
           {location ? `Emplacement · ${location}` : "Emplacement à attribuer"}
         </InfoPill>
-        {reservation.seatingPreference && (
-          <InfoPill>Zone souhaitée · {preferenceLabels[reservation.seatingPreference]}</InfoPill>
-        )}
         {reservation.depositRequired ? (
           <InfoPill tone={reservation.depositPaid ? "success" : "warning"}>
             {reservation.depositPaid
               ? "Acompte reçu"
               : `Acompte à suivre · ${reservation.depositAmount ?? settings.depositFixedAmount} €`}
           </InfoPill>
-        ) : (
-          <InfoPill>Pas d'acompte requis</InfoPill>
-        )}
+        ) : null}
         {reservation.groupQuoteTotal ? (
           <InfoPill tone="success">Devis estimatif · {reservation.groupQuoteTotal} €</InfoPill>
         ) : null}
@@ -1958,14 +1947,12 @@ function ReservationCard({
               />
             </>
           )}
-        {reservation.source !== "walk_in" && (
-          <button
-            onClick={() => setEditing((value) => !value)}
-            className="rounded-full border border-border px-3 py-1 text-xs hover:bg-secondary"
-          >
-            {editing ? "Fermer la modification" : "Modifier la réservation"}
-          </button>
-        )}
+        <button
+          onClick={() => setEditing((value) => !value)}
+          className="rounded-full border border-border px-3 py-1 text-xs hover:bg-secondary"
+        >
+          {editing ? "Fermer la modification" : "Modifier la réservation"}
+        </button>
 
         <button
           onClick={async () => {
