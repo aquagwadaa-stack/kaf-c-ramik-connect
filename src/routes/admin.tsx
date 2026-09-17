@@ -72,6 +72,8 @@ import {
   statusLabel,
   seatingUnitLabel,
   updateStatus,
+  updateReservationDetails,
+
   useReservationOccupancies,
   type Reservation,
   type ReservationStatus,
