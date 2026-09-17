@@ -1947,14 +1947,12 @@ function ReservationCard({
               />
             </>
           )}
-        {reservation.source !== "walk_in" && (
-          <button
-            onClick={() => setEditing((value) => !value)}
-            className="rounded-full border border-border px-3 py-1 text-xs hover:bg-secondary"
-          >
-            {editing ? "Fermer la modification" : "Modifier la réservation"}
-          </button>
-        )}
+        <button
+          onClick={() => setEditing((value) => !value)}
+          className="rounded-full border border-border px-3 py-1 text-xs hover:bg-secondary"
+        >
+          {editing ? "Fermer la modification" : "Modifier la réservation"}
+        </button>
 
         <button
           onClick={async () => {
