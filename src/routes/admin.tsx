@@ -1914,20 +1914,25 @@ function ReservationCard({
 
       {groupRequest && <GroupDecisionControls reservation={reservation} />}
 
+      {editing && (
+        <ReservationEditForm
+          reservation={reservation}
+          settings={settings}
+          onClose={() => setEditing(false)}
+        />
+      )}
+
       <div className="mt-3 flex flex-wrap gap-2">
         {!pendingGroup &&
           reservation.status !== "cancelled" &&
           reservation.status !== "arrived" && (
             <>
-              {!experienceUsesCeramicGuide(reservation.experience) &&
-                reservation.status === "confirmed" && (
-                  <StatusButton
-                    id={reservation.id}
-                    target="arrived"
-                    current={reservation.status}
-                    label="Marquer l'arrivée"
-                  />
-                )}
+              <StatusButton
+                id={reservation.id}
+                target="arrived"
+                current={reservation.status}
+                label="Marquer l'arrivée"
+              />
               {reservation.status !== "confirmed" && (
                 <StatusButton
                   id={reservation.id}
@@ -1953,6 +1958,15 @@ function ReservationCard({
               />
             </>
           )}
+        {reservation.source !== "walk_in" && (
+          <button
+            onClick={() => setEditing((value) => !value)}
+            className="rounded-full border border-border px-3 py-1 text-xs hover:bg-secondary"
+          >
+            {editing ? "Fermer la modification" : "Modifier la réservation"}
+          </button>
+        )}
+
         <button
           onClick={async () => {
             if (!window.confirm("Supprimer définitivement cette réservation ?")) return;
