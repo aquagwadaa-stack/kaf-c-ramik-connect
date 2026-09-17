@@ -1820,12 +1820,6 @@ function ReservationCard({
   const [editing, setEditing] = useState(false);
 
   const location = seatingAllocationLabel(reservation, settings);
-  const preferenceLabels = {
-    indifferent: "Peu importe",
-    interieur: "Intérieur",
-    exterieur: "Extérieur",
-    carbet: "Carbet",
-  } as const;
   const groupRequest = Boolean(reservation.isGroupRequest);
   const pendingGroup =
     groupRequest && (reservation.status === "pending" || reservation.status === "deposit_paid");
