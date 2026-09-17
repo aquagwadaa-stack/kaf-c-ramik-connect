@@ -72,6 +72,8 @@ import {
   statusLabel,
   seatingUnitLabel,
   updateStatus,
+  updateReservationDetails,
+
   useReservationOccupancies,
   type Reservation,
   type ReservationStatus,
@@ -1815,6 +1817,8 @@ function ReservationCard({
   settings: KafeSettings;
 }) {
   const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+
   const location = seatingAllocationLabel(reservation, settings);
   const preferenceLabels = {
     indifferent: "Peu importe",
@@ -1910,20 +1914,25 @@ function ReservationCard({
 
       {groupRequest && <GroupDecisionControls reservation={reservation} />}
 
+      {editing && (
+        <ReservationEditForm
+          reservation={reservation}
+          settings={settings}
+          onClose={() => setEditing(false)}
+        />
+      )}
+
       <div className="mt-3 flex flex-wrap gap-2">
         {!pendingGroup &&
           reservation.status !== "cancelled" &&
           reservation.status !== "arrived" && (
             <>
-              {!experienceUsesCeramicGuide(reservation.experience) &&
-                reservation.status === "confirmed" && (
-                  <StatusButton
-                    id={reservation.id}
-                    target="arrived"
-                    current={reservation.status}
-                    label="Marquer l'arrivée"
-                  />
-                )}
+              <StatusButton
+                id={reservation.id}
+                target="arrived"
+                current={reservation.status}
+                label="Marquer l'arrivée"
+              />
               {reservation.status !== "confirmed" && (
                 <StatusButton
                   id={reservation.id}
@@ -1949,6 +1958,15 @@ function ReservationCard({
               />
             </>
           )}
+        {reservation.source !== "walk_in" && (
+          <button
+            onClick={() => setEditing((value) => !value)}
+            className="rounded-full border border-border px-3 py-1 text-xs hover:bg-secondary"
+          >
+            {editing ? "Fermer la modification" : "Modifier la réservation"}
+          </button>
+        )}
+
         <button
           onClick={async () => {
             if (!window.confirm("Supprimer définitivement cette réservation ?")) return;
@@ -1974,6 +1992,140 @@ function ReservationCard({
     </div>
   );
 }
+
+function ReservationEditForm({
+  reservation,
+  settings,
+  onClose,
+}: {
+  reservation: Reservation;
+  settings: KafeSettings;
+  onClose: () => void;
+}) {
+  const [date, setDate] = useState(reservation.date);
+  const [slot, setSlot] = useState(reservation.slot);
+  const [people, setPeople] = useState(String(reservation.people));
+  const [notify, setNotify] = useState(reservation.source !== "walk_in");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const slots = useMemo(() => getSlotsForDate(date, settings), [date, settings]);
+  const cancelled = reservation.status === "cancelled";
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    const count = Number(people);
+    if (!date || !slot || !Number.isFinite(count) || count < 1) {
+      setError("Renseigne une date, un créneau et un nombre de personnes valides.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await updateReservationDetails(reservation.id, {
+        date,
+        slot,
+        people: count,
+        reactivate: cancelled,
+        notify,
+      });
+      setNotice(
+        notify && result?.ok === false
+          ? "Réservation modifiée, mais l'email n'a pas pu être envoyé."
+          : "Réservation modifiée.",
+      );
+      if (!notify || result?.ok !== false) onClose();
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "La réservation n'a pas pu être modifiée.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="mt-3 grid gap-3 rounded-xl bg-secondary/40 p-3 text-sm">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="grid gap-1">
+          <span className="text-xs text-muted-foreground">Date</span>
+          <input
+            type="date"
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+            className="rounded-lg border border-border bg-background px-3 py-2"
+          />
+        </label>
+        <label className="grid gap-1">
+          <span className="text-xs text-muted-foreground">Créneau</span>
+          <input
+            type="time"
+            step={900}
+            list={`slots-${reservation.id}`}
+            value={slot === "—" ? "" : slot}
+            onChange={(event) => setSlot(event.target.value)}
+            className="rounded-lg border border-border bg-background px-3 py-2"
+          />
+          <datalist id={`slots-${reservation.id}`}>
+            {slots.map((value) => (
+              <option key={value} value={value} />
+            ))}
+          </datalist>
+        </label>
+        <label className="grid gap-1">
+          <span className="text-xs text-muted-foreground">Personnes</span>
+          <input
+            type="number"
+            min={1}
+            value={people}
+            onChange={(event) => setPeople(event.target.value)}
+            className="rounded-lg border border-border bg-background px-3 py-2"
+          />
+        </label>
+      </div>
+
+      {reservation.source !== "walk_in" && (
+        <label className="flex items-center gap-2 text-xs">
+          <input
+            type="checkbox"
+            checked={notify}
+            onChange={(event) => setNotify(event.target.checked)}
+          />
+          Prévenir la cliente par email
+        </label>
+      )}
+
+      {cancelled && (
+        <p className="text-xs text-muted-foreground">
+          Cette réservation est annulée : l'enregistrer la réactivera.
+        </p>
+      )}
+
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      {notice && <p className="text-xs text-muted-foreground">{notice}</p>}
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-full bg-primary px-4 py-1.5 text-xs text-primary-foreground disabled:opacity-50"
+        >
+          {saving ? "Enregistrement…" : cancelled ? "Enregistrer et réactiver" : "Enregistrer"}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full border border-border px-4 py-1.5 text-xs hover:bg-secondary"
+        >
+          Annuler
+        </button>
+      </div>
+    </form>
+  );
+}
+
+
 
 function GroupDecisionControls({ reservation }: { reservation: Reservation }) {
   const [settings] = useKafeSettings();
