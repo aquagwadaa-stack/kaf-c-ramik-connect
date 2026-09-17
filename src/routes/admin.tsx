@@ -1160,6 +1160,8 @@ function WalkInAvailability({
   const [timeChoice, setTimeChoice] = useState("now");
   const [walkInPeople, setWalkInPeople] = useState(2);
   const [walkInLabel, setWalkInLabel] = useState("");
+  const [walkInPhone, setWalkInPhone] = useState("");
+  const [walkInEmail, setWalkInEmail] = useState("");
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [walkInNotice, setWalkInNotice] = useState("");
   const [walkInError, setWalkInError] = useState("");
@@ -1185,6 +1187,11 @@ function WalkInAvailability({
   }
 
   async function addWalkIn(unitId: string) {
+    const email = walkInEmail.trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setWalkInError("Adresse email invalide.");
+      return;
+    }
     setAddingTo(unitId);
     setWalkInNotice("");
     setWalkInError("");
@@ -1195,8 +1202,12 @@ function WalkInAvailability({
         people: walkInPeople,
         seatingUnitId: unitId,
         label: walkInLabel,
+        phone: walkInPhone,
+        email,
       });
       setWalkInLabel("");
+      setWalkInPhone("");
+      setWalkInEmail("");
       setWalkInNotice(
         `${reservation.people} personne${reservation.people > 1 ? "s" : ""} ajoutée${reservation.people > 1 ? "s" : ""} dans ${seatingUnitLabel(reservation.seatingUnitId, settings) ?? "l'espace choisi"}.`,
       );
@@ -1287,6 +1298,32 @@ function WalkInAvailability({
                 className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
             </label>
+            <div className="grid gap-3 sm:col-span-2 sm:grid-cols-2">
+              <label>
+                <span className="mb-1.5 block text-sm font-medium">
+                  Téléphone <span className="font-normal text-muted-foreground">(facultatif)</span>
+                </span>
+                <input
+                  type="tel"
+                  value={walkInPhone}
+                  onChange={(event) => setWalkInPhone(event.target.value)}
+                  placeholder="Ex. 0690 00 00 00"
+                  className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+              <label>
+                <span className="mb-1.5 block text-sm font-medium">
+                  Email <span className="font-normal text-muted-foreground">(facultatif)</span>
+                </span>
+                <input
+                  type="email"
+                  value={walkInEmail}
+                  onChange={(event) => setWalkInEmail(event.target.value)}
+                  placeholder="Ex. client@email.com"
+                  className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+            </div>
             <p className="text-xs text-muted-foreground sm:col-span-2">
               Choisissez ensuite un espace compatible. L'ajout réserve immédiatement ces places pour
               tous les autres clients.
@@ -1832,7 +1869,7 @@ function ReservationCard({
           </div>
           <div className="text-xs text-muted-foreground">
             {reservation.source === "walk_in"
-              ? "Groupe ajouté depuis l'accueil"
+              ? `Ajouté par l'équipe${reservation.phone ? ` · ${reservation.phone}` : ""}${reservation.email ? ` · ${reservation.email}` : ""}`
               : `${reservation.phone} · ${reservation.email}`}
           </div>
         </div>
@@ -1993,6 +2030,8 @@ function ReservationEditForm({
   const [slot, setSlot] = useState(reservation.slot);
   const [people, setPeople] = useState(String(reservation.people));
   const [notify, setNotify] = useState(reservation.source !== "walk_in");
+  const [email, setEmail] = useState(reservation.email ?? "");
+  const [showEmailEditor, setShowEmailEditor] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -2006,6 +2045,10 @@ function ReservationEditForm({
       setError("Renseigne une date, un créneau et un nombre de personnes valides.");
       return;
     }
+    if (notify && !email.trim()) {
+      setError("Pas de mail ajouté pour cette réservation.");
+      return;
+    }
     setSaving(true);
     setError("");
     setNotice("");
@@ -2016,6 +2059,7 @@ function ReservationEditForm({
         people: count,
         reactivate: cancelled,
         notify,
+        email: email.trim(),
       });
       setNotice(
         notify && result?.ok === false
@@ -2072,14 +2116,30 @@ function ReservationEditForm({
         </label>
       </div>
 
-      {reservation.source !== "walk_in" && (
-        <label className="flex items-center gap-2 text-xs">
+      <label className="flex items-center gap-2 text-xs">
+        <input
+          type="checkbox"
+          checked={notify}
+          onChange={(event) => setNotify(event.target.checked)}
+        />
+        Prévenir la cliente par email
+      </label>
+
+      {showEmailEditor && (
+        <label className="grid max-w-md gap-1">
+          <span className="text-xs text-muted-foreground">Email client</span>
           <input
-            type="checkbox"
-            checked={notify}
-            onChange={(event) => setNotify(event.target.checked)}
+            type="email"
+            value={email}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              setError("");
+            }}
+            placeholder="client@email.com"
+            autoFocus
+            required={notify}
+            className="rounded-lg border border-border bg-background px-3 py-2"
           />
-          Prévenir la cliente par email
         </label>
       )}
 
@@ -2089,7 +2149,23 @@ function ReservationEditForm({
         </p>
       )}
 
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-destructive">
+          <span>{error}</span>
+          {error === "Pas de mail ajouté pour cette réservation." && !showEmailEditor && (
+            <button
+              type="button"
+              onClick={() => {
+                setShowEmailEditor(true);
+                setError("");
+              }}
+              className="font-medium underline underline-offset-2"
+            >
+              Ajouter un mail
+            </button>
+          )}
+        </div>
+      )}
       {notice && <p className="text-xs text-muted-foreground">{notice}</p>}
 
       <div className="flex flex-wrap gap-2">

@@ -537,8 +537,12 @@ export async function addWalkInReservation(input: {
   people: number;
   seatingUnitId: string;
   label?: string;
+  phone?: string;
+  email?: string;
 }): Promise<Reservation> {
   const label = input.label?.trim() || "Groupe sur place";
+  const phone = input.phone?.trim() ?? "";
+  const email = (input.email ?? "").trim().toLowerCase();
   let full: Reservation = {
     id: `walk-in-${Date.now()}`,
     createdAt: new Date().toISOString(),
@@ -548,8 +552,8 @@ export async function addWalkInReservation(input: {
     slot: input.slot,
     firstName: label,
     lastName: "",
-    phone: "",
-    email: "",
+    phone,
+    email,
     childrenAges: "Non renseigné",
     guideAccepted: false,
     message: "Ajouté sur place par l'équipe.",
@@ -571,6 +575,8 @@ export async function addWalkInReservation(input: {
         p_people: input.people,
         p_seating_unit_id: input.seatingUnitId,
         p_label: label,
+        p_phone: phone,
+        p_email: email,
       },
       true,
     );
@@ -1093,7 +1099,7 @@ export async function updateStatus(id: string, status: ReservationStatus) {
 
 export async function updateReservationDetails(
   id: string,
-  input: { date: string; slot: string; people: number; reactivate?: boolean; notify?: boolean },
+  input: { date: string; slot: string; people: number; reactivate?: boolean; notify?: boolean; email?: string },
 ): Promise<EmailDispatchResult> {
   const patch = {
     date: input.date,
@@ -1110,6 +1116,7 @@ export async function updateReservationDetails(
           ? {
               ...item,
               ...patch,
+              ...(input.email !== undefined ? { email: input.email.trim() } : {}),
               status: input.reactivate && item.status === "cancelled" ? "confirmed" : item.status,
             }
           : item,
@@ -1131,9 +1138,17 @@ export async function updateReservationDetails(
     true,
   );
 
+  const nextValue: Reservation = {
+    ...result.value,
+    ...(input.email !== undefined ? { email: input.email.trim() } : {}),
+  };
+  if (input.email !== undefined && input.email.trim() !== (result.value.email ?? "").trim()) {
+    await patchRow("kafe_reservations", id, { value: nextValue }, true);
+  }
+
   write(
     read().map((item) =>
-      item.id === id ? { ...item, ...patch, ...result.value, status: result.status } : item,
+      item.id === id ? { ...item, ...patch, ...nextValue, status: result.status } : item,
     ),
   );
   refreshReservationOccupancies();
