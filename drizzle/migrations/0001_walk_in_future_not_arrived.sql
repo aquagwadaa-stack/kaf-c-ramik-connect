@@ -53,7 +53,7 @@ begin
 
   new_id := 'walk-in-' || extract(epoch from clock_timestamp())::bigint || '-' || replace(gen_random_uuid()::text, '-', '');
   display_label := coalesce(nullif(trim(p_label), ''), 'Groupe sur place');
-  new_status := case when p_date = timezone('America/Guadeloupe', now())::date then 'arrived' else 'confirmed' end;
+  new_status := 'confirmed';
 
   insert into public.kafe_reservations (id, value, created_at, date, slot, people, status, seating_unit_id, updated_at)
   values (new_id,

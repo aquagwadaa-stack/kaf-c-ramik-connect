@@ -1971,7 +1971,7 @@ function ReservationCard({
             }
           }}
           disabled={deleting}
-          className="rounded-full border border-destructive/30 px-3 py-1 text-xs text-destructive hover:bg-destructive/10"
+          className="ml-auto rounded-full border border-destructive/30 px-3 py-1 text-xs text-destructive hover:bg-destructive/10"
         >
           {deleting ? "Suppression…" : "Supprimer"}
         </button>

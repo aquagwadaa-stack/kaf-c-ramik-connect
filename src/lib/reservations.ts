@@ -556,7 +556,7 @@ export async function addWalkInReservation(input: {
     depositPaid: false,
     depositRequired: false,
     depositAmount: 0,
-    status: "arrived",
+    status: "confirmed",
     seatingUnitId: input.seatingUnitId,
     source: "walk_in",
     walkInLabel: label,
