@@ -1863,18 +1863,13 @@ function ReservationCard({
         <InfoPill tone={location ? "success" : "warning"}>
           {location ? `Emplacement · ${location}` : "Emplacement à attribuer"}
         </InfoPill>
-        {reservation.seatingPreference && (
-          <InfoPill>Zone souhaitée · {preferenceLabels[reservation.seatingPreference]}</InfoPill>
-        )}
         {reservation.depositRequired ? (
           <InfoPill tone={reservation.depositPaid ? "success" : "warning"}>
             {reservation.depositPaid
               ? "Acompte reçu"
               : `Acompte à suivre · ${reservation.depositAmount ?? settings.depositFixedAmount} €`}
           </InfoPill>
-        ) : (
-          <InfoPill>Pas d'acompte requis</InfoPill>
-        )}
+        ) : null}
         {reservation.groupQuoteTotal ? (
           <InfoPill tone="success">Devis estimatif · {reservation.groupQuoteTotal} €</InfoPill>
         ) : null}
