@@ -42,6 +42,8 @@ type ReservationValue = {
   reminderEmailSentAt?: string;
   managementToken?: string;
   updatedByAdminAt?: string;
+  rescheduledByCustomerAt?: string;
+
 
 };
 
