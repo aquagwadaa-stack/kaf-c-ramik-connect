@@ -49,6 +49,18 @@ function ReservationPortalPage() {
   const [notice, setNotice] = useState("");
   const [paying, setPaying] = useState(false);
   const [refreshAttempt, setRefreshAttempt] = useState(0);
+  const [settings] = useKafeSettings();
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [newDate, setNewDate] = useState("");
+  const [newSlot, setNewSlot] = useState("");
+  const [newPeople, setNewPeople] = useState(1);
+
+  const availableSlots = useMemo(
+    () => (newDate ? getSlotsForDate(newDate, settings) : []),
+    [newDate, settings],
+  );
+
 
   const token =
     typeof window === "undefined"
