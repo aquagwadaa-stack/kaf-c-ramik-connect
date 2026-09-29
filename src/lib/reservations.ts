@@ -67,12 +67,15 @@ export interface Reservation {
 export type ReservationPortalData = {
   reservation: Reservation;
   canCancel: boolean;
+  canReschedule?: boolean;
+  rescheduleNoticeHours?: number;
   cancellationDeadline: string;
   cancellationNoticeHours: number;
   paymentEnabled: boolean;
   paymentUrl?: string;
   paymentMode?: "sumup" | "link";
 };
+
 
 export type SumUpCheckoutResult = {
   ok: boolean;
