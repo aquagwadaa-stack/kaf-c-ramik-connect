@@ -1440,7 +1440,24 @@ Deno.serve(async (request) => {
       });
     }
 
+    if (action === "customer-rescheduled") {
+      if (
+        !body.managementToken ||
+        !row.value.managementToken ||
+        body.managementToken !== row.value.managementToken
+      ) {
+        return json({ error: "Unauthorized" }, 401);
+      }
+      const delivered = await reservationRescheduledByCustomer(row, settings, siteUrl);
+      return json({
+        ok: true,
+        delivered,
+        reason: delivered ? undefined : "Le fournisseur email reste à configurer.",
+      });
+    }
+
     return json({ error: "Unknown action" }, 400);
+
   } catch (error) {
     console.error(error);
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);
