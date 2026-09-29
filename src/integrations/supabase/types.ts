@@ -550,6 +550,15 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: Json
       }
+      reschedule_kafe_reservation_by_token: {
+        Args: {
+          p_date: string
+          p_people: number
+          p_slot: string
+          p_token: string
+        }
+        Returns: Json
+      }
       revoke_kafe_admin_access: { Args: { p_user_id: string }; Returns: Json }
       update_kafe_reservation: {
         Args: {
