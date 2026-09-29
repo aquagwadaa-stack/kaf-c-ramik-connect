@@ -461,19 +461,35 @@ export type Database = {
           seating_unit_id: string
         }[]
       }
-      create_kafe_walk_in: {
-        Args: {
-          p_date: string
-          p_label?: string
-          p_people: number
-          p_seating_unit_id: string
-          p_slot: string
-        }
-        Returns: {
-          id: string
-          seating_unit_id: string
-        }[]
-      }
+      create_kafe_walk_in:
+        | {
+            Args: {
+              p_date: string
+              p_label?: string
+              p_people: number
+              p_seating_unit_id: string
+              p_slot: string
+            }
+            Returns: {
+              id: string
+              seating_unit_id: string
+            }[]
+          }
+        | {
+            Args: {
+              p_date: string
+              p_email: string
+              p_label: string
+              p_people: number
+              p_phone: string
+              p_seating_unit_id: string
+              p_slot: string
+            }
+            Returns: {
+              id: string
+              seating_unit_id: string
+            }[]
+          }
       decide_kafe_group_reservation: {
         Args: { p_approved: boolean; p_id: string; p_message?: string }
         Returns: Json
