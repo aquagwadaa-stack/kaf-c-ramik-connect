@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   BookOpenText,
   CalendarDays,
+  CalendarSync,
   CheckCircle2,
   Clock3,
   FileText,
@@ -11,17 +12,21 @@ import {
   Users,
 } from "lucide-react";
 import { PageHeader, PageShell } from "@/components/page-shell";
+import { useKafeSettings } from "@/lib/admin-data";
 import {
   cancelReservationFromPortal,
   createSumUpCheckout,
   refreshSumUpPayment,
+  rescheduleReservationFromPortal,
   experienceLabel,
   experienceUsesCeramicGuide,
   formatReservationDate,
   getReservationPortal,
+  getSlotsForDate,
   statusLabel,
   type ReservationPortalData,
 } from "@/lib/reservations";
+
 
 export const Route = createFileRoute("/reservation")({
   head: () => ({
@@ -44,6 +49,18 @@ function ReservationPortalPage() {
   const [notice, setNotice] = useState("");
   const [paying, setPaying] = useState(false);
   const [refreshAttempt, setRefreshAttempt] = useState(0);
+  const [settings] = useKafeSettings();
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [newDate, setNewDate] = useState("");
+  const [newSlot, setNewSlot] = useState("");
+  const [newPeople, setNewPeople] = useState(1);
+
+  const availableSlots = useMemo(
+    () => (newDate ? getSlotsForDate(newDate, settings) : []),
+    [newDate, settings],
+  );
+
 
   const token =
     typeof window === "undefined"
@@ -112,6 +129,57 @@ function ReservationPortalPage() {
       setPaying(false);
     }
   }
+
+  function openEditor() {
+    if (!data) return;
+    setNewDate(data.reservation.date);
+    setNewSlot(data.reservation.slot);
+    setNewPeople(data.reservation.people);
+    setNotice("");
+    setError("");
+    setEditing(true);
+  }
+
+  async function submitReschedule() {
+    if (!token || saving) return;
+    if (!newDate || !newSlot) {
+      setError("Choisis une date et une heure.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const next = await rescheduleReservationFromPortal(token, {
+        date: newDate,
+        slot: newSlot,
+        people: newPeople,
+      });
+      setData(next);
+      setEditing(false);
+      setNotice(
+        "Ta réservation a bien été déplacée. Un e-mail de confirmation va t'être envoyé.",
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(
+        message.includes("KAFE_SLOT_FULL")
+          ? "Ce créneau est complet. Choisis une autre date ou une autre heure."
+          : message.includes("KAFE_INVALID_SLOT")
+            ? "Le Kafé n'accueille pas de réservation à ce moment-là."
+            : message.includes("KAFE_BOOKING_TOO_LATE")
+              ? "Ce créneau est trop proche pour être réservé en ligne."
+              : message.includes("KAFE_GROUP_CONTACT_REQUIRED")
+                ? "Pour un groupe de cette taille, contacte directement le Kafé."
+                : message.includes("KAFE_MODIFICATION_NOT_ALLOWED")
+                  ? "Le délai de modification en ligne est dépassé. Contacte le Kafé."
+                  : "La modification n'a pas pu être enregistrée. Réessaie ou contacte le Kafé.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+
 
   async function cancelReservation() {
     if (!data?.canCancel || !token) return;
@@ -253,7 +321,99 @@ function ReservationPortalPage() {
                   </Link>
                 )}
 
+              {data.canReschedule && (
+                <div className="rounded-2xl border border-border bg-card p-4">
+                  <div className="flex items-center gap-2">
+                    <CalendarSync className="h-5 w-5 shrink-0 text-primary" />
+                    <h2 className="font-medium">Changer de créneau</h2>
+                  </div>
+                  {editing ? (
+                    <div className="mt-3 space-y-3">
+                      <label className="block text-xs font-medium text-muted-foreground">
+                        Nouvelle date
+                        <input
+                          type="date"
+                          value={newDate}
+                          min={new Date().toISOString().slice(0, 10)}
+                          onChange={(event) => {
+                            setNewDate(event.target.value);
+                            setNewSlot("");
+                          }}
+                          className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
+                        />
+                      </label>
+                      <label className="block text-xs font-medium text-muted-foreground">
+                        Nouvelle heure
+                        <select
+                          value={newSlot}
+                          onChange={(event) => setNewSlot(event.target.value)}
+                          className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
+                        >
+                          <option value="">Choisir une heure</option>
+                          {availableSlots.map((slot) => (
+                            <option key={slot} value={slot}>
+                              {slot}
+                            </option>
+                          ))}
+                        </select>
+                        {newDate && availableSlots.length === 0 && (
+                          <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                            Le Kafé est fermé ce jour-là.
+                          </span>
+                        )}
+                      </label>
+                      <label className="block text-xs font-medium text-muted-foreground">
+                        Nombre de personnes
+                        <input
+                          type="number"
+                          min={1}
+                          max={10}
+                          value={newPeople}
+                          onChange={(event) =>
+                            setNewPeople(Math.max(1, Number(event.target.value) || 1))
+                          }
+                          className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
+                        />
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={saving}
+                          onClick={() => void submitReschedule()}
+                          className="flex-1 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                        >
+                          {saving ? "Enregistrement…" : "Confirmer le changement"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditing(false)}
+                          className="rounded-full border border-border px-4 py-2.5 text-sm font-medium"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                        Tu peux déplacer ta réservation en ligne jusqu'à{" "}
+                        {data.rescheduleNoticeHours ?? data.cancellationNoticeHours} h avant le
+                        créneau, selon les places disponibles.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={openEditor}
+                        className="mt-4 w-full rounded-full border border-primary/40 px-4 py-2.5 text-sm font-medium text-primary hover:bg-primary/10"
+                      >
+                        Déplacer ma réservation
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
               {data.reservation.status !== "cancelled" && (
+
                 <div className="rounded-2xl border border-border bg-card p-4">
                   <h2 className="font-medium">Besoin d'annuler ?</h2>
                   {data.canCancel ? (
