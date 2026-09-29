@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   BookOpenText,
   CalendarDays,
+  CalendarSync,
   CheckCircle2,
   Clock3,
   FileText,
@@ -11,17 +12,21 @@ import {
   Users,
 } from "lucide-react";
 import { PageHeader, PageShell } from "@/components/page-shell";
+import { useKafeSettings } from "@/lib/admin-data";
 import {
   cancelReservationFromPortal,
   createSumUpCheckout,
   refreshSumUpPayment,
+  rescheduleReservationFromPortal,
   experienceLabel,
   experienceUsesCeramicGuide,
   formatReservationDate,
   getReservationPortal,
+  getSlotsForDate,
   statusLabel,
   type ReservationPortalData,
 } from "@/lib/reservations";
+
 
 export const Route = createFileRoute("/reservation")({
   head: () => ({
