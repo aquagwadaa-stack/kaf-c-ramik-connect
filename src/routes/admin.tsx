@@ -4510,6 +4510,14 @@ function SettingsPanel({
               onChange={(cancellationNoticeHours) => update({ cancellationNoticeHours })}
             />
             <NumberField
+              label="Changement d'horaire en ligne jusqu'à"
+              value={settings.rescheduleNoticeHours ?? 24}
+              suffix="heures avant"
+              onChange={(rescheduleNoticeHours) =>
+                update({ rescheduleNoticeHours: Math.max(0, rescheduleNoticeHours) })
+              }
+            />
+            <NumberField
               label="Acompte conservé si annulation à moins de"
               value={settings.groupDepositForfeitHours}
               suffix="heures avant"

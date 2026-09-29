@@ -656,6 +656,7 @@ export interface KafeSettings {
   kitchenClosingTime: string;
   lateArrivalGraceMinutes: number;
   cancellationNoticeHours: number;
+  rescheduleNoticeHours: number;
   groupDepositForfeitHours: number;
   minimumBookingLeadHours: number;
   reservationFieldRequirements: ReservationFieldRequirements;
@@ -886,6 +887,7 @@ export const settingsSeed: KafeSettings = {
   kitchenClosingTime: "17:30",
   lateArrivalGraceMinutes: 30,
   cancellationNoticeHours: 48,
+  rescheduleNoticeHours: 24,
   groupDepositForfeitHours: 24,
   minimumBookingLeadHours: 0,
   reservationFieldRequirements: {
