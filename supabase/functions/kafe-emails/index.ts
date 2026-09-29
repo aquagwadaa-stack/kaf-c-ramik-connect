@@ -1039,6 +1039,44 @@ async function reservationUpdated(row: ReservationRow, settings: SettingsValue, 
   );
 }
 
+async function reservationRescheduledByCustomer(
+  row: ReservationRow,
+  settings: SettingsValue,
+  siteUrl: string,
+) {
+  if (row.status === "cancelled") return false;
+  const stamp = row.value.rescheduledByCustomerAt ?? new Date().toISOString();
+  let delivered = false;
+  if (row.value.email) {
+    delivered = await sendEmail(
+      [row.value.email],
+      "Ta réservation a bien été déplacée – Kafé Céramik",
+      shell(
+        "Réservation déplacée",
+        `<p>Bonjour ${escapeHtml(row.value.firstName)},</p><p>Ta réservation a bien été déplacée. Voici les nouvelles informations :</p>${details(row, settings, siteUrl)}<p>Pour toute question, contacte le Kafé au ${escapeHtml(settings.contactPhone ?? "0690 28 47 88")}.</p>`,
+      ),
+      [],
+      undefined,
+      `${row.id}-rescheduled-customer-${stamp}`,
+    );
+  }
+  const recipients = await adminRecipients(settings);
+  await sendEmail(
+    recipients,
+    `Réservation déplacée par la cliente – ${row.people} personne${row.people > 1 ? "s" : ""}`,
+    shell(
+      "Réservation déplacée",
+      `<p><strong>${escapeHtml(row.value.firstName)} ${escapeHtml(row.value.lastName)}</strong> a déplacé sa réservation depuis son espace en ligne.</p>${details(row, settings, siteUrl, { includeGuideReminder: false, audience: "admin" })}`,
+    ),
+    [],
+    undefined,
+    `${row.id}-rescheduled-admin-${stamp}`,
+  );
+  return delivered;
+}
+
+
+
 
 async function processReminders(settings: SettingsValue, siteUrl: string) {
   const today = new Date();
