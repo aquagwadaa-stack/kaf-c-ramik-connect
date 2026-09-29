@@ -693,6 +693,44 @@ export async function cancelReservationFromPortal(managementToken: string) {
   return result;
 }
 
+export async function rescheduleReservationFromPortal(
+  managementToken: string,
+  input: { date: string; slot: string; people: number },
+) {
+  if (!managementToken) throw new Error("KAFE_INVALID_MANAGEMENT_TOKEN");
+  if (!isSupabaseConfigured()) {
+    const portal = await getReservationPortal(managementToken);
+    if (!portal.canReschedule) throw new Error("KAFE_MODIFICATION_NOT_ALLOWED");
+    write(
+      read().map((reservation) =>
+        reservation.managementToken === managementToken
+          ? { ...reservation, date: input.date, slot: input.slot, people: input.people }
+          : reservation,
+      ),
+    );
+    refreshReservationOccupancies();
+    return getReservationPortal(managementToken);
+  }
+  const result = await callRpc<ReservationPortalData>("reschedule_kafe_reservation_by_token", {
+    p_token: managementToken,
+    p_date: input.date,
+    p_slot: input.slot,
+    p_people: input.people,
+  });
+  refreshReservationOccupancies();
+  await invokeEdgeFunction<EmailDispatchResult>("kafe-emails", {
+    action: "customer-rescheduled",
+    reservationId: result.reservation.id,
+    managementToken,
+    siteUrl: window.location.origin,
+  }).catch((error) => {
+    console.warn("Customer reschedule email skipped:", error);
+  });
+  return result;
+}
+
+
+
 export async function createSumUpCheckout(managementToken: string) {
   if (!managementToken) throw new Error("KAFE_INVALID_MANAGEMENT_TOKEN");
   return invokeEdgeFunction<SumUpCheckoutResult>("sumup-checkout", {
