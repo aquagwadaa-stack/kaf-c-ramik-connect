@@ -22,6 +22,13 @@
       "when": 1790693065023,
       "tag": "0002_customer_reschedule_reservation",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790693652553,
+      "tag": "0003_reschedule_notice_hours_setting",
+      "breakpoints": true
     }
   ]
 }

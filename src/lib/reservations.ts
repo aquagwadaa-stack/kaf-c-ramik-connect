@@ -646,6 +646,16 @@ export async function getReservationPortal(managementToken: string) {
         new Date() <= cancellationDeadline,
       cancellationDeadline: cancellationDeadline.toISOString(),
       cancellationNoticeHours,
+      rescheduleNoticeHours: settings.rescheduleNoticeHours ?? 24,
+      canReschedule: (() => {
+        const deadline = getReservationDateTime(reservation);
+        deadline.setHours(deadline.getHours() - (settings.rescheduleNoticeHours ?? 24));
+        return (
+          ["pending", "deposit_paid", "confirmed"].includes(reservation.status) &&
+          !reservation.isGroupRequest &&
+          new Date() <= deadline
+        );
+      })(),
       paymentEnabled: Boolean(
         reservation.groupApprovedAt &&
         reservation.status === "pending" &&
