@@ -130,6 +130,57 @@ function ReservationPortalPage() {
     }
   }
 
+  function openEditor() {
+    if (!data) return;
+    setNewDate(data.reservation.date);
+    setNewSlot(data.reservation.slot);
+    setNewPeople(data.reservation.people);
+    setNotice("");
+    setError("");
+    setEditing(true);
+  }
+
+  async function submitReschedule() {
+    if (!token || saving) return;
+    if (!newDate || !newSlot) {
+      setError("Choisis une date et une heure.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const next = await rescheduleReservationFromPortal(token, {
+        date: newDate,
+        slot: newSlot,
+        people: newPeople,
+      });
+      setData(next);
+      setEditing(false);
+      setNotice(
+        "Ta réservation a bien été déplacée. Un e-mail de confirmation va t'être envoyé.",
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(
+        message.includes("KAFE_SLOT_FULL")
+          ? "Ce créneau est complet. Choisis une autre date ou une autre heure."
+          : message.includes("KAFE_INVALID_SLOT")
+            ? "Le Kafé n'accueille pas de réservation à ce moment-là."
+            : message.includes("KAFE_BOOKING_TOO_LATE")
+              ? "Ce créneau est trop proche pour être réservé en ligne."
+              : message.includes("KAFE_GROUP_CONTACT_REQUIRED")
+                ? "Pour un groupe de cette taille, contacte directement le Kafé."
+                : message.includes("KAFE_MODIFICATION_NOT_ALLOWED")
+                  ? "Le délai de modification en ligne est dépassé. Contacte le Kafé."
+                  : "La modification n'a pas pu être enregistrée. Réessaie ou contacte le Kafé.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+
+
   async function cancelReservation() {
     if (!data?.canCancel || !token) return;
     const confirmed = window.confirm(
