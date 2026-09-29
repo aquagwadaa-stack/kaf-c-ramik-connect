@@ -321,7 +321,99 @@ function ReservationPortalPage() {
                   </Link>
                 )}
 
+              {data.canReschedule && (
+                <div className="rounded-2xl border border-border bg-card p-4">
+                  <div className="flex items-center gap-2">
+                    <CalendarSync className="h-5 w-5 shrink-0 text-primary" />
+                    <h2 className="font-medium">Changer de créneau</h2>
+                  </div>
+                  {editing ? (
+                    <div className="mt-3 space-y-3">
+                      <label className="block text-xs font-medium text-muted-foreground">
+                        Nouvelle date
+                        <input
+                          type="date"
+                          value={newDate}
+                          min={new Date().toISOString().slice(0, 10)}
+                          onChange={(event) => {
+                            setNewDate(event.target.value);
+                            setNewSlot("");
+                          }}
+                          className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
+                        />
+                      </label>
+                      <label className="block text-xs font-medium text-muted-foreground">
+                        Nouvelle heure
+                        <select
+                          value={newSlot}
+                          onChange={(event) => setNewSlot(event.target.value)}
+                          className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
+                        >
+                          <option value="">Choisir une heure</option>
+                          {availableSlots.map((slot) => (
+                            <option key={slot} value={slot}>
+                              {slot}
+                            </option>
+                          ))}
+                        </select>
+                        {newDate && availableSlots.length === 0 && (
+                          <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                            Le Kafé est fermé ce jour-là.
+                          </span>
+                        )}
+                      </label>
+                      <label className="block text-xs font-medium text-muted-foreground">
+                        Nombre de personnes
+                        <input
+                          type="number"
+                          min={1}
+                          max={10}
+                          value={newPeople}
+                          onChange={(event) =>
+                            setNewPeople(Math.max(1, Number(event.target.value) || 1))
+                          }
+                          className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
+                        />
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={saving}
+                          onClick={() => void submitReschedule()}
+                          className="flex-1 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                        >
+                          {saving ? "Enregistrement…" : "Confirmer le changement"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditing(false)}
+                          className="rounded-full border border-border px-4 py-2.5 text-sm font-medium"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                        Tu peux déplacer ta réservation en ligne jusqu'à{" "}
+                        {data.rescheduleNoticeHours ?? data.cancellationNoticeHours} h avant le
+                        créneau, selon les places disponibles.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={openEditor}
+                        className="mt-4 w-full rounded-full border border-primary/40 px-4 py-2.5 text-sm font-medium text-primary hover:bg-primary/10"
+                      >
+                        Déplacer ma réservation
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
               {data.reservation.status !== "cancelled" && (
+
                 <div className="rounded-2xl border border-border bg-card p-4">
                   <h2 className="font-medium">Besoin d'annuler ?</h2>
                   {data.canCancel ? (
