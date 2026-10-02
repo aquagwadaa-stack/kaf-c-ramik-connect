@@ -50,14 +50,12 @@ const categoryTones: Record<CeramicObject["category"], string> = {
 };
 
 function ObjetsPage() {
-  const [objects] = useCeramicObjects();
-  const [cat, setCat] = useState("Tous");
-  const cats = useMemo(
-    () => ["Tous", ...Array.from(new Set(objects.map((item) => categoryLabels[item.category])))],
-    [objects],
+  const [allObjects] = useCeramicObjects();
+  const objects = useMemo(
+    () => allObjects.filter((item) => item.visible !== false),
+    [allObjects],
   );
-  const list =
-    cat === "Tous" ? objects : objects.filter((item) => categoryLabels[item.category] === cat);
+  const [cat, setCat] = useState("Tous");
 
   return (
     <PageShell>
