@@ -56,6 +56,12 @@ function ObjetsPage() {
     [allObjects],
   );
   const [cat, setCat] = useState("Tous");
+  const cats = useMemo(
+    () => ["Tous", ...Array.from(new Set(objects.map((item) => categoryLabels[item.category])))],
+    [objects],
+  );
+  const list =
+    cat === "Tous" ? objects : objects.filter((item) => categoryLabels[item.category] === cat);
 
   return (
     <PageShell>
