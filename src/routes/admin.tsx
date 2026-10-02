@@ -2665,6 +2665,7 @@ function ObjectsPanel({
         category: draft.category,
         price: Number(draft.price) || 0,
         availability: "available",
+        visible: true,
       },
       ...objects,
     ]);
