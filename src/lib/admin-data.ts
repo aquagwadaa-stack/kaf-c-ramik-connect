@@ -177,6 +177,7 @@ export interface CeramicObject {
   imageDataUrl?: string;
   imageName?: string;
   note?: string;
+  visible?: boolean;
 }
 
 export const ceramicObjectsSeed: CeramicObject[] = [

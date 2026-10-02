@@ -2665,6 +2665,7 @@ function ObjectsPanel({
         category: draft.category,
         price: Number(draft.price) || 0,
         availability: "available",
+        visible: true,
       },
       ...objects,
     ]);
@@ -2759,6 +2760,15 @@ function ObjectsPanel({
                 value={`${object.price}`}
                 onChange={(value) => updateObject(object.id, { price: Number(value) || 0 })}
               />
+              <label className="flex cursor-pointer items-center gap-2 self-end rounded-xl border border-input bg-background px-3 py-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={object.visible !== false}
+                  onChange={(event) => updateObject(object.id, { visible: event.target.checked })}
+                  className="h-4 w-4 accent-primary"
+                />
+                Visibilité
+              </label>
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-[96px_1fr] sm:items-center">
               <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-border bg-secondary/40">
