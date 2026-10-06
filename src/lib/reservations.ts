@@ -168,6 +168,23 @@ function nextWeekday(target: number, offset = 0) {
 const listeners = new Set<() => void>();
 const OCCUPANCY_EVENT = "kafe-ceramik-occupancy-change";
 
+// In production Supabase is the source of truth. Keeping the complete
+// reservation history in localStorage makes the browser cache grow forever
+// and can eventually trigger QuotaExceededError. Keep the live admin copy only
+// in memory; localStorage remains available for standalone/local preview mode.
+let remoteReservationCache: Reservation[] = [];
+let legacyRemoteReservationCacheCleared = false;
+
+function clearLegacyRemoteReservationCache() {
+  if (legacyRemoteReservationCacheCleared || typeof window === "undefined") return;
+  legacyRemoteReservationCacheCleared = true;
+  try {
+    localStorage.removeItem(KEY);
+  } catch {
+    // Storage may be unavailable/full; remote reservations still work.
+  }
+}
+
 export function refreshReservationOccupancies() {
   if (typeof window !== "undefined") window.dispatchEvent(new Event(OCCUPANCY_EVENT));
 }
@@ -247,23 +264,39 @@ async function updateRemoteReservationStatus(reservation: Reservation) {
 }
 
 function read(): Reservation[] {
-  if (typeof window === "undefined") return seed;
+  if (typeof window === "undefined") return isSupabaseConfigured() ? [] : seed;
+
+  if (isSupabaseConfigured()) {
+    clearLegacyRemoteReservationCache();
+    return remoteReservationCache;
+  }
+
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) {
-      const initial = isSupabaseConfigured() ? [] : seed;
-      localStorage.setItem(KEY, JSON.stringify(initial));
-      return initial;
+      localStorage.setItem(KEY, JSON.stringify(seed));
+      return seed;
     }
     return JSON.parse(raw);
   } catch {
-    return isSupabaseConfigured() ? [] : seed;
+    return seed;
   }
 }
 
 function write(list: Reservation[]) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(KEY, JSON.stringify(list));
+
+  if (isSupabaseConfigured()) {
+    remoteReservationCache = list;
+    clearLegacyRemoteReservationCache();
+  } else {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(list));
+    } catch (error) {
+      console.warn("Local reservation cache unavailable:", error);
+    }
+  }
+
   listeners.forEach((listener) => listener());
 }
 
