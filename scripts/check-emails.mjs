@@ -328,7 +328,7 @@ await run(
   "all preview templates use the real renderers without database writes or delivery",
   async () => {
     const suite = await ctx.buildEmailPreviewSuite(settings);
-    assert.equal(suite.length, 20);
+    assert.equal(suite.length, 23);
     assert.equal(sent.length, 0);
     assert.equal(values.size, 0);
     for (const mail of suite) {
