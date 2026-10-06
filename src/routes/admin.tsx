@@ -2381,6 +2381,11 @@ function WaiversPanel({
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [archiveView, setArchiveView] = useState<"reservation" | "date">("reservation");
+  const [archivePage, setArchivePage] = useState(0);
+  const [signatureDetails, setSignatureDetails] = useState<Map<string, WaiverSignature>>(
+    () => new Map(),
+  );
+  const archivePageSize = 40;
 
   const filteredSignatures = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase("fr");
@@ -2405,13 +2410,68 @@ function WaiversPanel({
       .sort((a, b) => b.signedAt.localeCompare(a.signedAt));
   }, [reservations, search, signatures]);
 
+  const archivePageCount = Math.max(1, Math.ceil(filteredSignatures.length / archivePageSize));
+  const pagedSignatures = useMemo(
+    () =>
+      filteredSignatures.slice(
+        archivePage * archivePageSize,
+        archivePage * archivePageSize + archivePageSize,
+      ),
+    [archivePage, filteredSignatures],
+  );
+  const pageSignatureKey = pagedSignatures.map((signature) => signature.id).join("|");
+
+  useEffect(() => {
+    setArchivePage(0);
+  }, [archiveView, search]);
+
+  useEffect(() => {
+    if (archivePage >= archivePageCount) setArchivePage(Math.max(0, archivePageCount - 1));
+  }, [archivePage, archivePageCount]);
+
+  useEffect(() => {
+    let alive = true;
+    const localDetails = new Map<string, WaiverSignature>();
+    pagedSignatures.forEach((signature) => {
+      if (signature.signatureDataUrl) localDetails.set(signature.id, signature);
+    });
+
+    if (!isSupabaseConfigured() || pagedSignatures.length === 0) {
+      setSignatureDetails(localDetails);
+      return () => {
+        alive = false;
+      };
+    }
+
+    const ids = pagedSignatures.map((signature) => signature.id);
+    callRpc<{ value: WaiverSignature }[]>(
+      "get_kafe_waiver_signature_details",
+      { p_ids: ids },
+      true,
+    )
+      .then((rows) => {
+        if (!alive) return;
+        const next = new Map(localDetails);
+        rows.forEach((row) => next.set(row.value.id, row.value));
+        setSignatureDetails(next);
+      })
+      .catch((loadError) => {
+        console.warn("Waiver page details unavailable:", loadError);
+        if (alive) setSignatureDetails(localDetails);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [pageSignatureKey]);
+
   const signatureGroups = useMemo(() => {
     const groups = new Map<
       string,
       { label: string; detail: string; signatures: WaiverSignature[] }
     >();
 
-    filteredSignatures.forEach((signature) => {
+    pagedSignatures.forEach((signature) => {
       const reservation = reservations.find((item) => item.id === signature.reservationRef);
       const signedDate = signature.signedAt.slice(0, 10);
       const key =
@@ -2443,7 +2503,7 @@ function WaiversPanel({
     });
 
     return [...groups.entries()].map(([key, value]) => ({ key, ...value }));
-  }, [archiveView, filteredSignatures, reservations]);
+  }, [archiveView, pagedSignatures, reservations]);
 
   const incompleteWaiverReservations = reservations.filter((reservation) => {
     if (reservation.status === "cancelled" || !experienceUsesCeramicGuide(reservation.experience))
@@ -2454,14 +2514,57 @@ function WaiversPanel({
     return signedPeople < reservation.people;
   });
 
+  async function fullSignature(signature: WaiverSignature) {
+    const cached = signatureDetails.get(signature.id);
+    if (cached?.signatureDataUrl) return cached;
+    if (signature.signatureDataUrl) return signature;
+    if (!isSupabaseConfigured()) return signature;
+
+    const rows = await callRpc<{ value: WaiverSignature }[]>(
+      "get_kafe_waiver_signature_details",
+      { p_ids: [signature.id] },
+      true,
+    );
+    const loaded = rows[0]?.value ?? signature;
+    if (loaded !== signature) {
+      setSignatureDetails((current) => {
+        const next = new Map(current);
+        next.set(loaded.id, loaded);
+        return next;
+      });
+    }
+    return loaded;
+  }
+
+  async function exportSignature(signature: WaiverSignature) {
+    setError("");
+    try {
+      await downloadSignedWaiver(await fullSignature(signature), waiver.body);
+    } catch {
+      setError("Impossible de générer cette décharge pour le moment.");
+    }
+  }
+
   async function removeSignature(id: string) {
     if (!window.confirm("Supprimer définitivement cette décharge signée ?")) return;
     setError("");
     const saved = await saveSignatures(signatures.filter((signature) => signature.id !== id));
     if (!saved) {
       setError("La décharge n'a pas pu être supprimée de l'administration.");
+      return;
     }
+    setSignatureDetails((current) => {
+      const next = new Map(current);
+      next.delete(id);
+      return next;
+    });
   }
+
+  const firstVisible = filteredSignatures.length === 0 ? 0 : archivePage * archivePageSize + 1;
+  const lastVisible = Math.min(
+    filteredSignatures.length,
+    archivePage * archivePageSize + pagedSignatures.length,
+  );
 
   return (
     <Panel title="Décharges" desc="Signature sur tablette et archives.">
@@ -2536,6 +2639,41 @@ function WaiversPanel({
             </select>
           </div>
         </div>
+
+        {filteredSignatures.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+            <span>
+              {firstVisible}–{lastVisible} sur {filteredSignatures.length} décharge
+              {filteredSignatures.length > 1 ? "s" : ""}
+            </span>
+            {archivePageCount > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={archivePage === 0}
+                  onClick={() => setArchivePage((current) => Math.max(0, current - 1))}
+                  className="inline-flex h-8 items-center gap-1 rounded-full border border-border bg-card px-3 disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-4 w-4" /> Précédent
+                </button>
+                <span>
+                  Page {archivePage + 1}/{archivePageCount}
+                </span>
+                <button
+                  type="button"
+                  disabled={archivePage + 1 >= archivePageCount}
+                  onClick={() =>
+                    setArchivePage((current) => Math.min(archivePageCount - 1, current + 1))
+                  }
+                  className="inline-flex h-8 items-center gap-1 rounded-full border border-border bg-card px-3 disabled:opacity-40"
+                >
+                  Suivant <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="mt-4 grid gap-2">
           {signatureGroups.length === 0 ? (
             <EmptyState text="Aucune signature enregistrée." />
@@ -2557,56 +2695,55 @@ function WaiversPanel({
                   <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
                 </summary>
                 <div className="divide-y divide-border border-t border-border px-4">
-                  {group.signatures.map((signature) => (
-                    <div key={signature.id} className="py-3 text-sm">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="font-medium">
-                            {signature.firstName} {signature.lastName}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(signature.signedAt).toLocaleString("fr-FR")} ·{" "}
-                            {signature.documentVersion}
-                          </div>
-                          {signature.isMinor && (
-                            <div className="mt-1 text-xs text-muted-foreground">
-                              Signé par {signature.guardianFirstName} {signature.guardianLastName},
-                              responsable légal
+                  {group.signatures.map((signature) => {
+                    const detailedSignature = signatureDetails.get(signature.id) ?? signature;
+                    return (
+                      <div key={signature.id} className="py-3 text-sm">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="font-medium">
+                              {signature.firstName} {signature.lastName}
                             </div>
-                          )}
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(signature.signedAt).toLocaleString("fr-FR")} ·{" "}
+                              {signature.documentVersion}
+                            </div>
+                            {signature.isMinor && (
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                Signé par {signature.guardianFirstName} {signature.guardianLastName},
+                                responsable légal
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <InfoPill tone="success">Signé</InfoPill>
+                            <button
+                              onClick={() => void exportSignature(signature)}
+                              className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+                              aria-label="Exporter la décharge signée"
+                              title="Exporter la décharge signée"
+                            >
+                              <Download className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => void removeSignature(signature.id)}
+                              className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                              aria-label="Supprimer la signature"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex shrink-0 items-center gap-2">
-                          <InfoPill tone="success">Signé</InfoPill>
-                          <button
-                            onClick={() =>
-                              downloadSignedWaiver(signature, waiver.body).catch(() =>
-                                setError("Impossible de générer cette décharge pour le moment."),
-                              )
-                            }
-                            className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
-                            aria-label="Exporter la décharge signée"
-                            title="Exporter la décharge signée"
-                          >
-                            <Download className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => void removeSignature(signature.id)}
-                            className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                            aria-label="Supprimer la signature"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
+                        {detailedSignature.signatureDataUrl && (
+                          <img
+                            src={detailedSignature.signatureDataUrl}
+                            alt="Signature"
+                            className="mt-3 h-16 rounded-lg border border-border bg-white object-contain"
+                          />
+                        )}
                       </div>
-                      {signature.signatureDataUrl && (
-                        <img
-                          src={signature.signatureDataUrl}
-                          alt="Signature"
-                          className="mt-3 h-16 rounded-lg border border-border bg-white object-contain"
-                        />
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </details>
             ))
