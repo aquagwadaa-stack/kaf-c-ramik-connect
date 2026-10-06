@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import {
+  callRpc,
   insertRow,
   isSupabaseConfigured,
+  publicFileUrl,
   selectRows,
   uploadPublicFile,
 } from "./supabase-rest";
@@ -74,22 +76,17 @@ export async function submitGuestbookEntry(input: {
   const id = `guest-${crypto.randomUUID()}`;
   const imagePath = input.image ? `submissions/${id}/${safeImageName(input.image.name)}` : "";
 
-  // Upload first: the entry only ever stores an image URL that already exists,
-  // so no privileged cleanup function is needed when an upload fails.
+  const createdAt = new Date().toISOString();
+  const remoteMode = isSupabaseConfigured();
+
   let imageUrl: string | undefined;
-  let imageUploaded = true;
   if (input.image && imagePath) {
-    try {
-      imageUrl = isSupabaseConfigured()
-        ? await uploadPublicFile("kafe-guestbook", imagePath, input.image)
-        : await fileToDataUrl(input.image);
-    } catch {
-      imageUrl = undefined;
-      imageUploaded = false;
-    }
+    imageUrl = remoteMode
+      ? publicFileUrl("kafe-guestbook", imagePath)
+      : await fileToDataUrl(input.image);
   }
 
-  const entry: GuestbookEntry = {
+  let entry: GuestbookEntry = {
     id,
     author: input.author.trim(),
     message: input.message.trim(),
@@ -97,9 +94,10 @@ export async function submitGuestbookEntry(input: {
     status: "pending",
     source: "site",
     imageUrl,
-    createdAt: new Date().toISOString(),
+    createdAt,
   };
-  if (!isSupabaseConfigured()) {
+
+  if (!remoteMode) {
     let stored: GuestbookEntry[] = [];
     try {
       stored = JSON.parse(localStorage.getItem("kafe-ceramik-guestbook") || "[]");
@@ -107,14 +105,35 @@ export async function submitGuestbookEntry(input: {
       stored = [];
     }
     localStorage.setItem("kafe-ceramik-guestbook", JSON.stringify([entry, ...stored]));
-    return { entry, imageUploaded };
+    return { entry, imageUploaded: true };
   }
+
+  // The storage policy only accepts a visitor image when a matching pending
+  // guestbook entry already references its exact public path. Create the
+  // pending entry first, then upload the file.
   await insertRow("kafe_guestbook_entries", {
     id,
     value: entry,
     sort_order: 9999,
-    updated_at: entry.createdAt,
+    updated_at: createdAt,
   });
+
+  let imageUploaded = true;
+  if (input.image && imagePath && imageUrl) {
+    try {
+      await uploadPublicFile("kafe-guestbook", imagePath, input.image);
+    } catch {
+      imageUploaded = false;
+      entry = { ...entry, imageUrl: undefined };
+      await callRpc("clear_failed_kafe_guestbook_image", {
+        p_id: id,
+        p_image_url: imageUrl,
+      }).catch((error) => {
+        console.warn("Guestbook image cleanup skipped:", error);
+      });
+    }
+  }
+
   return { entry, imageUploaded };
 }
 
