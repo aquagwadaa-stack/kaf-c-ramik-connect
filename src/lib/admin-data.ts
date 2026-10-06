@@ -988,19 +988,101 @@ export function useContentDocuments() {
 }
 
 export function useWaiverSignatures() {
-  return useStoredList<WaiverSignature>("kafe-ceramik-waiver-signatures", waiverSignaturesSeed, {
-    table: "kafe_waiver_signatures",
-    authLoad: true,
-    hasSortOrder: false,
-    toRow: (signature) => ({
-      id: signature.id,
-      value: signature,
-      reservation_ref: signature.reservationRef ?? null,
-      document_version: signature.documentVersion,
-      signed_at: signature.signedAt,
-      updated_at: new Date().toISOString(),
-    }),
-  });
+  const [signatures, setSignatures] = useState<WaiverSignature[]>(waiverSignaturesSeed);
+  const signaturesRef = useRef<WaiverSignature[]>(waiverSignaturesSeed);
+  const remoteSaveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const saveVersion = useRef(0);
+
+  useEffect(() => {
+    let alive = true;
+
+    // Signatures used to be mirrored in localStorage as base64 PNG images.
+    // That cache grows without bound and eventually triggers QuotaExceededError.
+    // Supabase is the source of truth, so remove the legacy cache and never recreate it.
+    try {
+      localStorage.removeItem("kafe-ceramik-waiver-signatures");
+    } catch {
+      // Storage can be unavailable in restricted browser contexts; remote persistence still works.
+    }
+
+    if (!isSupabaseConfigured()) {
+      return () => {
+        alive = false;
+      };
+    }
+
+    loadRemoteList<WaiverSignature>("kafe_waiver_signatures", true, false)
+      .then((remoteList) => {
+        if (!alive) return;
+
+        // Keep a signature created while the initial remote load was still in flight.
+        const merged = new Map(remoteList.map((signature) => [signature.id, signature]));
+        signaturesRef.current.forEach((signature) => merged.set(signature.id, signature));
+        const next = [...merged.values()].sort((a, b) => b.signedAt.localeCompare(a.signedAt));
+
+        signaturesRef.current = next;
+        setSignatures(next);
+      })
+      .catch((error) => {
+        console.warn("Remote load skipped for kafe_waiver_signatures:", error);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const save = (next: WaiverSignature[]) => {
+    const previous = signaturesRef.current;
+    const version = ++saveVersion.current;
+    const previousById = new Map(previous.map((signature) => [signature.id, signature]));
+    const nextIds = new Set(next.map((signature) => signature.id));
+    const removedIds = previous
+      .filter((signature) => !nextIds.has(signature.id))
+      .map((signature) => signature.id);
+    const changed = next.filter((signature) => {
+      const previousSignature = previousById.get(signature.id);
+      return !previousSignature || JSON.stringify(previousSignature) !== JSON.stringify(signature);
+    });
+
+    signaturesRef.current = next;
+    setSignatures(next);
+
+    if (!isSupabaseConfigured()) return Promise.resolve(true);
+
+    const operation = remoteSaveQueue.current
+      .catch(() => undefined)
+      .then(async () => {
+        await saveRemoteList("kafe_waiver_signatures", changed, (signature) => ({
+          id: signature.id,
+          value: signature,
+          reservation_ref: signature.reservationRef ?? null,
+          document_version: signature.documentVersion,
+          signed_at: signature.signedAt,
+          updated_at: new Date().toISOString(),
+        }));
+        await Promise.all(removedIds.map((id) => deleteRow("kafe_waiver_signatures", id, true)));
+      });
+
+    remoteSaveQueue.current = operation.catch((error) => {
+      console.warn("Remote save skipped for kafe_waiver_signatures:", error);
+    });
+
+    return operation
+      .then(() => true)
+      .catch(() => {
+        if (saveVersion.current === version) {
+          signaturesRef.current = previous;
+          setSignatures(previous);
+        }
+        reportAdminSyncError(
+          "La décharge n'a pas pu être enregistrée. Vérifie la connexion puis réessaie.",
+        );
+        return false;
+      });
+  };
+
+  return [signatures, save] as const;
 }
 
 const legacyReservationConditions =
