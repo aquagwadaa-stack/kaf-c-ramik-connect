@@ -117,6 +117,7 @@ const cronSecret = Deno.env.get("KAFE_CRON_SECRET") ?? "";
 const vapidPublicKey = Deno.env.get("KAFE_VAPID_PUBLIC_KEY") ?? "";
 const vapidPrivateKey = Deno.env.get("KAFE_VAPID_PRIVATE_KEY") ?? "";
 const vapidSubject = Deno.env.get("KAFE_VAPID_SUBJECT") ?? "mailto:gwada.web.studio@gmail.com";
+const giftAdminEmail = "ceramikkafe@gmail.com";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -662,30 +663,50 @@ async function createGiftCardPdf(order: GiftOrderRow) {
 
 async function sendGiftCard(order: GiftOrderRow, force = false, preview?: PreviewContext) {
   if (order.status !== "paid") return { delivered: false, reason: "Paiement non confirme." };
-  if (order.pdf_email_sent_at && !force) return { delivered: true, alreadySent: true };
 
-  const attachment = await createGiftCardPdf(order);
-  const delivered = await sendEmail(
-    [order.value.recipientEmail],
-    `Ta carte cadeau Kafé Céramik - ${formatMoney(order.amount)}`,
+  const customerAlreadySent = Boolean(order.pdf_email_sent_at) && !force;
+  let customerDelivered = customerAlreadySent;
+
+  if (!customerAlreadySent) {
+    const attachment = await createGiftCardPdf(order);
+    customerDelivered = await sendEmail(
+      [order.value.recipientEmail],
+      `Ta carte cadeau Kafé Céramik - ${formatMoney(order.amount)}`,
+      shell(
+        "Une parenthèse créative t'attend",
+        `<p>Bonjour ${escapeHtml(order.value.recipientName)},</p><p><strong>${escapeHtml(order.value.senderName)}</strong> t'offre une carte cadeau Kafé Céramik d'une valeur de <strong>${escapeHtml(formatMoney(order.amount))}</strong>.</p>${order.value.message?.trim() ? `<div style="margin:18px 0;padding:16px;background:#f4dddd;border-radius:14px">${escapeHtml(order.value.message)}</div>` : ""}<p>Ta carte personnalisée est jointe à cet e-mail au format PDF. Elle est valable jusqu'au <strong>${escapeHtml(formatGiftExpiry(order.expires_at || "", true))}</strong> et son montant peut être utilisé librement au Kafé Céramik ou chez Mala Madre.</p><p>Présente ta carte à l'équipe lors de ta venue.</p>`,
+      ),
+      [attachment],
+      preview,
+      `gift-${order.id}-${force ? crypto.randomUUID() : "paid"}`,
+    );
+
+    if (customerDelivered && !preview) {
+      await api<void>(`/rest/v1/kafe_gift_card_orders?id=eq.${encodeURIComponent(order.id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({ pdf_email_sent_at: new Date().toISOString() }),
+      });
+    }
+  }
+
+  const adminRecipients = preview ? ["equipe@example.invalid"] : [giftAdminEmail];
+  const adminDelivered = await sendEmail(
+    adminRecipients,
+    `Nouvelle carte cadeau achetée - ${formatMoney(order.amount)}`,
     shell(
-      "Une parenthèse créative t'attend",
-      `<p>Bonjour ${escapeHtml(order.value.recipientName)},</p><p><strong>${escapeHtml(order.value.senderName)}</strong> t'offre une carte cadeau Kafé Céramik d'une valeur de <strong>${escapeHtml(formatMoney(order.amount))}</strong>.</p>${order.value.message?.trim() ? `<div style="margin:18px 0;padding:16px;background:#f4dddd;border-radius:14px">${escapeHtml(order.value.message)}</div>` : ""}<p>Ta carte personnalisée est jointe à cet e-mail au format PDF. Elle est valable jusqu'au <strong>${escapeHtml(formatGiftExpiry(order.expires_at || "", true))}</strong> et son montant peut être utilisé librement au Kafé Céramik ou chez Mala Madre.</p><p>Présente ta carte à l'équipe lors de ta venue.</p>`,
+      "Nouvelle carte cadeau achetée",
+      `<p>Une carte cadeau vient d'être achetée et son paiement est confirmé.</p><div style="margin:18px 0;padding:16px;background:#f4dddd;border-radius:14px"><strong>Code :</strong> ${escapeHtml(order.code)}<br><strong>Montant :</strong> ${escapeHtml(formatMoney(order.amount))}<br><strong>Acheteur :</strong> ${escapeHtml(order.value.senderName)}<br><strong>Bénéficiaire :</strong> ${escapeHtml(order.value.recipientName)}<br><strong>E-mail du bénéficiaire :</strong> ${escapeHtml(order.value.recipientEmail)}<br><strong>Valable jusqu'au :</strong> ${escapeHtml(formatGiftExpiry(order.expires_at || "", true))}</div><p>La carte cadeau a été enregistrée dans l'espace administrateur Kafé Céramik.</p>`,
     ),
-    [attachment],
+    [],
     preview,
-    `gift-${order.id}-${force ? crypto.randomUUID() : "paid"}`,
+    `gift-${order.id}-admin-paid`,
   );
 
-  if (delivered && !preview) {
-    await api<void>(`/rest/v1/kafe_gift_card_orders?id=eq.${encodeURIComponent(order.id)}`, {
-      method: "PATCH",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ pdf_email_sent_at: new Date().toISOString() }),
-    });
-  }
+  const delivered = customerDelivered && adminDelivered;
   return {
     delivered,
+    alreadySent: customerAlreadySent,
     reason: delivered ? undefined : "Le fournisseur email reste a configurer.",
   };
 }
@@ -1267,7 +1288,7 @@ async function buildEmailPreviewSuite(settings: SettingsValue) {
     sendReminder(base(), settings, site, new Date("2026-10-15T08:00:00-04:00"), p),
   );
   for (const visual of ["rose", "tropical", "confetti"] as const) {
-    await collect([`beneficiaire-cadeau-${visual}`], (p) =>
+    await collect([`beneficiaire-cadeau-${visual}`, `equipe-cadeau-${visual}`], (p) =>
       sendGiftCard(
         {
           id: `preview-${visual}`,
