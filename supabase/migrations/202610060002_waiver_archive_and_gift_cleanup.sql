@@ -13,14 +13,14 @@ begin
   end if;
 
   return query
-  select w.value - 'signatureDataUrl'
+  select w.value - array['signatureDataUrl', 'documentUrl', 'documentPreviewUrl', 'acceptanceText']
   from public.kafe_waiver_signatures w
   order by w.signed_at desc, w.id desc;
 end;
 $$;
 
-revoke all on function public.get_kafe_waiver_signature_summaries() from public;
-grant execute on function public.get_kafe_waiver_signature_summaries() to authenticated;
+revoke all on function public.get_kafe_waiver_signature_summaries() from public, anon;
+grant execute on function public.get_kafe_waiver_signature_summaries() to authenticated, service_role;
 
 create or replace function public.get_kafe_waiver_signature_details(p_ids text[])
 returns table(value jsonb)
@@ -42,8 +42,8 @@ begin
 end;
 $$;
 
-revoke all on function public.get_kafe_waiver_signature_details(text[]) from public;
-grant execute on function public.get_kafe_waiver_signature_details(text[]) to authenticated;
+revoke all on function public.get_kafe_waiver_signature_details(text[]) from public, anon;
+grant execute on function public.get_kafe_waiver_signature_details(text[]) to authenticated, service_role;
 
 create or replace function private.expire_stale_kafe_gift_orders()
 returns integer
