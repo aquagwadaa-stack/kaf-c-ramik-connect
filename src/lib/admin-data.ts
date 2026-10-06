@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { deleteRow, isSupabaseConfigured, selectRows, upsertRows } from "./supabase-rest";
+import { callRpc, deleteRow, isSupabaseConfigured, selectRows, upsertRows } from "./supabase-rest";
 
 type Listener = () => void;
 
@@ -1011,11 +1011,17 @@ export function useWaiverSignatures() {
       };
     }
 
-    loadRemoteList<WaiverSignature>("kafe_waiver_signatures", true, false)
-      .then((remoteList) => {
+    callRpc<{ value: WaiverSignature }[]>(
+      "get_kafe_waiver_signature_summaries",
+      {},
+      true,
+    )
+      .then((rows) => {
         if (!alive) return;
 
-        // Keep a signature created while the initial remote load was still in flight.
+        // The archive list intentionally omits the base64 signature image. Full
+        // signature details are loaded only for the current admin archive page.
+        const remoteList = rows.map((row) => row.value);
         const merged = new Map(remoteList.map((signature) => [signature.id, signature]));
         signaturesRef.current.forEach((signature) => merged.set(signature.id, signature));
         const next = [...merged.values()].sort((a, b) => b.signedAt.localeCompare(a.signedAt));
@@ -1023,8 +1029,24 @@ export function useWaiverSignatures() {
         signaturesRef.current = next;
         setSignatures(next);
       })
-      .catch((error) => {
-        console.warn("Remote load skipped for kafe_waiver_signatures:", error);
+      .catch(async (error) => {
+        console.warn("Lightweight waiver archive load skipped, using compatibility fallback:", error);
+        try {
+          const remoteList = await loadRemoteList<WaiverSignature>(
+            "kafe_waiver_signatures",
+            true,
+            false,
+          );
+          if (!alive) return;
+          const lightweight = remoteList.map(({ signatureDataUrl: _signatureDataUrl, ...signature }) => signature);
+          const merged = new Map(lightweight.map((signature) => [signature.id, signature]));
+          signaturesRef.current.forEach((signature) => merged.set(signature.id, signature));
+          const next = [...merged.values()].sort((a, b) => b.signedAt.localeCompare(a.signedAt));
+          signaturesRef.current = next;
+          setSignatures(next);
+        } catch (fallbackError) {
+          console.warn("Remote load skipped for kafe_waiver_signatures:", fallbackError);
+        }
       });
 
     return () => {
