@@ -648,6 +648,7 @@ export interface KafeSettings {
   depositFixedAmount: number;
   defaultCapacity: number;
   slotDurationMinutes: number;
+  highDemandPeopleThreshold: number;
   cafeClosingTime: string;
   slotIntervalMinutes: number;
   slots: string[];
@@ -858,6 +859,7 @@ export const settingsSeed: KafeSettings = {
   depositFixedAmount: 100,
   defaultCapacity: 60,
   slotDurationMinutes: 180,
+  highDemandPeopleThreshold: 7,
   cafeClosingTime: "18:30",
   slotIntervalMinutes: 60,
   slots: ["09:30", "10:30", "11:30", "12:30", "13:30", "14:30", "15:30", "16:30"],
@@ -1118,9 +1120,13 @@ export function normalizeKafeSettings(value?: Partial<KafeSettings> | null): Kaf
     page: seedImage.page,
     label: seedImage.label,
   }));
+  const configuredDemandThreshold = Number(value?.highDemandPeopleThreshold);
   const merged: KafeSettings = {
     ...settingsSeed,
     ...value,
+    highDemandPeopleThreshold: Number.isFinite(configuredDemandThreshold)
+      ? Math.max(1, Math.round(configuredDemandThreshold))
+      : settingsSeed.highDemandPeopleThreshold,
     reservationFieldRequirements: {
       ...settingsSeed.reservationFieldRequirements,
       ...value?.reservationFieldRequirements,
