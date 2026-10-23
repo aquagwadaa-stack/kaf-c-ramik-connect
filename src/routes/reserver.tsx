@@ -1019,9 +1019,7 @@ function WeekPlanner({
                               ? "min-h-14 rounded-xl border-primary bg-primary px-2 py-2 text-primary-foreground"
                               : state.disabled
                                 ? "h-8 rounded-md border-dashed border-border/70 bg-muted/45 px-2 text-muted-foreground"
-                                : state.label === "Créneau très demandé"
-                                  ? "min-h-14 rounded-xl border-primary/40 bg-secondary/60 px-2 py-2 hover:border-primary hover:bg-secondary"
-                                  : "min-h-14 rounded-xl border-border bg-card px-2 py-2 hover:border-primary/45 hover:bg-secondary/60"
+                                : "min-h-14 rounded-xl border-border bg-card px-2 py-2 hover:border-primary/45 hover:bg-secondary/60"
                           }`}
                         >
                           {state.disabled ? (
@@ -1036,8 +1034,19 @@ function WeekPlanner({
                           ) : (
                             <>
                               <span className="block text-sm font-medium">{slotOption}</span>
+                              {state.highDemand && (
+                                <span
+                                  className={`mt-1.5 flex w-full items-center justify-center rounded-lg border border-dashed px-1 py-1 text-center text-[10px] font-semibold leading-tight ${
+                                    selected
+                                      ? "border-primary-foreground/75 bg-primary-foreground/15 text-primary-foreground"
+                                      : "border-amber-500/80 bg-amber-100 text-amber-900"
+                                  }`}
+                                >
+                                  Créneau très demandé
+                                </span>
+                              )}
                               <span
-                                className={`block text-[11px] ${selected ? "text-primary-foreground/75" : "text-muted-foreground"}`}
+                                className={`mt-1 block text-[11px] ${selected ? "text-primary-foreground/75" : "text-muted-foreground"}`}
                               >
                                 {state.label}
                               </span>
@@ -1072,20 +1081,21 @@ function getSlotAvailability(
 ) {
   const date = toISODate(day);
   if (!isBookingTimeAllowed(date, slot, settings.minimumBookingLeadHours ?? 0)) {
-    return { disabled: true, label: "", hideLabel: true };
+    return { disabled: true, label: "", hideLabel: true, highDemand: false };
   }
 
   const placement = getSlotPlacement(reservations, occupancies, date, slot, people, settings);
   if (!placement.unitId && placement.totalRemaining <= 0) {
-    return { disabled: true, label: "complet" };
+    return { disabled: true, label: "complet", highDemand: false };
   }
   if (!placement.unitId) {
-    return { disabled: true, label: "places restantes séparées" };
+    return { disabled: true, label: "places restantes séparées", highDemand: false };
   }
   const arrivals = getBookedPeopleAtSlot(reservations, occupancies, date, slot);
   return {
     disabled: false,
-    label: arrivals >= settings.highDemandPeopleThreshold ? "Créneau très demandé" : "disponible",
+    label: "disponible",
+    highDemand: arrivals >= settings.highDemandPeopleThreshold,
   };
 }
 
