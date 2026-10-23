@@ -30,6 +30,7 @@ import {
   formatDuration,
   formatReservationDate,
   getDepositAmount,
+  getBookedPeopleAtSlot,
   getSlotPlacement,
   getSlotsForDate,
   refreshReservationOccupancies,
@@ -1018,7 +1019,9 @@ function WeekPlanner({
                               ? "min-h-14 rounded-xl border-primary bg-primary px-2 py-2 text-primary-foreground"
                               : state.disabled
                                 ? "h-8 rounded-md border-dashed border-border/70 bg-muted/45 px-2 text-muted-foreground"
-                                : "min-h-14 rounded-xl border-border bg-card px-2 py-2 hover:border-primary/45 hover:bg-secondary/60"
+                                : state.label === "Créneau très demandé"
+                                  ? "min-h-14 rounded-xl border-primary/40 bg-secondary/60 px-2 py-2 hover:border-primary hover:bg-secondary"
+                                  : "min-h-14 rounded-xl border-border bg-card px-2 py-2 hover:border-primary/45 hover:bg-secondary/60"
                           }`}
                         >
                           {state.disabled ? (
@@ -1079,7 +1082,11 @@ function getSlotAvailability(
   if (!placement.unitId) {
     return { disabled: true, label: "places restantes séparées" };
   }
-  return { disabled: false, label: "disponible" };
+  const arrivals = getBookedPeopleAtSlot(reservations, occupancies, date, slot);
+  return {
+    disabled: false,
+    label: arrivals >= settings.highDemandPeopleThreshold ? "Créneau très demandé" : "disponible",
+  };
 }
 
 function startOfWeek(date: Date) {
