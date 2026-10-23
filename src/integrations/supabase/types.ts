@@ -449,6 +449,10 @@ export type Database = {
         Args: { p_token: string }
         Returns: Json
       }
+      clear_failed_kafe_guestbook_image: {
+        Args: { p_id: string; p_image_url: string }
+        Returns: undefined
+      }
       create_kafe_reservation: {
         Args: {
           p_date: string
@@ -535,6 +539,18 @@ export type Database = {
           reservation_id: string
           seating_unit_id: string
           slot: string
+        }[]
+      }
+      get_kafe_waiver_signature_details: {
+        Args: { p_ids: string[] }
+        Returns: {
+          value: Json
+        }[]
+      }
+      get_kafe_waiver_signature_summaries: {
+        Args: never
+        Returns: {
+          value: Json
         }[]
       }
       mark_kafe_notification_read: {
