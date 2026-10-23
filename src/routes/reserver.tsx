@@ -1036,7 +1036,7 @@ function WeekPlanner({
                               <span className="block text-sm font-medium">{slotOption}</span>
                               {state.highDemand && (
                                 <span
-                                  className={`mt-1.5 flex w-full items-center justify-center rounded-lg border border-dashed px-1 py-1 text-center text-[10px] font-semibold leading-tight ${ 
+                                  className={`mt-1.5 flex w-full items-center justify-center rounded-lg border border-dashed px-1 py-1 text-center text-[10px] font-semibold leading-tight ${
                                     selected
                                       ? "border-primary-foreground/75 bg-primary-foreground/15 text-primary-foreground"
                                       : "border-amber-500/80 bg-amber-100 text-amber-900"
