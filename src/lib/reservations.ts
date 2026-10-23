@@ -209,6 +209,35 @@ export type SlotOccupancy = {
   seating_unit_id: string | null;
 };
 
+// Count arrivals at this exact start time, rather than people still on site
+// from previous slots. Occupancy rows can contain multiple table allocations
+// for one group; their 'people' values add up to the actual group size.
+export function getBookedPeopleAtSlot(
+  reservations: Reservation[],
+  occupancies: SlotOccupancy[],
+  date: string,
+  slot: string,
+): number {
+  const localIds = new Set(reservations.map((reservation) => reservation.id));
+  const localPeople = reservations.reduce(
+    (total, reservation) =>
+      reservation.status !== "cancelled" && reservation.date === date && reservation.slot === slot
+        ? total + reservation.people
+        : total,
+    0,
+  );
+  const remotePeople = occupancies.reduce(
+    (total, occupancy) =>
+      occupancy.date === date &&
+      occupancy.slot === slot &&
+      !localIds.has(occupancy.reservation_id)
+        ? total + occupancy.people
+        : total,
+    0,
+  );
+  return localPeople + remotePeople;
+}
+
 type LegacySlotCapacity = {
   date: string;
   slot: string;

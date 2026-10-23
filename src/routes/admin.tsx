@@ -4616,6 +4616,12 @@ function SettingsPanel({
               suffix="minutes"
               onChange={(value) => update({ slotDurationMinutes: Math.max(15, Math.round(value)) })}
             />
+            <NumberField
+              label="Afficher « Créneau très demandé » à partir de"
+              value={settings.highDemandPeopleThreshold}
+              suffix="personnes au même horaire"
+              onChange={(value) => update({ highDemandPeopleThreshold: Math.max(1, Math.round(value)) })}
+            />
             <IntervalField
               value={settings.slotIntervalMinutes}
               onChange={(slotIntervalMinutes) => update({ slotIntervalMinutes })}
