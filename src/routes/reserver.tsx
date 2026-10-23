@@ -998,7 +998,7 @@ function WeekPlanner({
                     Fermé
                   </div>
                 ) : (
-                  <div className="mt-3 grid gap-1.5">
+                  <div className="mt-3 grid gap-3.5">
                     {slots.map((slotOption) => {
                       const state = getSlotAvailability(
                         day,
@@ -1015,11 +1015,13 @@ function WeekPlanner({
                           disabled={state.disabled}
                           onClick={() => onSelect(iso, slotOption)}
                           className={`border text-left transition ${
+                            state.highDemand ? "relative z-10 " : ""
+                          }${
                             selected
-                              ? "min-h-14 rounded-xl border-primary bg-primary px-2 py-2 text-primary-foreground"
+                              ? `h-14 rounded-xl border-primary bg-primary px-2 text-primary-foreground ${state.highDemand ? "pb-0.5 pt-4" : "py-2"}`
                               : state.disabled
                                 ? "h-8 rounded-md border-dashed border-border/70 bg-muted/45 px-2 text-muted-foreground"
-                                : "min-h-14 rounded-xl border-border bg-card px-2 py-2 hover:border-primary/45 hover:bg-secondary/60"
+                                : `h-14 rounded-xl border-border bg-card px-2 hover:border-primary/45 hover:bg-secondary/60 ${state.highDemand ? "pb-0.5 pt-4" : "py-2"}`
                           }`}
                         >
                           {state.disabled ? (
@@ -1036,7 +1038,7 @@ function WeekPlanner({
                               <span className="block text-sm font-medium">{slotOption}</span>
                               {state.highDemand && (
                                 <span
-                                  className={`mt-1.5 flex w-full items-center justify-center rounded-lg border border-dashed px-1 py-1 text-center text-[10px] font-semibold leading-tight ${
+                                  className={`pointer-events-none absolute left-1/2 top-0 z-10 flex w-[calc(100%-0.5rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-lg border border-dashed px-1 py-0.5 text-center text-[10px] font-semibold leading-[11px] shadow-sm ${
                                     selected
                                       ? "border-primary-foreground/75 bg-primary-foreground/15 text-primary-foreground"
                                       : "border-amber-500/80 bg-amber-100 text-amber-900"
@@ -1046,7 +1048,7 @@ function WeekPlanner({
                                 </span>
                               )}
                               <span
-                                className={`mt-1 block text-[11px] ${selected ? "text-primary-foreground/75" : "text-muted-foreground"}`}
+                                className={`block text-[11px] ${selected ? "text-primary-foreground/75" : "text-muted-foreground"}`}
                               >
                                 {state.label}
                               </span>
