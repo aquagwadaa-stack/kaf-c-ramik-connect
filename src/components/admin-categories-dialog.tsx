@@ -129,7 +129,7 @@ function CategoriesDialogInner({
   /** Suppressions avec déplacement d'objets : id supprimé → id de destination. */
   const [moves, setMoves] = useState<Record<string, string>>({});
   const [expandedId, setExpandedId] = useState<string | null>(initialNew?.id ?? null);
-  const [focusNameId, setFocusNameId] = useState<string | null>(initialNew?.id ?? null);
+  const [focusNameId, setFocusNameId] = useState<string | null>(null);
   const [previewActiveId, setPreviewActiveId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ObjectCategory | null>(null);
   const [destinationId, setDestinationId] = useState("");
@@ -283,7 +283,11 @@ function CategoriesDialogInner({
         <DialogPrimitive.Content
           onOpenAutoFocus={(event) => {
             // Ouverture sur « nouvelle catégorie » : le focus va dans le champ Nom.
-            if (initialNew) event.preventDefault();
+            const input = initialNew ? nameInputs.current.get(initialNew.id) : undefined;
+            if (!input) return;
+            event.preventDefault();
+            input.focus();
+            input.scrollIntoView({ block: "center" });
           }}
           className="kafe-categories-dialog fixed inset-0 z-50 flex h-[100dvh] w-full flex-col overflow-hidden bg-background text-foreground shadow-lg outline-none sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[85dvh] sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:border-border"
         >
@@ -451,9 +455,15 @@ function CategoriesDialogInner({
 
                       {expanded && (
                         <div className="mt-3 grid gap-4 border-t border-border pt-3">
-                          <label className="block">
-                            <span className="mb-1.5 block text-sm font-medium">Nom</span>
+                          <div>
+                            <label
+                              htmlFor={`kafe-name-${category.id}`}
+                              className="mb-1.5 block text-sm font-medium"
+                            >
+                              Nom
+                            </label>
                             <input
+                              id={`kafe-name-${category.id}`}
                               ref={(element) => {
                                 if (element) nameInputs.current.set(category.id, element);
                                 else nameInputs.current.delete(category.id);
@@ -464,18 +474,22 @@ function CategoriesDialogInner({
                                 patch(category.id, { label: event.target.value })
                               }
                               aria-invalid={Boolean(error)}
+                              aria-describedby={`kafe-name-help-${category.id}`}
                               placeholder="Ex. Noël, Fête des pères…"
                               className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-ring sm:text-sm"
                             />
-                            <span className="mt-1 flex justify-between gap-3 text-xs">
+                            <div
+                              id={`kafe-name-help-${category.id}`}
+                              className="mt-1 flex justify-between gap-3 text-xs"
+                            >
                               <span className="font-medium text-destructive" role="alert">
                                 {error ?? ""}
                               </span>
                               <span className="shrink-0 text-muted-foreground">
                                 {category.label.length}/{CATEGORY_LABEL_MAX}
                               </span>
-                            </span>
-                          </label>
+                            </div>
+                          </div>
 
                           <div>
                             <div

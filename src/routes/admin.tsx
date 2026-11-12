@@ -2975,7 +2975,7 @@ function ObjectsPanel({
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_150px_96px]">
+            <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_150px_96px]">
               <Field
                 label="Nom"
                 value={object.name}
