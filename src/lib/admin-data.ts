@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { callRpc, deleteRow, isSupabaseConfigured, selectRows, upsertRows } from "./supabase-rest";
+import {
+  normalizeObjectCategories,
+  objectCategoriesSeed,
+  OBJECT_CATEGORIES_VERSION,
+  type ObjectCategory,
+} from "./object-categories";
 
 type Listener = () => void;
 
@@ -171,7 +177,8 @@ export function useStoredList<T extends { id: string }>(
 export interface CeramicObject {
   id: string;
   name: string;
-  category: "Tasses" | "Bols" | "Assiettes" | "Figurines" | "Deco" | "Vases" | "Petites pieces";
+  /** Identifiant d'une catégorie du catalogue (voir object-categories.ts). */
+  category: string;
   price: number;
   availability: "available" | "limited" | "unavailable";
   imageDataUrl?: string;
@@ -981,6 +988,111 @@ export function useCeramicObjects() {
   return useStoredList<CeramicObject>("kafe-ceramik-objects", ceramicObjectsSeed, {
     table: "kafe_ceramic_objects",
   });
+}
+
+const OBJECT_CATEGORIES_KEY = "kafe-ceramik-object-categories";
+// Ligne dédiée dans kafe_settings. La ligne "main" (réglages de réservation) n'est jamais touchée.
+const OBJECT_CATEGORIES_ROW_ID = "object_categories";
+
+type StoredObjectCategories = { version: number; categories: ObjectCategory[] };
+
+function readObjectCategories(): ObjectCategory[] {
+  if (typeof window === "undefined") return objectCategoriesSeed;
+  try {
+    const raw = localStorage.getItem(OBJECT_CATEGORIES_KEY);
+    return raw ? normalizeObjectCategories(JSON.parse(raw)) : objectCategoriesSeed;
+  } catch {
+    return objectCategoriesSeed;
+  }
+}
+
+/**
+ * Catégories du catalogue « Objets à peindre » : liste ordonnée, modifiable depuis l'admin.
+ * Tant que rien n'a été enregistré, les valeurs par défaut du code s'appliquent.
+ */
+export function useObjectCategories() {
+  // Premier rendu identique au rendu serveur, puis lecture locale et distante dans l'effet.
+  const [categories, setCategories] = useState<ObjectCategory[]>(() => objectCategoriesSeed);
+  const [ready, setReady] = useState(() => !isSupabaseConfigured());
+  const remoteSaveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const saveVersion = useRef(0);
+
+  useEffect(() => {
+    let alive = true;
+    const update = () => setCategories(readObjectCategories());
+    update();
+    const unsubscribe = subscribe(OBJECT_CATEGORIES_KEY, update);
+
+    if (isSupabaseConfigured()) {
+      selectRows<{ id: string; value: unknown }>(
+        "kafe_settings",
+        `?id=eq.${OBJECT_CATEGORIES_ROW_ID}&select=id,value&limit=1`,
+      )
+        .then((rows) => {
+          if (!alive || !rows[0]?.value) return;
+          const stored: StoredObjectCategories = {
+            version: OBJECT_CATEGORIES_VERSION,
+            categories: normalizeObjectCategories(rows[0].value),
+          };
+          writeStore(OBJECT_CATEGORIES_KEY, stored);
+          setCategories(stored.categories);
+        })
+        .catch((error) => {
+          console.warn("Remote object categories load skipped:", error);
+        })
+        .finally(() => {
+          if (alive) setReady(true);
+        });
+    } else {
+      setReady(true);
+    }
+
+    return () => {
+      alive = false;
+      unsubscribe();
+    };
+  }, []);
+
+  const save = (next: ObjectCategory[]) => {
+    const previous = categories;
+    const version = ++saveVersion.current;
+    const stored: StoredObjectCategories = {
+      version: OBJECT_CATEGORIES_VERSION,
+      categories: normalizeObjectCategories(next),
+    };
+    writeStore(OBJECT_CATEGORIES_KEY, stored);
+    if (isSupabaseConfigured()) {
+      const operation = remoteSaveQueue.current
+        .catch(() => undefined)
+        .then(() =>
+          upsertRows(
+            "kafe_settings",
+            [{ id: OBJECT_CATEGORIES_ROW_ID, value: stored, updated_at: new Date().toISOString() }],
+            true,
+          ),
+        );
+      remoteSaveQueue.current = operation.catch((error) => {
+        console.warn("Remote object categories save skipped:", error);
+      });
+      return operation
+        .then(() => true)
+        .catch(() => {
+          if (saveVersion.current === version) {
+            writeStore(OBJECT_CATEGORIES_KEY, {
+              version: OBJECT_CATEGORIES_VERSION,
+              categories: previous,
+            });
+          }
+          reportAdminSyncError(
+            "Les catégories n'ont pas pu être enregistrées. Vérifie la connexion puis réessaie.",
+          );
+          return false;
+        });
+    }
+    return Promise.resolve(true);
+  };
+
+  return [categories, save, ready] as const;
 }
 
 export function useContentDocuments() {
