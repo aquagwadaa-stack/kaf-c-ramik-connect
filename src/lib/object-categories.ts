@@ -197,6 +197,15 @@ export function findCategory(categories: ObjectCategory[], id: string) {
 }
 
 /**
+ * Catégories proposées dans le menu « Catégorie » d'un objet (admin) : les catégories
+ * affichées, dans l'ordre. Une catégorie masquée n'y figure que si l'objet y est déjà rangé,
+ * pour que son menu montre toujours sa vraie catégorie.
+ */
+export function selectableCategories(categories: ObjectCategory[], currentId?: string) {
+  return categories.filter((category) => category.visible || category.id === currentId);
+}
+
+/**
  * Ce que le site affiche.
  * - objets : visibles ET dont la catégorie n'est pas masquée. Un objet dont la catégorie
  *   est inconnue (orpheline) reste affiché dans « Tous », sans étiquette.

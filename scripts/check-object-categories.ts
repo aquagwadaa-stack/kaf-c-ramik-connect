@@ -20,6 +20,7 @@ import {
   removeCategory,
   resolveSelectedCategory,
   sameCategories,
+  selectableCategories,
   validateCategories,
   validateCategoryLabel,
   type ObjectCategory,
@@ -283,6 +284,39 @@ check("suppression : vide = directe ; avec objets = destination obligatoire et d
 
 check("impossible de supprimer la dernière catégorie", () => {
   assert.equal(removeCategory([categories[0]], [], "noel").ok, false);
+});
+
+check("menu Catégorie de l'admin : sans les catégories masquées, sauf celle de l'objet", () => {
+  assert.deepEqual(ids(selectableCategories(categories)), [
+    "noel",
+    "Tasses",
+    "Deco",
+    "Petites pieces",
+    "carnaval",
+  ]);
+  assert.deepEqual(ids(selectableCategories(categories, "Tasses")), [
+    "noel",
+    "Tasses",
+    "Deco",
+    "Petites pieces",
+    "carnaval",
+  ]);
+  // Un objet déjà rangé dans une catégorie masquée la garde dans son menu, à sa place.
+  assert.deepEqual(ids(selectableCategories(categories, "halloween")), [
+    "noel",
+    "Tasses",
+    "Deco",
+    "Petites pieces",
+    "carnaval",
+    "halloween",
+  ]);
+  assert.deepEqual(
+    ids(selectableCategories(categories, "inconnue")),
+    ids(selectableCategories(categories)),
+  );
+  // Masquer ne supprime rien : la catégorie et ses objets restent dans les données.
+  assert.equal(countCategoryObjects(objects, "halloween").total, 1);
+  assert.ok(findCategory(categories, "halloween"));
 });
 
 check("comptage des objets par catégorie", () => {

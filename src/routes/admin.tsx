@@ -104,7 +104,7 @@ import {
   type SeatingZone,
   type WaiverSignature,
 } from "@/lib/admin-data";
-import { findCategory, type ObjectCategory } from "@/lib/object-categories";
+import { findCategory, selectableCategories, type ObjectCategory } from "@/lib/object-categories";
 import {
   CategoriesDialog,
   type CategoriesDialogResult,
@@ -2777,6 +2777,8 @@ function CategorySelect({
   onCreate: () => void;
 }) {
   const known = categories.some((category) => category.id === value);
+  // Les catégories masquées restent hors du menu, sauf celle où l'objet est déjà rangé.
+  const options = selectableCategories(categories, value);
   return (
     <label>
       <span className="mb-1.5 block text-sm font-medium">{label}</span>
@@ -2793,7 +2795,7 @@ function CategorySelect({
             Sans catégorie
           </option>
         )}
-        {categories.map((category) => (
+        {options.map((category) => (
           <option key={category.id} value={category.id}>
             {category.label}
             {category.visible ? "" : " (masquée)"}
@@ -2830,10 +2832,19 @@ function ObjectsPanel({
     category: "Petites pieces",
     price: "24",
   });
-  // Si la catégorie du brouillon n'existe plus, on retombe sur la première de la liste.
-  const draftCategory = categories.some((category) => category.id === draft.category)
+  // Un nouvel objet se range dans une catégorie affichée : si celle du brouillon est masquée
+  // ou n'existe plus, on retombe sur la première catégorie affichée.
+  const shownCategories = selectableCategories(categories);
+  const hiddenCount = categories.length - shownCategories.length;
+  const plural = (count: number) => (count > 1 ? "s" : "");
+  const categoriesSummary =
+    `${shownCategories.length} catégorie${plural(shownCategories.length)} affichée${plural(shownCategories.length)}` +
+    (hiddenCount > 0
+      ? ` · ${hiddenCount} masquée${plural(hiddenCount)} (absente${plural(hiddenCount)} des menus)`
+      : "");
+  const draftCategory = shownCategories.some((category) => category.id === draft.category)
     ? draft.category
-    : (categories[0]?.id ?? draft.category);
+    : (shownCategories[0]?.id ?? categories[0]?.id ?? draft.category);
 
   async function saveCategoriesDialog(result: CategoriesDialogResult) {
     let currentObjects = objects;
@@ -2909,8 +2920,7 @@ function ObjectsPanel({
       )}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          {categories.length} catégorie{categories.length > 1 ? "s" : ""} : nom, couleur, ordre et
-          visibilité des onglets du catalogue.
+          {categoriesSummary}. Nom, couleur, ordre et visibilité se règlent ici.
         </p>
         <button
           type="button"
