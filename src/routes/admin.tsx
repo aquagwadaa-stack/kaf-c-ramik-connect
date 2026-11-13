@@ -35,6 +35,7 @@ import {
   Settings,
   ShieldCheck,
   Smartphone,
+  Tags,
   Trash2,
   UploadCloud,
   UserCog,
@@ -72,8 +73,8 @@ import {
   statusLabel,
   seatingUnitLabel,
   updateStatus,
-  updateReservationDetails,
 
+  updateReservationDetails,
   useReservationOccupancies,
   type Reservation,
   type ReservationStatus,
@@ -81,6 +82,7 @@ import {
 } from "@/lib/reservations";
 import {
   useCeramicObjects,
+  useObjectCategories,
   useContentDocuments,
   creationInspirationsSeed,
   getGuideDocument,
@@ -102,6 +104,11 @@ import {
   type SeatingZone,
   type WaiverSignature,
 } from "@/lib/admin-data";
+import { findCategory, type ObjectCategory } from "@/lib/object-categories";
+import {
+  CategoriesDialog,
+  type CategoriesDialogResult,
+} from "@/components/admin-categories-dialog";
 import { useAdminGuestbookEntries, type GuestbookEntry } from "@/lib/guestbook";
 import { resendGiftCardPdf, useAdminGiftCardOrders, type GiftCardOrder } from "@/lib/gift-cards";
 import { formatGiftExpiry, giftIsValid } from "../../supabase/functions/_shared/gift-validity";
@@ -147,16 +154,6 @@ type AdminTab =
   | "documents"
   | "settings"
   | "team";
-
-const objectCategories: CeramicObject["category"][] = [
-  "Tasses",
-  "Bols",
-  "Assiettes",
-  "Figurines",
-  "Deco",
-  "Vases",
-  "Petites pieces",
-];
 
 const tabGroups: { label: string; items: { id: AdminTab; label: string; icon: LucideIcon }[] }[] = [
   {
@@ -543,6 +540,7 @@ function AdminWorkspace({
   const reservations = useReservations();
   const occupancies = useReservationOccupancies();
   const [objects, saveObjects] = useCeramicObjects();
+  const [objectCategories, saveObjectCategories] = useObjectCategories();
   const [documents, saveDocuments, replaceDocumentsLocal] = useContentDocuments();
   const [signatures, saveSignatures] = useWaiverSignatures();
   const [settings, saveSettings] = useKafeSettings();
@@ -694,7 +692,14 @@ function AdminWorkspace({
                 reservations={reservations}
               />
             )}
-            {tab === "objects" && <ObjectsPanel objects={objects} saveObjects={saveObjects} />}
+            {tab === "objects" && (
+              <ObjectsPanel
+                objects={objects}
+                saveObjects={saveObjects}
+                categories={objectCategories}
+                saveCategories={saveObjectCategories}
+              />
+            )}
             {tab === "creations" && (
               <CreationsPanel creations={creations} saveCreations={saveCreations} />
             )}
@@ -2183,12 +2188,12 @@ function ReservationEditForm({
         >
           Annuler
         </button>
+
+
       </div>
     </form>
   );
 }
-
-
 
 function GroupDecisionControls({ reservation }: { reservation: Reservation }) {
   const [settings] = useKafeSettings();
@@ -2754,20 +2759,103 @@ function WaiversPanel({
   );
 }
 
+const NEW_CATEGORY_OPTION = "__kafe-new-category__";
+const UNKNOWN_CATEGORY_OPTION = "__kafe-unknown-category__";
+
+/** Menu « Catégorie » : noms dans l'ordre choisi, puis « + Nouvelle catégorie… ». */
+function CategorySelect({
+  label,
+  value,
+  categories,
+  onChange,
+  onCreate,
+}: {
+  label: string;
+  value: string;
+  categories: ObjectCategory[];
+  onChange: (categoryId: string) => void;
+  onCreate: () => void;
+}) {
+  const known = categories.some((category) => category.id === value);
+  return (
+    <label>
+      <span className="mb-1.5 block text-sm font-medium">{label}</span>
+      <select
+        value={known ? value : UNKNOWN_CATEGORY_OPTION}
+        onChange={(event) => {
+          if (event.target.value === NEW_CATEGORY_OPTION) onCreate();
+          else onChange(event.target.value);
+        }}
+        className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+      >
+        {!known && (
+          <option value={UNKNOWN_CATEGORY_OPTION} disabled>
+            Sans catégorie
+          </option>
+        )}
+        {categories.map((category) => (
+          <option key={category.id} value={category.id}>
+            {category.label}
+            {category.visible ? "" : " (masquée)"}
+          </option>
+        ))}
+        <option value={NEW_CATEGORY_OPTION}>+ Nouvelle catégorie…</option>
+      </select>
+    </label>
+  );
+}
+
+type CategoriesDialogState = {
+  startWithNew: boolean;
+  /** Objet (ou brouillon du nouvel objet) qui recevra la catégorie créée. */
+  target?: { kind: "draft" } | { kind: "object"; id: string };
+};
+
 function ObjectsPanel({
   objects,
   saveObjects,
+  categories,
+  saveCategories,
 }: {
   objects: CeramicObject[];
-  saveObjects: (next: CeramicObject[]) => void;
+  saveObjects: (next: CeramicObject[]) => Promise<boolean>;
+  categories: ObjectCategory[];
+  saveCategories: (next: ObjectCategory[]) => Promise<boolean>;
 }) {
   const [uploadingId, setUploadingId] = useState<string>();
   const [uploadError, setUploadError] = useState("");
+  const [categoriesDialog, setCategoriesDialog] = useState<CategoriesDialogState | null>(null);
   const [draft, setDraft] = useState({
     name: "",
-    category: "Petites pieces" as CeramicObject["category"],
+    category: "Petites pieces",
     price: "24",
   });
+  // Si la catégorie du brouillon n'existe plus, on retombe sur la première de la liste.
+  const draftCategory = categories.some((category) => category.id === draft.category)
+    ? draft.category
+    : (categories[0]?.id ?? draft.category);
+
+  async function saveCategoriesDialog(result: CategoriesDialogResult) {
+    let currentObjects = objects;
+    // D'abord les objets déplacés hors des catégories supprimées, puis la liste des catégories.
+    if (result.objects) {
+      if (!(await saveObjects(result.objects))) return false;
+      currentObjects = result.objects;
+    }
+    if (!(await saveCategories(result.categories))) return false;
+    const createdId = result.createdIds[0];
+    const target = categoriesDialog?.target;
+    if (createdId && target?.kind === "draft") {
+      setDraft((current) => ({ ...current, category: createdId }));
+    } else if (createdId && target?.kind === "object") {
+      await saveObjects(
+        currentObjects.map((object) =>
+          object.id === target.id ? { ...object, category: createdId } : object,
+        ),
+      );
+    }
+    return true;
+  }
 
   function updateObject(id: string, patch: Partial<CeramicObject>) {
     saveObjects(objects.map((object) => (object.id === id ? { ...object, ...patch } : object)));
@@ -2799,14 +2887,14 @@ function ObjectsPanel({
       {
         id: `obj-${Date.now()}`,
         name: draft.name.trim(),
-        category: draft.category,
+        category: draftCategory,
         price: Number(draft.price) || 0,
         availability: "available",
         visible: true,
       },
       ...objects,
     ]);
-    setDraft({ name: "", category: "Petites pieces", price: "24" });
+    setDraft({ name: "", category: draftCategory, price: "24" });
   }
 
   return (
@@ -2819,26 +2907,42 @@ function ObjectsPanel({
           {uploadError}
         </div>
       )}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          {categories.length} catégorie{categories.length > 1 ? "s" : ""} : nom, couleur, ordre et
+          visibilité des onglets du catalogue.
+        </p>
+        <button
+          type="button"
+          onClick={() => setCategoriesDialog({ startWithNew: false })}
+          className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-medium hover:bg-secondary"
+        >
+          <Tags className="h-4 w-4" /> Gérer les catégories
+        </button>
+      </div>
+      <CategoriesDialog
+        open={categoriesDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setCategoriesDialog(null);
+        }}
+        categories={categories}
+        objects={objects}
+        startWithNew={categoriesDialog?.startWithNew}
+        onSave={saveCategoriesDialog}
+      />
       <div className="grid gap-3 rounded-2xl border border-border bg-background p-4 sm:grid-cols-[1fr_180px_110px_auto]">
         <Field
           label="Nouvel objet"
           value={draft.name}
           onChange={(value) => setDraft({ ...draft, name: value })}
         />
-        <label>
-          <span className="mb-1.5 block text-sm font-medium">Catégorie</span>
-          <select
-            value={draft.category}
-            onChange={(event) =>
-              setDraft({ ...draft, category: event.target.value as CeramicObject["category"] })
-            }
-            className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
-          >
-            {objectCategories.map((category) => (
-              <option key={category}>{category}</option>
-            ))}
-          </select>
-        </label>
+        <CategorySelect
+          label="Catégorie"
+          value={draftCategory}
+          categories={categories}
+          onChange={(category) => setDraft({ ...draft, category })}
+          onCreate={() => setCategoriesDialog({ startWithNew: true, target: { kind: "draft" } })}
+        />
         <Field
           label="Prix"
           value={draft.price}
@@ -2859,7 +2963,8 @@ function ObjectsPanel({
               <div>
                 <div className="font-display text-xl">{object.name}</div>
                 <div className="text-sm text-muted-foreground">
-                  {object.category} · {object.price} €
+                  {findCategory(categories, object.category)?.label ?? "Sans catégorie"} ·{" "}
+                  {object.price} €
                 </div>
               </div>
               <button
@@ -2870,28 +2975,24 @@ function ObjectsPanel({
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_150px_96px]">
+            <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_150px_96px]">
               <Field
                 label="Nom"
                 value={object.name}
                 onChange={(value) => updateObject(object.id, { name: value })}
               />
-              <label>
-                <span className="mb-1.5 block text-sm font-medium">Categorie</span>
-                <select
-                  value={object.category}
-                  onChange={(event) =>
-                    updateObject(object.id, {
-                      category: event.target.value as CeramicObject["category"],
-                    })
-                  }
-                  className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
-                >
-                  {objectCategories.map((category) => (
-                    <option key={category}>{category}</option>
-                  ))}
-                </select>
-              </label>
+              <CategorySelect
+                label="Catégorie"
+                value={object.category}
+                categories={categories}
+                onChange={(category) => updateObject(object.id, { category })}
+                onCreate={() =>
+                  setCategoriesDialog({
+                    startWithNew: true,
+                    target: { kind: "object", id: object.id },
+                  })
+                }
+              />
               <Field
                 label="Prix"
                 value={`${object.price}`}
